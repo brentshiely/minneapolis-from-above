@@ -33,6 +33,10 @@ const markSky = (d: number) => {
 markSky(sky.daylight);
 
 const map = createBaseMap(document.getElementById("map")!, sky.daylight);
+// On small screens the credits start collapsed behind their (i) button.
+if (matchMedia("(max-width: 640px)").matches) {
+  map.once("load", () => document.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show"));
+}
 const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
 map.addControl(overlay);
 

@@ -6,6 +6,13 @@ import { blendPair, through3, type Pair } from "./color.ts";
 
 /** Frames the seven-county core: Minneapolis–Saint Paul plus inner suburbs. */
 export const METRO_CENTER: [number, number] = [-93.18, 44.96];
+/**
+ * What the first view must show, whatever the screen's shape: both
+ * downtowns, the U and MSP. A tall phone fits it by zooming out a little.
+ */
+export const CORE_BOUNDS: [[number, number], [number, number]] = [[-93.38, 44.86], [-93.03, 45.02]];
+/** Sharper than 2x costs a phone a lot of GPU for detail nobody can see. */
+export const MAX_PIXEL_RATIO = 2;
 export const METRO_BOUNDS: [[number, number], [number, number]] = [[-94.15, 44.55], [-92.55, 45.35]];
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
@@ -84,8 +91,10 @@ export function createBaseMap(container: HTMLElement, initialDaylight = 0): Map 
   const map = new Map({
     container,
     style: STYLE_URL,
-    center: METRO_CENTER,
-    zoom: 10.3,
+    // Fit the core to this screen, but never closer than the classic metro view.
+    bounds: CORE_BOUNDS,
+    fitBoundsOptions: { padding: 24, maxZoom: 10.3 },
+    pixelRatio: Math.min(devicePixelRatio || 1, MAX_PIXEL_RATIO),
     minZoom: 8.5,
     maxZoom: 18.5,
     maxBounds: METRO_BOUNDS,

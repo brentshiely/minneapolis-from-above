@@ -27,7 +27,16 @@ export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedS
     const buses = moving - trains;
     const planes = air ? [...air.planes.values()].filter((p) => p.alpha > 0.5 && !p.onGround).length : 0;
     const conditions = weather?.();
-    el.textContent = `${buses} buses · ${trains} trains${air ? ` · ${planes} planes` : ""}${conditions ? ` · ${conditions}` : ""} · live`;
+    // Two parts, so narrow screens can stack them on separate lines.
+    const counts = document.createElement("span");
+    counts.textContent = `${buses} buses · ${trains} trains${air ? ` · ${planes} planes` : ""}`;
+    const sky = document.createElement("span");
+    sky.className = "sky";
+    sky.textContent = `${conditions ? `${conditions} · ` : ""}live`;
+    const sep = document.createElement("span");
+    sep.className = "sep";
+    sep.textContent = " · ";
+    el.replaceChildren(counts, sep, sky);
   };
   render();
   return setInterval(render, 1000);

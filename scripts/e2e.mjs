@@ -4,7 +4,7 @@
 //   node scripts/e2e.mjs [url]
 //
 // Exits non-zero if any check fails.
-import puppeteer from "puppeteer-core";
+import puppeteer, { KnownDevices } from "puppeteer-core";
 
 const url = process.argv[2] ?? "http://localhost:5173";
 const CHROME = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
@@ -30,8 +30,9 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1280, height: 800 },
 });
 
-async function openApp({ reduced = false, query = "" } = {}) {
+async function openApp({ reduced = false, query = "", phone = false } = {}) {
   const page = await browser.newPage();
+  if (phone) await page.emulate(KnownDevices["iPhone 13"]);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
@@ -391,6 +392,78 @@ try {
       return `background ${r.bg}, daylight ${r.daylight.toFixed(2)}`;
     });
     await sky.page.close();
+  }
+
+  {
+    const phone = await openApp({ phone: true, query: "?idle=4" });
+    const p = phone.page;
+    await sleep(2500);
+    const fits = () => p.evaluate(() => {
+      const box = (el) => el && !el.hidden ? el.getBoundingClientRect() : null;
+      const out = [];
+      for (const id of ["status", "tip", "caption"]) {
+        const b = box(document.getElementById(id));
+        if (b && b.width && (b.left < 0 || b.right > innerWidth || b.bottom > innerHeight)) out.push(`${id} ${Math.round(b.left)}..${Math.round(b.right)}`);
+      }
+      if (document.documentElement.scrollWidth > innerWidth) out.push("page scrolls sideways");
+      return out;
+    });
+    await check("phone: nothing spills off a 390 px screen", async () => {
+      const bad = await fits();
+      assert(bad.length === 0, bad.join(", "));
+      const both = await p.evaluate(() => {
+        const b = window.fromAbove.map.getBounds();
+        return b.contains([-93.268, 44.976]) && b.contains([-93.094, 44.948]);
+      });
+      assert(both, "both downtowns aren't in the first view");
+    });
+    await check("phone: tapping a bus shows its tooltip, on screen; tapping elsewhere dismisses it", async () => {
+      const id = await p.evaluate(() => {
+        const all = window.fromAbove.fleet.list().filter((x) => x.alpha === 1);
+        const clear = (v) => all.every((o) => o === v || Math.hypot((o.position[0] - v.position[0]) * 70_000, (o.position[1] - v.position[1]) * 111_000) > 250);
+        const v = all.find((x) => x.mode === "bus" && clear(x));
+        window.fromAbove.map.jumpTo({ center: v.position, zoom: 13 });
+        return v.id;
+      });
+      await sleep(800);
+      const pt = await p.evaluate((id) => { const g = window.fromAbove; return g.map.project(g.fleet.vehicles.get(id).position); }, id);
+      await p.touchscreen.tap(pt.x + 6, pt.y + 5); // a fingertip, not a pixel-perfect hit
+      await sleep(600);
+      const tip = await p.$eval("#tip", (el) => (el.hidden ? "" : el.innerText));
+      const bad = await fits();
+      await p.touchscreen.tap(30, 120);
+      await sleep(400);
+      const gone = await p.$eval("#tip", (el) => el.hidden);
+      assert(/bus/.test(tip), `got "${tip}"`);
+      assert(bad.length === 0, bad.join(", "));
+      assert(gone, "tooltip stayed after tapping elsewhere");
+      return tip.split("\n")[0];
+    });
+    await check("phone: tapping the Mississippi shows its level", async () => {
+      await p.evaluate(() => window.fromAbove.map.jumpTo({ center: [-93.1, 44.938], zoom: 13.5 }));
+      await sleep(3500);
+      const pt = await p.evaluate(() => window.fromAbove.map.project([-93.1, 44.938]));
+      await p.touchscreen.tap(pt.x, pt.y);
+      await sleep(2500);
+      const tip = await p.$eval("#tip", (el) => (el.hidden ? "" : el.innerText));
+      const bad = await fits();
+      assert(/^Mississippi River/.test(tip), `got "${tip}"`);
+      assert(bad.length === 0, bad.join(", "));
+      await p.touchscreen.tap(30, 120);
+    });
+    await check("phone: touching the screen stops the drift", async () => {
+      await sleep(6000);
+      const before = await p.evaluate(() => window.fromAbove.drift.drifting);
+      await p.touchscreen.tap(200, 300);
+      await sleep(300);
+      const after = await p.evaluate(() => window.fromAbove.drift.drifting);
+      assert(before, "never started drifting");
+      assert(!after, "still drifting after a touch");
+    });
+    await check("phone: no console errors", async () => {
+      assert(phone.errors.length === 0, phone.errors.join(" | "));
+    });
+    await p.close();
   }
 
   const reduced = await openApp({ reduced: true });

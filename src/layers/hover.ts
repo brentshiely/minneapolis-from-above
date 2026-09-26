@@ -7,6 +7,10 @@ import { planeColor, vehicleColor } from "../palette.ts";
 import { mixRgb } from "../color.ts";
 import { BUS_ICON, TRAIN_ICON } from "../icons.ts";
 
+/** Fingers are bigger than mouse pointers: widen hit areas on touch screens. */
+const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+const FINGER = coarse ? 1.8 : 1;
+
 /**
  * Invisible, generous hit areas so small moving dots are easy to hover.
  * Alpha 1/255 rather than 0 so they still render into the picking pass.
@@ -21,7 +25,7 @@ export function pickLayers(vehicles: Vehicle[], planes: Plane[], version: number
       getFillColor: [0, 0, 0, 1],
       getRadius: 1,
       radiusUnits: "pixels",
-      radiusMinPixels: 10,
+      radiusMinPixels: 10 * FINGER,
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: version },
     }),
@@ -33,7 +37,7 @@ export function pickLayers(vehicles: Vehicle[], planes: Plane[], version: number
       getFillColor: [0, 0, 0, 1],
       getRadius: 1,
       radiusUnits: "pixels",
-      radiusMinPixels: 16,
+      radiusMinPixels: 16 * FINGER,
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: version },
     }),
