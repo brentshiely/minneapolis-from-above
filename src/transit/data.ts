@@ -13,7 +13,8 @@ export interface TransitFile {
   generated: string;
   feed: { version: string; start: string; end: string };
   routes: Record<string, RouteInfo>;
-  shapes: { id: string; route: string; line: string }[];
+  /** `head` is the destination sign, `dir` the direction (NB, SB, EB, WB). */
+  shapes: { id: string; route: string; head: string; dir: string; line: string }[];
   trips: Record<string, number>;
 }
 
@@ -21,6 +22,10 @@ export interface TransitFile {
 export interface Shape {
   id: string;
   route: string;
+  /** Destination sign most trips on this shape show, e.g. "Selby-Lake / Lake & France". */
+  headsign: string;
+  /** NB, SB, EB or WB. */
+  direction: string;
   /** [lon, lat] vertices. */
   path: [number, number][];
   /** Cumulative distance in meters at each vertex; cum[0] = 0. */
@@ -65,14 +70,14 @@ export function distM(a: readonly [number, number], b: readonly [number, number]
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-export function buildShape(id: string, route: string, path: [number, number][]): Shape {
+export function buildShape(id: string, route: string, path: [number, number][], headsign = "", direction = ""): Shape {
   const cum = new Float64Array(path.length);
   for (let i = 1; i < path.length; i++) cum[i] = cum[i - 1] + distM(path[i - 1], path[i]);
-  return { id, route, path, cum, length: cum[path.length - 1] ?? 0 };
+  return { id, route, headsign, direction, path, cum, length: cum[path.length - 1] ?? 0 };
 }
 
 export function parseTransit(file: TransitFile): Transit {
-  const shapes = file.shapes.map((s) => buildShape(s.id, s.route, decodePolyline(s.line)));
+  const shapes = file.shapes.map((s) => buildShape(s.id, s.route, decodePolyline(s.line), s.head ?? "", s.dir ?? ""));
   return {
     file,
     routes: file.routes,

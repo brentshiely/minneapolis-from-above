@@ -12,3 +12,15 @@ export const PLANE_ICON = {
   width: 64, height: 64, anchorY: 32, mask: true,
   id: "plane",
 };
+
+/** Top-down bus: body with a windshield cut out at the front (north). */
+export const BUS_ICON = {
+  url: svg(`<path fill="#fff" fill-rule="evenodd" d="M25 4h14a5 5 0 0 1 5 5v46a5 5 0 0 1-5 5H25a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5zm1 5v8h12V9z"/>`),
+  width: 64, height: 64, mask: true, id: "bus",
+};
+
+/** Top-down light rail train: two cars joined, cab window at the front. */
+export const TRAIN_ICON = {
+  url: svg(`<path fill="#fff" fill-rule="evenodd" d="M27 1h10a5 5 0 0 1 5 5v24H22V6a5 5 0 0 1 5-5zm1 4v6h8V5zM22 34h20v24a5 5 0 0 1-5 5H27a5 5 0 0 1-5-5zM30 30h4v4h-4z"/>`),
+  width: 64, height: 64, mask: true, id: "train",
+};

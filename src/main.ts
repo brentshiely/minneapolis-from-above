@@ -12,6 +12,8 @@ import { aircraftLayers, type AircraftFrame } from "./layers/aircraft.ts";
 import type { AircraftResponse } from "../functions/api/aircraft.ts";
 import { Trails } from "./live/trails.ts";
 import { startStatus } from "./status.ts";
+import { Hover } from "./hover.ts";
+import { pickLayers } from "./layers/hover.ts";
 
 const map = createBaseMap(document.getElementById("map")!);
 const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
@@ -42,6 +44,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const air = new AirFleet();
   const airTrails = new Trails<Plane>(45);
   const a: AircraftFrame = { planes: [], trails: [], now: 0, version: 0, trailsVersion: 0 };
+  const hover = new Hover(map, overlay, fleet, air, transit);
 
   /** Trail geometry is rebuilt a few times a second; the fade animates every frame. */
   const TRAIL_REBUILD_S = 0.25;
@@ -77,7 +80,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     f.version++;
     overlay.setProps({
       // Planes fly above everything on the ground.
-      layers: [...routes, ...(still ? [] : trailLayers(transit, f)), ...vehicleLayers(transit, f), ...aircraftLayers(a)],
+      layers: [
+        ...routes,
+        ...(still ? [] : trailLayers(transit, f)),
+        ...vehicleLayers(transit, f),
+        ...aircraftLayers(a),
+        ...pickLayers(fleet.list().filter((v) => v.alpha > 0.3), a.planes, f.version),
+        ...hover.frame(now, f.version),
+      ],
     });
     requestAnimationFrame(frame);
   };
@@ -102,7 +112,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   startStatus(document.getElementById("status")!, fleet, feed, air);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };

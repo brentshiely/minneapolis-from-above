@@ -24,3 +24,30 @@ html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-
   font-variant-numeric: tabular-nums;
 }
 #status.stalled { color: #b98a4a; }
+
+#tip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  max-width: min(300px, calc(100vw - 16px));
+  padding: 9px 12px 8px;
+  border-radius: 8px;
+  background: rgba(10, 15, 21, 0.9);
+  border: 1px solid rgba(120, 140, 160, 0.22);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  color: #dfe6ec;
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  pointer-events: none;
+  z-index: 2;
+  display: grid;
+  gap: 3px;
+}
+#tip .tip-title { font-weight: 600; text-wrap: balance; }
+#tip .tip-detail { color: #b3bec8; }
+#tip .tip-meta {
+  margin-top: 2px;
+  color: #6f7d8a;
+  font: 500 11px/1.3 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.02em;
+}

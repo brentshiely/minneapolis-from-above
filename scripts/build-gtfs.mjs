@@ -151,9 +151,23 @@ for (const s of shapeRows) {
   pts.push([Number(s.shape_pt_sequence), Number(s.shape_pt_lon), Number(s.shape_pt_lat)]);
 }
 
-// Each shape's route comes from the trips that use it.
+// Each shape's route, and its most common destination sign and direction,
+// come from the trips that use it.
 const shapeRoute = new Map();
-for (const t of tripRows) if (t.shape_id && !shapeRoute.has(t.shape_id)) shapeRoute.set(t.shape_id, t.route_id);
+const shapeSigns = new Map();
+for (const t of tripRows) {
+  if (!t.shape_id) continue;
+  if (!shapeRoute.has(t.shape_id)) shapeRoute.set(t.shape_id, t.route_id);
+  let counts = shapeSigns.get(t.shape_id);
+  if (!counts) shapeSigns.set(t.shape_id, (counts = new Map()));
+  const key = `${t.trip_headsign}\t${t.direction}`;
+  counts.set(key, (counts.get(key) ?? 0) + 1);
+}
+const signOf = (shapeId) => {
+  const [best] = [...shapeSigns.get(shapeId).entries()].sort((a, b) => b[1] - a[1]);
+  const [head, dir] = best[0].split("\t");
+  return { head, dir };
+};
 
 const shapes = [];
 const shapeIndex = new Map();
@@ -165,7 +179,7 @@ for (const [id, pts] of rawShapes) {
   const simple = simplify(line, SIMPLIFY_M);
   rawPts += line.length; keptPts += simple.length;
   shapeIndex.set(id, shapes.length);
-  shapes.push({ id, route: shapeRoute.get(id), line: encodePolyline(simple) });
+  shapes.push({ id, route: shapeRoute.get(id), ...signOf(id), line: encodePolyline(simple) });
 }
 
 const trips = {};

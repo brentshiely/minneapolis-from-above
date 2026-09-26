@@ -142,6 +142,84 @@ try {
     return `${r.flying} flying, all moved within 1 s`;
   });
 
+  // Point the real mouse at something and read the tooltip.
+  async function hoverOn(pickFn) {
+    const target = await page.evaluate(pickFn);
+    if (!target) return null;
+    await page.evaluate(({ center }) => window.fromAbove.map.jumpTo({ center, zoom: 13 }), target);
+    await sleep(600);
+    const pt = await page.evaluate((id, kind) => {
+      const g = window.fromAbove;
+      const o = kind === "plane" ? g.air.planes.get(id) : g.fleet.vehicles.get(id);
+      const p = g.map.project(o.position);
+      return { x: p.x, y: p.y };
+    }, target.id, target.kind);
+    await page.mouse.move(pt.x, pt.y);
+    await sleep(2500); // flight lookups take a moment
+    const tip = await page.$eval("#tip", (el) => ({ hidden: el.hidden, text: el.innerText }));
+    await page.mouse.move(5, 5);
+    await sleep(300);
+    const after = await page.$eval("#tip", (el) => el.hidden);
+    return { ...target, tip, hiddenAfter: after };
+  }
+
+  await check("hovering a bus shows its icon and a plain-language tooltip", async () => {
+    const r = await hoverOn(() => {
+      const v = window.fromAbove.fleet.list().find((x) => x.mode === "bus" && x.alpha === 1 && x.motion.onShape);
+      return v && { id: v.id, kind: "vehicle", center: v.position };
+    });
+    assert(r, "no bus to hover");
+    assert(!r.tip.hidden, "tooltip hidden");
+    assert(/^Route \S+.* bus/.test(r.tip.text), `got "${r.tip.text}"`);
+    assert(/Bus \S+ · updated/.test(r.tip.text), `got "${r.tip.text}"`);
+    assert(r.hiddenAfter, "tooltip stayed after mouse left");
+    return r.tip.text.replace(/\n/g, " | ");
+  });
+
+  await check("hovering a train names its line", async () => {
+    const r = await hoverOn(() => {
+      const v = window.fromAbove.fleet.list().find((x) => x.mode === "rail" && x.alpha === 1);
+      return v && { id: v.id, kind: "vehicle", center: v.position };
+    });
+    if (!r) return "no trains running right now (skipped)";
+    assert(/^METRO .+ train/.test(r.tip.text), `got "${r.tip.text}"`);
+    return r.tip.text.replace(/\n/g, " | ");
+  });
+
+  await check("hovering a plane describes it in plain language", async () => {
+    const r = await hoverOn(() => {
+      // Only planes inside the map's pan limits can be centered on.
+      const inView = ([lon, lat]) => lon > -94.0 && lon < -92.7 && lat > 44.65 && lat < 45.25;
+      const planes = [...window.fromAbove.air.planes.values()].filter((p) => !p.onGround && p.alpha === 1 && inView(p.position));
+      const p = planes.find((x) => /^[A-Z]{3}\d/.test(x.callsign)) ?? planes[0];
+      return p && { id: p.id, kind: "plane", center: p.position };
+    });
+    assert(r, "no plane to hover");
+    assert(!r.tip.hidden, "tooltip hidden");
+    assert(/(flight \S+|^An? .+)\./.test(r.tip.text), `got "${r.tip.text}"`);
+    assert(/(climbing|descending|cruising|flying|taxiing|ground)/i.test(r.tip.text), `got "${r.tip.text}"`);
+    return r.tip.text.replace(/\n/g, " | ");
+  });
+
+  await check("tapping pins the tooltip until tapping elsewhere", async () => {
+    const t = await page.evaluate(() => {
+      const v = window.fromAbove.fleet.list().find((x) => x.alpha === 1);
+      window.fromAbove.map.jumpTo({ center: v.position, zoom: 13 });
+      return v.id;
+    });
+    await sleep(500);
+    const pt = await page.evaluate((id) => { const g = window.fromAbove; const p = g.map.project(g.fleet.vehicles.get(id).position); return { x: p.x, y: p.y }; }, t);
+    await page.mouse.click(pt.x, pt.y);
+    await page.mouse.move(pt.x + 200, pt.y + 200);
+    await sleep(400);
+    const pinned = await page.$eval("#tip", (el) => !el.hidden);
+    await page.mouse.click(pt.x + 200, pt.y + 200);
+    await sleep(300);
+    const cleared = await page.$eval("#tip", (el) => el.hidden);
+    assert(pinned, "tooltip not pinned after tap");
+    assert(cleared, "tooltip not cleared by tapping elsewhere");
+  });
+
   await check("no console errors", async () => {
     assert(errors.length === 0, errors.join(" | "));
   });
