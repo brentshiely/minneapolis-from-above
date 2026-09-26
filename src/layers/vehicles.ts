@@ -56,7 +56,8 @@ export function trailLayers(transit: Transit, f: VehicleFrame) {
     return new TripsLayer<Trail<Vehicle>>({
       id: `trails-${mode}`,
       data: byMode[mode],
-      getPath: (t) => t.path,
+      getPath: (t) => t.flat,
+      positionFormat: "XY",
       getTimestamps: (t) => t.times,
       getColor: (t) => [...color(t.vehicle), look.trailAlpha * t.vehicle.alpha],
       getWidth: look.trailM,
@@ -66,6 +67,11 @@ export function trailLayers(transit: Transit, f: VehicleFrame) {
       capRounded: true,
       jointRounded: true,
       fadeTrail: true,
+      // Trails are never loops, and are handed over pre-flattened. Without
+      // this, deck.gl treats a path whose ends coincide as closed and sizes
+      // its buffers differently from the timestamps, corrupting neighbors
+      // or throwing "offset is out of bounds".
+      _pathType: "open",
       trailLength: look.trailS,
       currentTime: f.now,
       parameters: ADDITIVE,

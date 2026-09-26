@@ -43,7 +43,8 @@ export function aircraftLayers(f: AircraftFrame) {
     new TripsLayer<Trail<Plane>>({
       id: "contrails",
       data: airborne,
-      getPath: (t) => t.path,
+      getPath: (t) => t.flat,
+      positionFormat: "XY",
       getTimestamps: (t) => t.times,
       getColor: (t) => [...SKY, 70 * t.vehicle.alpha * opacity(t.vehicle)],
       getWidth: 2,
@@ -51,6 +52,11 @@ export function aircraftLayers(f: AircraftFrame) {
       capRounded: true,
       jointRounded: true,
       fadeTrail: true,
+      // Trails are never loops, and are handed over pre-flattened. Without
+      // this, deck.gl treats a path whose ends coincide as closed and sizes
+      // its buffers differently from the timestamps, corrupting neighbors
+      // or throwing "offset is out of bounds".
+      _pathType: "open",
       trailLength: 45,
       currentTime: f.now,
       parameters: { depthCompare: "always" },

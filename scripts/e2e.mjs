@@ -196,7 +196,8 @@ try {
     });
     assert(r, "no plane to hover");
     assert(!r.tip.hidden, "tooltip hidden");
-    assert(/(flight \S+|^An? .+)\./.test(r.tip.text), `got "${r.tip.text}"`);
+    const title = r.tip.text.split("\n")[0];
+    assert(/^(.+ flight \d+|An? .+)[^.]*\.$/.test(title), `got "${title}"`);
     assert(/(climbing|descending|cruising|flying|taxiing|ground)/i.test(r.tip.text), `got "${r.tip.text}"`);
     return r.tip.text.replace(/\n/g, " | ");
   });

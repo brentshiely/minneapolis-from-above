@@ -7,6 +7,8 @@ export const TRAIL_S = 90;
 const SAMPLE_S = 1;
 /** A jump longer than this between samples is a teleport; the trail restarts. */
 const BREAK_M = 250;
+/** A trail spanning less than this has nothing to draw. */
+const MIN_SPAN_M = 0.5;
 
 /** Anything that moves and can leave a trail. */
 export interface Mover {
@@ -17,6 +19,8 @@ export interface Mover {
 export interface Trail<T extends Mover = Mover> {
   vehicle: T;
   path: LonLat[];
+  /** The same path as flat [lon, lat, lon, lat, ...] for deck.gl. */
+  flat: Float64Array;
   /** Seconds on the page clock, one per path point. */
   times: number[];
 }
@@ -26,8 +30,11 @@ export interface Trail<T extends Mover = Mover> {
  * `snapshot` appends each vehicle's current position so the trail meets the
  * vehicle exactly.
  */
+/** A trail as stored between samples. */
+type Stored<T> = { vehicle: T; path: LonLat[]; times: number[] };
+
 export class Trails<T extends Mover> {
-  private trails = new Map<string, Trail<T>>();
+  private trails = new Map<string, Stored<T>>();
   private lastSample = -Infinity;
   private seconds: number;
 
@@ -62,7 +69,13 @@ export class Trails<T extends Mover> {
       const last = t.path[t.path.length - 1];
       if (!last) continue;
       if (distM(last, head) > BREAK_M) continue; // mid-teleport; restarts next sample
-      out.push({ vehicle: t.vehicle, path: [...t.path, head], times: [...t.times, now] });
+      // Skip vehicles that haven't moved: nothing to draw, and a path whose
+      // points all coincide is one deck.gl would misread as a closed loop.
+      if (!t.path.some((p) => distM(p, head) > MIN_SPAN_M)) continue;
+      const path = [...t.path, head];
+      const flat = new Float64Array(path.length * 2);
+      path.forEach((p, i) => { flat[i * 2] = p[0]; flat[i * 2 + 1] = p[1]; });
+      out.push({ vehicle: t.vehicle, path, flat, times: [...t.times, now] });
     }
     return out;
   }

@@ -25,7 +25,10 @@ test("forgets points older than the trail length", () => {
   const v: Partial<Vehicle> = { id: "a", mode: "bus", position: [-93.27, 44.97] };
   const fleet = fakeFleet([v]);
   const trails = new Trails<Vehicle>();
-  for (let t = 0; t <= TRAIL_S + 60; t += 1) trails.record(fleet.vehicles, t);
+  for (let t = 0; t <= TRAIL_S + 60; t += 1) {
+    v.position = [-93.27 + t * 0.0001, 44.97];
+    trails.record(fleet.vehicles, t);
+  }
   const [trail] = trails.snapshot(TRAIL_S + 60);
   assert.ok(trail.times[0] >= 60 - 1e-9, `oldest point at ${trail.times[0]}`);
 });
@@ -38,6 +41,7 @@ test("a teleport restarts the trail instead of drawing a streak", () => {
   v.position = [-93.2, 44.97]; // ~5.5 km east
   assert.equal(trails.snapshot(5).length, 0, "no trail drawn mid-teleport");
   trails.record(fleet.vehicles, 5);
+  v.position = [-93.1999, 44.97];
   const [trail] = trails.snapshot(5.5);
   assert.equal(trail.path.length, 2, "fresh trail: one sample plus head");
 });
@@ -49,4 +53,16 @@ test("drops trails for vehicles that left the fleet", () => {
   fleet.vehicles.clear();
   trails.record(fleet.vehicles, 1);
   assert.equal(trails.snapshot(1).length, 0);
+});
+
+test("vehicles that haven't moved leave no trail", () => {
+  const v: Partial<Vehicle> = { id: "a", mode: "brt", position: [-93.27, 44.97] };
+  const fleet = fakeFleet([v]);
+  const trails = new Trails<Vehicle>();
+  trails.record(fleet.vehicles, 0);
+  assert.equal(trails.snapshot(0.5).length, 0, "just appeared: one sample plus a head at the same spot");
+  for (let t = 1; t <= 60; t++) trails.record(fleet.vehicles, t);
+  assert.equal(trails.snapshot(60.5).length, 0, "parked for a minute");
+  v.position = [-93.2699, 44.97]; // ~8 m
+  assert.equal(trails.snapshot(61).length, 1, "moving again");
 });
