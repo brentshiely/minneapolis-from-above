@@ -1,2 +1,5 @@
-html, body { margin: 0; height: 100%; background: #0b1017; color: #c9d3dc; font-family: system-ui, sans-serif; }
+html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
 #map { position: fixed; inset: 0; }
+.maplibregl-ctrl-attrib.maplibregl-compact { background: rgba(7, 11, 16, 0.6); color: #5d6b78; }
+.maplibregl-ctrl-attrib a { color: #7d8b98; }
+.maplibregl-ctrl-attrib-button { filter: invert(0.7); }
