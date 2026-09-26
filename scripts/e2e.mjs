@@ -69,7 +69,7 @@ try {
 
   await check("status line shows live counts", async () => {
     const text = await page.$eval("#status", (el) => el.textContent);
-    assert(/^\d+ buses · \d+ trains · \d+ planes( · -?\d+°F, [a-z ]+)? · live$/.test(text), `got "${text}"`);
+    assert(/^\d+ buses · \d+ trains · \d+ planes( · -?\d+°F, [a-z ]+ · (calm|([NESW]{1,2} )?wind \d+ mph(, gusting to \d+)?))? · live$/.test(text), `got "${text}"`);
     return text;
   });
 
@@ -280,6 +280,32 @@ try {
       return `${r.lit} snow pixels`;
     });
     await snow.page.close();
+
+    const breeze = await openApp({ query: "?weather=breezy" });
+    await sleep(1500);
+    await check("wind threads drift the way the wind blows, at a pace proportional to it", async () => {
+      const r = await breeze.page.evaluate(async () => {
+        const fx = window.fromAbove.fx;
+        const snap = () => new Map(fx.threads.map((t) => [t, [t.x, t.y, t.age]]));
+        const a = snap();
+        await new Promise((r) => setTimeout(r, 1000));
+        let vx = 0, vy = 0, n = 0;
+        for (const t of fx.threads) {
+          const p = a.get(t);
+          if (!p || t.age < p[2]) continue; // respawned meanwhile
+          vx += t.x - p[0]; vy += t.y - p[1]; n++;
+        }
+        return { vx: vx / n, vy: vy / n, n, wind: fx.current.wind, toward: fx.current.windToward, mph: fx.current.windMph };
+      });
+      // Breezy preview: NW wind 12 mph, blowing toward the southeast (135°): down and right on screen.
+      const angle = (Math.atan2(r.vx, -r.vy) * 180 / Math.PI + 360) % 360;
+      const speed = Math.hypot(r.vx, r.vy);
+      assert(r.n > 10, `only ${r.n} threads measured`);
+      assert(Math.abs(angle - r.toward) < 12, `drifting toward ${angle.toFixed(0)}°, wind toward ${r.toward}°`);
+      assert(Math.abs(speed - r.mph * 6) / (r.mph * 6) < 0.15, `${speed.toFixed(0)} px/s for ${r.mph} mph`);
+      return `${r.wind}: drifting toward ${angle.toFixed(0)}° at ${speed.toFixed(0)} px/s`;
+    });
+    await breeze.page.close();
 
     const storm = await openApp({ query: "?weather=storm" });
     await check("thunderstorms flicker with lightning now and then", async () => {

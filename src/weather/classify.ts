@@ -1,3 +1,5 @@
+import { windPhrase } from "./wind.ts";
+
 /**
  * Turns a National Weather Service observation into what the map shows:
  * a plain summary for the status line and the ingredients for effects.
@@ -22,6 +24,10 @@ export interface Weather {
   /** Direction the wind blows toward, degrees clockwise from north. */
   windToward: number;
   windMph: number;
+  /** Gust speed when reported. */
+  gustMph: number | null;
+  /** e.g. "NW wind 12 mph, gusting to 25", or "calm". */
+  wind: string;
 }
 
 interface Measure { value: number | null }
@@ -30,6 +36,7 @@ export interface NwsObservation {
   textDescription?: string;
   temperature?: Measure;
   windSpeed?: Measure;
+  windGust?: Measure;
   windDirection?: Measure;
   visibility?: Measure;
   presentWeather?: { intensity?: string | null; weather?: string | null; rawString?: string }[];
@@ -44,6 +51,8 @@ export function classify(obs: NwsObservation): Weather {
   const tempF = typeof c === "number" ? Math.round(c * 9 / 5 + 32) : null;
   const kmh = obs.windSpeed?.value;
   const windMph = typeof kmh === "number" ? Math.round(kmh * 0.621371) : 0;
+  const gustKmh = obs.windGust?.value;
+  const gustMph = typeof gustKmh === "number" ? Math.round(gustKmh * 0.621371) : null;
   const from = obs.windDirection?.value;
   const windToward = typeof from === "number" ? (from + 180) % 360 : 90; // calm: drift gently east
   const m = obs.visibility?.value;
@@ -64,7 +73,8 @@ export function classify(obs: NwsObservation): Weather {
   const parts: string[] = [];
   if (tempF !== null) parts.push(`${tempF}°F`);
   parts.push(describe(precip, intensity, thunder, cloudCover, visibilityMi, obs.textDescription));
-  return { t, summary: parts.join(", "), tempF, precip, intensity, thunder, cloudCover, visibilityMi, windToward, windMph };
+  const wind = windPhrase(typeof from === "number" ? from : null, windMph, gustMph);
+  return { t, summary: parts.join(", "), tempF, precip, intensity, thunder, cloudCover, visibilityMi, windToward, windMph, gustMph, wind };
 }
 
 function describe(p: Precip, i: Intensity, thunder: boolean, cover: number, vis: number | null, text?: string): string {
@@ -89,7 +99,13 @@ export function previewWeather(spec: string): Weather | undefined {
   const s = spec.toLowerCase();
   if (!s) return undefined;
   const intensity: Intensity = s.includes("heavy") ? "heavy" : s.includes("light") ? "light" : "moderate";
-  const base = { t: Date.now() / 1000, tempF: 30, intensity, thunder: false, cloudCover: 1, visibilityMi: 10, windToward: 120, windMph: 12 };
+  // "windy" previews a stiff northwest wind; everything else a moderate one.
+  const windMph = s.includes("windy") ? 24 : s.includes("calm") ? 0 : 12;
+  const gustMph = s.includes("windy") ? 38 : null;
+  const base = {
+    t: Date.now() / 1000, tempF: 30, intensity, thunder: false, cloudCover: 1, visibilityMi: 10,
+    windToward: 135, windMph, gustMph, wind: windPhrase(315, windMph, gustMph),
+  };
   let w: Omit<Weather, "summary">;
   if (s.includes("snow")) w = { ...base, precip: "snow", visibilityMi: intensity === "heavy" ? 0.8 : 3 };
   else if (s.includes("storm")) w = { ...base, tempF: 72, precip: "rain", thunder: true, intensity: "heavy" };
@@ -97,6 +113,7 @@ export function previewWeather(spec: string): Weather | undefined {
   else if (s.includes("fog")) w = { ...base, tempF: 45, precip: "none", visibilityMi: 0.4 };
   else if (s.includes("partly")) w = { ...base, tempF: 68, precip: "none", cloudCover: 0.45 };
   else if (s.includes("overcast")) w = { ...base, tempF: 50, precip: "none" };
+  else if (s.includes("windy") || s.includes("breezy")) w = { ...base, tempF: 55, precip: "none", cloudCover: 0.2 };
   else w = { ...base, tempF: 70, precip: "none", cloudCover: 0 };
   const summary = `${w.tempF}°F, ${describe(w.precip, w.intensity, w.thunder, w.cloudCover, w.visibilityMi)}`;
   return { ...w, summary };

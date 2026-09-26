@@ -197,7 +197,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     for (const p of [feed, airFeed, weatherFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
-  startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current?.summary);
+  startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current && `${fx.current.summary} · ${fx.current.wind}`);
 
   (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, sky: () => sky };
 });
