@@ -6,9 +6,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc",
-    "test": "node --test test/",
+    "test": "node --test \"test/**/*.test.ts\"",
     "preview": "wrangler pages dev dist",
-    "deploy": "npm run build && wrangler pages deploy dist"
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "build:data": "node scripts/build-gtfs.mjs"
   },
   "author": "",
   "license": "UNLICENSED",
