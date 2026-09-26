@@ -10,7 +10,7 @@ function pagesFunctions(): Plugin {
     configureServer(server) {
       server.middlewares.use("/api", async (req, res, next) => {
         const name = /^\/(\w+)/.exec(req.url ?? "")?.[1];
-        if (!name || !["vehicles", "aircraft", "flight", "weather"].includes(name)) return next();
+        if (!name || !["vehicles", "aircraft", "flight", "weather", "water"].includes(name)) return next();
         try {
           const mod = await server.ssrLoadModule(`/functions/api/${name}.ts`);
           const response: Response = await mod.onRequestGet({ request: new Request(`http://localhost/api${req.url}`), env: process.env });

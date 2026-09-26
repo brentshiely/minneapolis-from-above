@@ -2,6 +2,7 @@ import { IconLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Vehicle } from "../live/fleet.ts";
 import type { Plane } from "../live/aircraft.ts";
 import type { Transit } from "../transit/data.ts";
+import type { Gauge } from "../water/gauges.ts";
 import { planeColor, vehicleColor } from "../palette.ts";
 import { mixRgb } from "../color.ts";
 import { BUS_ICON, TRAIN_ICON } from "../icons.ts";
@@ -93,6 +94,27 @@ export function planeHighlight(p: Plane, version: number, d = 0) {
       radiusUnits: "pixels",
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: version, getFillColor: d, getLineColor: d },
+    }),
+  ];
+}
+
+/** A small ring on the gauge itself, so you can see where the reading comes from. */
+export function gaugeHighlight(g: Gauge, d = 0) {
+  const ring = mixRgb([130, 190, 255], [30, 100, 190], d);
+  return [
+    new ScatterplotLayer<Gauge>({
+      id: "hover-gauge",
+      data: [g],
+      getPosition: (x) => [x.lon, x.lat],
+      getFillColor: [...ring, 60],
+      getLineColor: [...ring, 230],
+      stroked: true,
+      lineWidthUnits: "pixels",
+      getLineWidth: 1.5,
+      getRadius: 7,
+      radiusUnits: "pixels",
+      parameters: { depthCompare: "always" },
+      updateTriggers: { getFillColor: d, getLineColor: d },
     }),
   ];
 }

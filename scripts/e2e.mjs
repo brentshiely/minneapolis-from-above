@@ -178,7 +178,10 @@ try {
 
   await check("hovering a train names its line", async () => {
     const r = await hoverOn(() => {
-      const v = window.fromAbove.fleet.list().find((x) => x.mode === "rail" && x.alpha === 1);
+      // A train with no other vehicle close enough to share the cursor.
+      const all = window.fromAbove.fleet.list().filter((x) => x.alpha === 1);
+      const clear = (v) => all.every((o) => o === v || Math.hypot((o.position[0] - v.position[0]) * 70_000, (o.position[1] - v.position[1]) * 111_000) > 150);
+      const v = all.find((x) => x.mode === "rail" && clear(x));
       return v && { id: v.id, kind: "vehicle", center: v.position };
     });
     if (!r) return "no trains running right now (skipped)";
@@ -200,6 +203,38 @@ try {
     assert(/^(.+ flight \d+|An? .+)[^.]*\.$/.test(title), `got "${title}"`);
     assert(/(climbing|descending|cruising|flying|taxiing|ground)/i.test(r.tip.text), `got "${r.tip.text}"`);
     return r.tip.text.replace(/\n/g, " | ");
+  });
+
+  // Water: point the mouse at a river or lake and read its gauge.
+  async function hoverWater(center, zoom = 13.5) {
+    await page.evaluate(({ center, zoom }) => window.fromAbove.map.jumpTo({ center, zoom }), { center, zoom });
+    await sleep(3500);
+    await page.mouse.move(5, 5);
+    const pt = await page.evaluate((c) => window.fromAbove.map.project(c), center);
+    await page.mouse.move(pt.x, pt.y);
+    await sleep(2500);
+    const text = await page.$eval("#tip", (el) => (el.hidden ? "" : el.innerText));
+    await page.mouse.move(5, 5);
+    await sleep(200);
+    return text;
+  }
+  for (const [name, center, expect] of [
+    ["the Mississippi in Saint Paul", [-93.1, 44.938], /^Mississippi River at/],
+    ["the St. Croix at Stillwater", [-92.795, 45.05], /^St\. Croix River|^Saint Croix River/],
+    ["Lake Minnetonka", [-93.56, 44.935], /^Lake Minnetonka/],
+  ]) {
+    await check(`hovering ${name} shows its water level`, async () => {
+      const text = await hoverWater(center);
+      assert(expect.test(text), `got "${text}"`);
+      assert(/feet/.test(text), `no level in "${text}"`);
+      return text.replace(/\n/g, " | ");
+    });
+  }
+  await check("hovering a lake without a gauge, or dry land, shows nothing", async () => {
+    const harriet = await hoverWater([-93.306, 44.922]);
+    const land = await hoverWater([-93.25, 44.95]);
+    assert(harriet === "", `Lake Harriet showed "${harriet}"`);
+    assert(land === "", `dry land showed "${land}"`);
   });
 
   await check("tapping pins the tooltip until tapping elsewhere", async () => {
@@ -287,13 +322,16 @@ try {
       const r = await breeze.page.evaluate(async () => {
         const fx = window.fromAbove.fx;
         const snap = () => new Map(fx.threads.map((t) => [t, [t.x, t.y, t.age]]));
+        // Measure against the threads' own clock (their age), not a timer
+        // that can fire late under load.
         const a = snap();
         await new Promise((r) => setTimeout(r, 1000));
         let vx = 0, vy = 0, n = 0;
         for (const t of fx.threads) {
           const p = a.get(t);
           if (!p || t.age < p[2]) continue; // respawned meanwhile
-          vx += t.x - p[0]; vy += t.y - p[1]; n++;
+          const elapsed = t.age - p[2];
+          vx += (t.x - p[0]) / elapsed; vy += (t.y - p[1]) / elapsed; n++;
         }
         return { vx: vx / n, vy: vy / n, n, wind: fx.current.wind, toward: fx.current.windToward, mph: fx.current.windMph };
       });

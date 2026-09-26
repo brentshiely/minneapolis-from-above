@@ -18,6 +18,7 @@ import { Hover } from "./hover.ts";
 import { pickLayers } from "./layers/hover.ts";
 import { Drift, IDLE_S, LANDMARKS, type Scene } from "./drift.ts";
 import { AIRLINES, kmBetween } from "./describe.ts";
+import { learnedLakes } from "./water/match.ts";
 import { WeatherFx } from "./weather/effects.ts";
 import { previewWeather, type Weather } from "./weather/classify.ts";
 
@@ -199,7 +200,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current && `${fx.current.summary} · ${fx.current.wind}`);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, sky: () => sky };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, learnedLakes, sky: () => sky };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };

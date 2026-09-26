@@ -5,12 +5,25 @@ import type { Fleet, Vehicle } from "./live/fleet.ts";
 import type { AirFleet, Plane } from "./live/aircraft.ts";
 import type { Transit } from "./transit/data.ts";
 import { describePlane, describeVehicle, type Description, type FlightInfo } from "./describe.ts";
-import { planeHighlight, vehicleHighlight } from "./layers/hover.ts";
+import { gaugeHighlight, planeHighlight, vehicleHighlight } from "./layers/hover.ts";
+import { describeGauge, type Gauge, type GaugeDetail } from "./water/gauges.ts";
+import { gaugeAt, learnLakeGauges } from "./water/match.ts";
 
-type Target = { kind: "vehicle"; id: string } | { kind: "plane"; id: string };
+/** Wall-clock seconds (gauge readings carry real timestamps). */
+const nowS_wall = () => Date.now() / 1000;
+
+type Target =
+  | { kind: "vehicle"; id: string }
+  | { kind: "plane"; id: string }
+  /** Water: the gauge that speaks for it, and where the cursor is. */
+  | { kind: "water"; lid: string; at: [number, number] };
+
+/** How often to refresh the list of river and lake gauges. */
+const GAUGE_REFRESH_MS = 10 * 60_000;
 
 /**
- * Hover (or tap) a bus, train or plane to see what it is. The tooltip
+ * Hover (or tap) a bus, train or plane to see what it is, or water to see
+ * its level. The tooltip
  * follows its subject as it moves. On touch screens a tap pins it until
  * the next tap elsewhere.
  */
@@ -20,6 +33,8 @@ export class Hover {
   private tip: HTMLElement;
   private lastText = "";
   private flights = new Map<string, FlightInfo | "pending">();
+  private gauges: Gauge[] = [];
+  private gaugeDetails = new Map<string, GaugeDetail | "pending">();
   private map: MapLibreMap;
   private fleet: Fleet;
   private air: AirFleet;
@@ -38,6 +53,26 @@ export class Hover {
       },
     });
     addEventListener("keydown", (e) => { if (e.key === "Escape") this.clear(); });
+    // Refresh gauges every 10 minutes; after a failed load, try again in 30 s.
+    const loadGauges = () => {
+      fetch("/api/water")
+        .then((r) => (r.ok ? (r.json() as Promise<{ gauges?: Gauge[] }>) : undefined))
+        .then((b) => {
+          if (!b?.gauges) throw new Error("no gauges");
+          this.gauges = b.gauges;
+          this.gaugeDetails.clear();
+          learnLakeGauges(map, this.gauges);
+          setTimeout(loadGauges, GAUGE_REFRESH_MS);
+        })
+        .catch(() => setTimeout(loadGauges, 30_000));
+    };
+    loadGauges();
+    // Learn which lake each lake gauge sits on as its area loads. Not on the
+    // map's "idle" event: with animation running it fires ~55 times a second.
+    const learner = setInterval(() => {
+      if (this.gauges.length && learnLakeGauges(map, this.gauges) === 0) clearInterval(learner);
+    }, 5000);
+    setInterval(loadGauges, GAUGE_REFRESH_MS);
     map.getCanvas().addEventListener("mouseleave", () => { if (!this.pinned) this.clear(); });
   }
 
@@ -46,6 +81,12 @@ export class Hover {
     let next: Target | null = null;
     if (obj && info.layer?.id === "pick-vehicles") next = { kind: "vehicle", id: (obj as Vehicle).id };
     else if (obj && info.layer?.id === "pick-planes") next = { kind: "plane", id: (obj as Plane).id };
+    else if (info.coordinate && this.gauges.length) {
+      // Nothing moving under the cursor: is it water with a gauge?
+      const at: [number, number] = [info.coordinate[0], info.coordinate[1]];
+      const g = gaugeAt(this.map, info.x, info.y, at, this.gauges);
+      if (g) next = { kind: "water", lid: g.lid, at };
+    }
     this.target = next;
     this.map.getCanvas().style.cursor = next ? "pointer" : "";
     if (!next) this.hideTip();
@@ -64,6 +105,18 @@ export class Hover {
   private hideTip() {
     this.tip.hidden = true;
     this.lastText = "";
+  }
+
+  private gaugeDetail(lid: string): GaugeDetail | undefined {
+    const cached = this.gaugeDetails.get(lid);
+    if (cached === "pending") return undefined;
+    if (cached) return cached;
+    this.gaugeDetails.set(lid, "pending");
+    fetch(`/api/water?lid=${lid}`)
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d: GaugeDetail) => this.gaugeDetails.set(lid, d))
+      .catch(() => this.gaugeDetails.set(lid, {}));
+    return undefined;
   }
 
   private flightInfo(p: Plane): FlightInfo | undefined {
@@ -98,6 +151,13 @@ export class Hover {
       });
       position = v.position;
       layers = vehicleHighlight(this.transit, v, version, this.daylight());
+    } else if (this.target.kind === "water") {
+      const lid = this.target.lid;
+      const g = this.gauges.find((x) => x.lid === lid);
+      if (!g) { this.clear(); return []; }
+      desc = describeGauge(g, this.gaugeDetail(lid), nowS_wall());
+      position = this.target.at;
+      layers = gaugeHighlight(g, this.daylight());
     } else {
       const p = this.air.planes.get(this.target.id);
       if (!p || p.alpha === 0) { this.clear(); return []; }

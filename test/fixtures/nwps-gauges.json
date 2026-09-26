@@ -1,0 +1,1724 @@
+{
+  "gauges": [
+    {
+      "lid": "AKAM5",
+      "name": "Mississippi River at Hwy 169 at Champlin",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.1916,
+      "longitude": -93.3944,
+      "pedts": {
+        "observed": "HGIRA",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 4.27,
+          "primaryUnit": "ft",
+          "secondary": 2.77,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:30:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "ANKM5",
+      "name": "Mississippi River at Hwy 610 in Brooklyn Park",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.1288,
+      "longitude": -93.2993,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 1.43,
+          "primaryUnit": "ft",
+          "secondary": 2.43,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": 1.7,
+          "primaryUnit": "ft",
+          "secondary": 2.91,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-10-01T12:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "ARLM5",
+      "name": "High Island Creek near Arlington",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.6226,
+      "longitude": -94.0919,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 6.58,
+          "primaryUnit": "ft",
+          "secondary": 0.0249,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:45:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "BGKM5",
+      "name": "St. Francis River near Big Lake at 164th Street",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.399167,
+      "longitude": -93.685,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 933.79,
+          "primaryUnit": "ft",
+          "secondary": 0.0237,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "CFLM5",
+      "name": "Cannon River at 9th St Bridge in Cannon Falls",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.5169,
+      "longitude": -92.9119,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 9.35,
+          "primaryUnit": "ft",
+          "secondary": 1.28,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:35:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "CHPM5",
+      "name": "Elm Creek (MN) at Champlin",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.1633,
+      "longitude": -93.4366,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 3.53,
+          "primaryUnit": "ft",
+          "secondary": 0.0065,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "DELM5",
+      "name": "South Fork Crow River at Delano",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.0419,
+      "longitude": -93.79,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 6.12,
+          "primaryUnit": "ft",
+          "secondary": 0.147,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:30:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "EMPM5",
+      "name": "Vermillion River near Empire",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.666666666667,
+      "longitude": -93.054722222222,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 1.74,
+          "primaryUnit": "ft",
+          "secondary": 0.0175,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T16:15:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "ERVM5",
+      "name": "Elk River near Big Lake",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.333888888889,
+      "longitude": -93.666666666667,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 0.69,
+          "primaryUnit": "ft",
+          "secondary": 0.0189,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T16:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "FSNM5",
+      "name": "Minnesota River at Fort Snelling State Park",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.87025801019855,
+      "longitude": -93.1924353426939,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 687.53,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T16:15:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "GBDM5",
+      "name": "Minnehaha Creek below Gray's Bay Dam",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.9533,
+      "longitude": -93.4872,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 925.58,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "GLNM5",
+      "name": "Buffalo Creek (MN) below Glencoe",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.7633,
+      "longitude": -94.0908,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 9.87,
+          "primaryUnit": "ft",
+          "secondary": 0.0765,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:15:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "HENM5",
+      "name": "Minnesota River at Henderson",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.529444444444,
+      "longitude": -93.900555555556,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 718.45,
+          "primaryUnit": "ft",
+          "secondary": 5.05,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:30:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "HICM5",
+      "name": "High Island Creek near Henderson",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.5719,
+      "longitude": -93.9217,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 3.83,
+          "primaryUnit": "ft",
+          "secondary": 0.0325,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "HSTM5",
+      "name": "Mississippi River Below Lock and Dam 2 - Hastings",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.756944444444,
+      "longitude": -92.866111111111,
+      "pedts": {
+        "observed": "HTIRG",
+        "forecast": "HTIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 5.06,
+          "primaryUnit": "ft",
+          "secondary": 11.6,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": 5.1,
+          "primaryUnit": "ft",
+          "secondary": 11.9,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-27T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "JDNM5",
+      "name": "Minnesota River at Jordan",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.693,
+      "longitude": -93.6419,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 10.05,
+          "primaryUnit": "ft",
+          "secondary": 6.88,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T16:45:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "LEPM5",
+      "name": "South Fork Crow River near Lester Prairie 1SE",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.879166666667,
+      "longitude": -94.030555555556,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 34.01,
+          "primaryUnit": "ft",
+          "secondary": 0.0316,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:45:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "MAYM5",
+      "name": "South Fork Crow River near Mayer",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.9055,
+      "longitude": -93.8855,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 1.92,
+          "primaryUnit": "ft",
+          "secondary": 0.131,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:30:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "MHAM5",
+      "name": "Minnehaha Creek at Minneapolis / Hiawatha Ave.",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.915555555556,
+      "longitude": -93.2125,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 11.78,
+          "primaryUnit": "ft",
+          "secondary": 0.0028,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "MSPM5",
+      "name": "Mississippi River at Fridley abv 37th Ave NE",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.0433,
+      "longitude": -93.2794,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 3.33,
+          "primaryUnit": "ft",
+          "secondary": 1.82,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T16:45:00Z"
+        },
+        "forecast": {
+          "primary": 4.1,
+          "primaryUnit": "ft",
+          "secondary": 2.76,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-10-02T18:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "MTKM5",
+      "name": "Lake Minnetonka above Gray's Dam",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.9536,
+      "longitude": -93.488,
+      "pedts": {
+        "observed": "HPIRP",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 928.31,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "PNEM5",
+      "name": "Pine Creek (MN) near Cannon Falls 2NW",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.5577222222222,
+      "longitude": -92.9342777777778,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 865.5,
+          "primaryUnit": "ft",
+          "secondary": 0.013,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:45:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "PREW3",
+      "name": "Mississippi River at Prescott - Pool 3",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "WI",
+        "name": "Wisconsin"
+      },
+      "latitude": 44.745833333333,
+      "longitude": -92.8,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 25.44,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:15:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "PSCW3",
+      "name": "St. Croix River near Prescott",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "WI",
+        "name": "Wisconsin"
+      },
+      "latitude": 44.749166666667,
+      "longitude": -92.804444444444,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 25.48,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T16:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "RANM5",
+      "name": "Chub Creek at Hwy 47 near Randolph 3W",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.528888888889,
+      "longitude": -93.0725,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 5.16,
+          "primaryUnit": "ft",
+          "secondary": 0.0264,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:30:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "RCUM5",
+      "name": "Rice Creek below Old Hwy 8 in Mounds View",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.093333333333,
+      "longitude": -93.195,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 5.7,
+          "primaryUnit": "ft",
+          "secondary": 0.004,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "RDWM5",
+      "name": "Mississippi River below Lock and Dam 3 - Red Wing",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.6103,
+      "longitude": -92.6103,
+      "pedts": {
+        "observed": "HTIRG",
+        "forecast": "HTIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 668.33,
+          "primaryUnit": "ft",
+          "secondary": 13.5,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:15:00Z"
+        },
+        "forecast": {
+          "primary": 668.3,
+          "primaryUnit": "ft",
+          "secondary": 13.4,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-27T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "REDM5",
+      "name": "Mississippi River at Red Wing",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.5653,
+      "longitude": -92.5424,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 2.97,
+          "primaryUnit": "ft",
+          "secondary": 14.5,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T16:15:00Z"
+        },
+        "forecast": {
+          "primary": 2.9,
+          "primaryUnit": "ft",
+          "secondary": 14.1,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-27T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "RFSW3",
+      "name": "Kinnickinnic River near River Falls",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "WI",
+        "name": "Wisconsin"
+      },
+      "latitude": 44.830833333333,
+      "longitude": -92.733055555556,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 8.19,
+          "primaryUnit": "ft",
+          "secondary": 0.101,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T16:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "RKFM5",
+      "name": "Crow River at Rockford",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.0867,
+      "longitude": -93.7339,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 2.53,
+          "primaryUnit": "ft",
+          "secondary": 0.278,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "RNFM5",
+      "name": "North Fork Crow River near Rockford 3W",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.095833333333,
+      "longitude": -93.789444444444,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 76.1,
+          "primaryUnit": "ft",
+          "secondary": 0.132,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T16:45:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "SAVM5",
+      "name": "Minnesota River at Savage",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.788,
+      "longitude": -93.3294,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 688.67,
+          "primaryUnit": "ft",
+          "secondary": 4.09,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": 688.6,
+          "primaryUnit": "ft",
+          "secondary": 3.99,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-27T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "SGCM5",
+      "name": "Shingle Creek at Queen Ave N",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.05,
+      "longitude": -93.31,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "obs_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "SKPM5",
+      "name": "Minnesota River at Shakopee",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.8002,
+      "longitude": -93.5266,
+      "pedts": {
+        "observed": "HGIRA",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 20.8,
+          "primaryUnit": "ft",
+          "secondary": 4.9,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "SNCM5",
+      "name": "Sand Creek near Jordan",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.668,
+      "longitude": -93.634,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFZ"
+      },
+      "status": {
+        "observed": {
+          "primary": 1.01,
+          "primaryUnit": "ft",
+          "secondary": 0.051,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T16:45:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "SOMW3",
+      "name": "Apple River (WI) at Somerset",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "WI",
+        "name": "Wisconsin"
+      },
+      "latitude": 45.1277,
+      "longitude": -92.6752,
+      "pedts": {
+        "observed": "HGIRA",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 3.18,
+          "primaryUnit": "ft",
+          "secondary": 0.322,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "SPAM5",
+      "name": "Mississippi River at St. Paul Ford Plant",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.915,
+      "longitude": -93.199444444444,
+      "pedts": {
+        "observed": "HPIRZ",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 725.33,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-25T20:15:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "SSPM5",
+      "name": "Mississippi River at South St. Paul - Pool 2",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.8955,
+      "longitude": -93.0296,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFE"
+      },
+      "status": {
+        "observed": {
+          "primary": 687.44,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:30:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "STFM5",
+      "name": "Rum River near St. Francis 4 South",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.327743,
+      "longitude": -93.372454,
+      "pedts": {
+        "observed": "HGIRA",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 2.22,
+          "primaryUnit": "ft",
+          "secondary": 0.14,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "STLM5",
+      "name": "St. Croix River at Stillwater",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 45.0561,
+      "longitude": -92.8041,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 75.84,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": 75.8,
+          "primaryUnit": "ft",
+          "secondary": -999,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-27T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "STPM5",
+      "name": "Mississippi River at St. Paul",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.9444,
+      "longitude": -93.0881,
+      "pedts": {
+        "observed": "HGIRG",
+        "forecast": "HGIFF"
+      },
+      "status": {
+        "observed": {
+          "primary": 3.58,
+          "primaryUnit": "ft",
+          "secondary": 11.9,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": 3.6,
+          "primaryUnit": "ft",
+          "secondary": 12.3,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "no_flooding",
+          "validTime": "2026-09-27T12:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "USAM5",
+      "name": "Mississippi River at Upper St. Anthony Falls",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.980833333333,
+      "longitude": -93.257222222222,
+      "pedts": {
+        "observed": "HPIRG",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "obs_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "lid": "WLCM5",
+      "name": "Cannon River at Welch",
+      "rfc": {
+        "abbreviation": "NCRFC",
+        "name": "North Central River Forecast Center"
+      },
+      "wfo": {
+        "abbreviation": "MPX",
+        "name": "Chanhassen"
+      },
+      "state": {
+        "abbreviation": "MN",
+        "name": "Minnesota"
+      },
+      "latitude": 44.5639,
+      "longitude": -92.7321,
+      "pedts": {
+        "observed": "HGIRP",
+        "forecast": ""
+      },
+      "status": {
+        "observed": {
+          "primary": 5.4,
+          "primaryUnit": "ft",
+          "secondary": 1.49,
+          "secondaryUnit": "kcfs",
+          "floodCategory": "not_defined",
+          "validTime": "2026-09-26T17:00:00Z"
+        },
+        "forecast": {
+          "primary": -999,
+          "primaryUnit": "",
+          "secondary": -999,
+          "secondaryUnit": "",
+          "floodCategory": "fcst_not_current",
+          "validTime": "0001-01-01T00:00:00Z"
+        }
+      }
+    }
+  ]
+}
