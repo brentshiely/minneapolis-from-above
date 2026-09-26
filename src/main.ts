@@ -35,13 +35,23 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   let version = 0;
 
   const render = () => overlay.setProps({ layers: [...routes, ...vehicleLayers(transit, fleet.list(), version)] });
-  render();
+
+  // Each frame glides every vehicle along its route and redraws.
+  let last = performance.now();
+  const frame = (now: number) => {
+    // Clamp so a long pause (backgrounded tab) doesn't lurch everything at once.
+    const dt = Math.min(0.25, (now - last) / 1000);
+    last = now;
+    fleet.advance(dt);
+    version++;
+    render();
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 
   const feed = startFeed((feedTime, rows) => {
     fleet.update(feedTime, rows);
     fleet.prune(feedTime, STALE_S);
-    version++;
-    render();
   }, (err) => console.warn("Vehicle feed:", err));
 
   (window as unknown as { godmode: unknown }).godmode = { map, overlay, transit, fleet, feed };

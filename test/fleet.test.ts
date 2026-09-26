@@ -23,8 +23,10 @@ test("adds, updates in place, and classifies vehicles by route mode", () => {
   const a = fleet.vehicles.get("a")!;
   fleet.update(1015, [["a", "t1", "901", 44.96, -93.26, 1010, 95]]);
   assert.equal(fleet.vehicles.get("a"), a, "same object is updated, not replaced");
-  assert.deepEqual(a.position, [-93.26, 44.96]);
   assert.equal(a.seenAt, 1015);
+  // No shape for this trip, so it glides in a straight line to the new fix.
+  fleet.advance(60);
+  assert.deepEqual(a.position, [-93.26, 44.96]);
 });
 
 test("unknown routes fall back to bus", () => {
