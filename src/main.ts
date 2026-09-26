@@ -3,9 +3,10 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createBaseMap } from "./basemap.ts";
 import { loadTransit } from "./transit/data.ts";
 import { routeLayers } from "./layers/routes.ts";
-import { vehicleLayers } from "./layers/vehicles.ts";
+import { trailLayers, vehicleLayers, type VehicleFrame } from "./layers/vehicles.ts";
 import { Fleet } from "./live/fleet.ts";
 import { startFeed } from "./live/feed.ts";
+import { Trails } from "./live/trails.ts";
 
 const map = createBaseMap(document.getElementById("map")!);
 const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
@@ -31,20 +32,32 @@ const mapReady = new Promise<void>((resolve) => map.once("load", () => resolve()
 
 Promise.all([transitReady, mapReady]).then(([transit]) => {
   const fleet = new Fleet(transit);
+  const trails = new Trails();
   const routes = routeLayers(transit, labelsAnchor());
-  let version = 0;
+  const f: VehicleFrame = { vehicles: [], trails: [], now: 0, version: 0, trailsVersion: 0 };
 
-  const render = () => overlay.setProps({ layers: [...routes, ...vehicleLayers(transit, fleet.list(), version)] });
+  /** Trail geometry is rebuilt a few times a second; the fade animates every frame. */
+  const TRAIL_REBUILD_S = 0.25;
+  let lastTrailBuild = -Infinity;
 
   // Each frame glides every vehicle along its route and redraws.
   let last = performance.now();
-  const frame = (now: number) => {
+  const frame = (nowMs: number) => {
     // Clamp so a long pause (backgrounded tab) doesn't lurch everything at once.
-    const dt = Math.min(0.25, (now - last) / 1000);
-    last = now;
+    const dt = Math.min(0.25, (nowMs - last) / 1000);
+    last = nowMs;
+    const now = nowMs / 1000;
     fleet.advance(dt);
-    version++;
-    render();
+    trails.record(fleet, now);
+    if (now - lastTrailBuild >= TRAIL_REBUILD_S) {
+      lastTrailBuild = now;
+      f.trails = trails.snapshot(now);
+      f.trailsVersion++;
+    }
+    f.vehicles = fleet.list();
+    f.now = now;
+    f.version++;
+    overlay.setProps({ layers: [...routes, ...trailLayers(transit, f), ...vehicleLayers(transit, f)] });
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
@@ -54,7 +67,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     fleet.prune(feedTime, STALE_S);
   }, (err) => console.warn("Vehicle feed:", err));
 
-  (window as unknown as { godmode: unknown }).godmode = { map, overlay, transit, fleet, feed };
+  (window as unknown as { godmode: unknown }).godmode = { map, overlay, transit, fleet, feed, trails };
 });
 
 (window as unknown as { godmode: unknown }).godmode = { map, overlay };
