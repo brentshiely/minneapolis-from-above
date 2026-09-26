@@ -36,3 +36,13 @@ export const ROUTE_STYLE: Record<Mode, { alpha: number; widthM: number; minPx: n
   brt: { alpha: 90, widthM: 4, minPx: 1.3, maxPx: 3 },
   bus: { alpha: 40, widthM: 3, minPx: 0.8, maxPx: 2.5 },
 };
+
+/** Local buses glow a warm headlight amber against the cool bus network. */
+const BUS_VEHICLE: RGB = [255, 206, 138];
+
+/** Vehicles draw brighter than their routes so motion reads first. */
+export function vehicleColor(route: RouteInfo | undefined): RGB {
+  if (!route || route.mode === "bus") return BUS_VEHICLE;
+  if (route.color.toUpperCase() === "#8A8B8A") return [214, 224, 234];
+  return lift(hexToRgb(route.color), 0.55);
+}
