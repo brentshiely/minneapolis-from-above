@@ -39,7 +39,9 @@ test("endpoint returns a clear 502 when adsb.lol fails and nothing is cached", a
   globalThis.fetch = async () => new Response("", { status: 429 });
   const res = await onRequestGet();
   assert.equal(res.status, 502);
-  assert.match(((await res.json()) as { error: string }).error, /429/);
+  const error = ((await res.json()) as { error: string }).error;
+  assert.match(error, /api\.adsb\.lol: .*429/);
+  assert.match(error, /opendata\.adsb\.fi: .*429/, "every source's failure is named");
 });
 
 const opensky = JSON.parse(readFileSync(new URL("./fixtures/opensky.json", import.meta.url), "utf8"));

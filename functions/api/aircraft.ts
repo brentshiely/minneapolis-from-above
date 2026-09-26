@@ -185,7 +185,7 @@ export const onRequestGet = async ({ env = {} }: { env?: AircraftEnv } = {}): Pr
   const cached = await edgeCache()?.match(CACHE_KEY);
   if (cached) return cached;
 
-  let problem = "The aircraft feed is unreachable.";
+  const problems: string[] = [];
   for (const src of sources(env)) {
     try {
       const body = await src.fetch();
@@ -194,11 +194,12 @@ export const onRequestGet = async ({ env = {} }: { env?: AircraftEnv } = {}): Pr
       await edgeCache()?.put(CACHE_KEY, res.clone());
       return res;
     } catch (err) {
-      problem = err instanceof Error ? err.message : problem;
+      problems.push(`${src.name}: ${err instanceof Error ? err.message : "unreachable"}`);
     }
   }
   if (last && now - last.at < STALE_OK_S) return json(last.body, 200, "no-store");
-  return json({ error: problem }, 502);
+  // Name every source's failure: the last one alone hides what went wrong.
+  return json({ error: `No aircraft feed answered. ${problems.join("; ")}` }, 502);
 };
 
 function json(body: unknown, status: number, cache = "no-store"): Response {
