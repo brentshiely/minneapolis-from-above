@@ -1,10 +1,7 @@
-import { Map, setWorkerUrl } from "maplibre-gl";
+// Pinned to MapLibre 5: deck.gl 9.4's map integration reads map.transform,
+// which MapLibre 6 removed. Revisit when deck.gl supports 6.
+import { Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-// MapLibre computes its worker URL at runtime, which bundlers can't see.
-// Have Vite bundle the worker as its own entry and hand MapLibre the URL.
-import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
-
-setWorkerUrl(workerUrl);
 
 /** Frames the seven-county core: Minneapolis–Saint Paul plus inner suburbs. */
 export const METRO_CENTER: [number, number] = [-93.18, 44.96];
