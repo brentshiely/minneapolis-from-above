@@ -21,7 +21,7 @@ try {
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
   await page.goto(url, { waitUntil: "load" });
-  await page.waitForFunction(() => window.godmode?.fleet?.vehicles.size > 0, { timeout: 30_000 });
+  await page.waitForFunction(() => window.fromAbove?.fleet?.vehicles.size > 0, { timeout: 30_000 });
   const renderer = await page.evaluate(() => {
     const gl = document.createElement("canvas").getContext("webgl2");
     const ext = gl?.getExtension("WEBGL_debug_renderer_info");
@@ -29,7 +29,7 @@ try {
   });
   await new Promise((r) => setTimeout(r, warmup * 1000));
   const result = await page.evaluate(async (zooms) => {
-    const g = window.godmode;
+    const g = window.fromAbove;
     const measure = () => new Promise((resolve) => {
       const times = [];
       const tick = (t) => { times.push(t); if (times.length < 241) requestAnimationFrame(tick); else resolve(times); };

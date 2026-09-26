@@ -80,7 +80,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   startStatus(document.getElementById("status")!, fleet, feed);
 
-  (window as unknown as { godmode: unknown }).godmode = { map, overlay, transit, fleet, feed, trails };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails };
 });
 
-(window as unknown as { godmode: unknown }).godmode = { map, overlay };
+(window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };

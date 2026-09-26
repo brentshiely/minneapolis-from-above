@@ -49,7 +49,7 @@ async function openApp({ reduced = false } = {}) {
     window.__setHidden = (h) => { hidden = h; document.dispatchEvent(new Event("visibilitychange")); };
   });
   await page.goto(url, { waitUntil: "load" });
-  await page.waitForFunction(() => window.godmode?.fleet?.vehicles.size > 50, { timeout: 30_000 });
+  await page.waitForFunction(() => window.fromAbove?.fleet?.vehicles.size > 50, { timeout: 30_000 });
   return { page, errors };
 }
 
@@ -59,7 +59,7 @@ try {
 
   await check("vehicles load and fade in", async () => {
     const r = await page.evaluate(() => {
-      const vs = window.godmode.fleet.list();
+      const vs = window.fromAbove.fleet.list();
       return { n: vs.length, visible: vs.filter((v) => v.alpha > 0.99).length };
     });
     assert(r.n > 100, `only ${r.n} vehicles`);
@@ -74,11 +74,11 @@ try {
   });
 
   await check("status line warns when live data stalls", async () => {
-    await page.evaluate(() => { window.godmode.feed.status.lastOk = performance.now() - 125_000; });
+    await page.evaluate(() => { window.fromAbove.feed.status.lastOk = performance.now() - 125_000; });
     await sleep(1300);
     const r = await page.$eval("#status", (el) => ({ text: el.textContent, stalled: el.classList.contains("stalled") }));
     assert(r.stalled && /paused 2 min ago/.test(r.text), `got "${r.text}"`);
-    await page.evaluate(() => { window.godmode.feed.status.lastOk = performance.now(); });
+    await page.evaluate(() => { window.fromAbove.feed.status.lastOk = performance.now(); });
     return r.text;
   });
 
@@ -97,7 +97,7 @@ try {
 
   await check("vehicles unheard from for 2.5 minutes are half faded", async () => {
     const alpha = await page.evaluate(async () => {
-      const f = window.godmode.fleet;
+      const f = window.fromAbove.fleet;
       f.update(f.feedTime - 150, [["e2e-stale", "", "21", 44.95, -93.2, f.feedTime - 150, null]], 0);
       await new Promise((r) => setTimeout(r, 200));
       const a = f.vehicles.get("e2e-stale").alpha;
@@ -110,7 +110,7 @@ try {
 
   await check("a teleport crossfades: ghost fades out, vehicle fades in", async () => {
     const r = await page.evaluate(async () => {
-      const f = window.godmode.fleet;
+      const f = window.fromAbove.fleet;
       const v = f.list().find((x) => x.alpha === 1);
       const ghostsBefore = f.drawables().length - f.vehicles.size;
       const [lon, lat] = v.position;
@@ -137,7 +137,7 @@ try {
   await sleep(2000);
   await check("reduced motion: no trails, vehicles sit at their latest fix", async () => {
     const r = await reduced.page.evaluate(() => {
-      const g = window.godmode;
+      const g = window.fromAbove;
       const ids = g.overlay._props?.layers?.map((l) => l.id) ?? g.overlay._deck.props.layers.map((l) => l.id);
       const gliding = g.fleet.list().filter((v) => v.motion.onShape && v.motion.dist !== v.motion.target).length;
       return { trails: ids.filter((id) => id.startsWith("trails")).length, gliding };

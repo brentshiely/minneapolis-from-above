@@ -25,10 +25,10 @@ const browser = await puppeteer.launch({
 try {
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: "load" });
-  await page.waitForFunction(() => window.godmode?.fleet?.vehicles.size > 0, { timeout: 30_000 });
+  await page.waitForFunction(() => window.fromAbove?.fleet?.vehicles.size > 0, { timeout: 30_000 });
   await new Promise((r) => setTimeout(r, Number(warmupArg) * 1000));
   for (const v of views) {
-    await page.evaluate(({ center, zoom }) => window.godmode.map.jumpTo({ center, zoom }), v);
+    await page.evaluate(({ center, zoom }) => window.fromAbove.map.jumpTo({ center, zoom }), v);
     await new Promise((r) => setTimeout(r, 3000));
     const file = join(outDir, `${v.name}.png`);
     await page.screenshot({ path: file });
