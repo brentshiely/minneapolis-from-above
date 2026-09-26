@@ -19,8 +19,10 @@ import { bearing, headingAt, pointAt, project, type LonLat } from "./geometry.ts
 export const OFF_ROUTE_M = 80;
 /** Further ahead than this and gliding would look like teleporting anyway. */
 export const JUMP_AHEAD_M = 3000;
-/** Further behind than this and the drawn position was simply wrong. */
+/** Further behind than this is either a GPS glitch or a drawn position that was wrong... */
 export const JUMP_BACK_M = 400;
+/** ...and this many such fixes in a row means the drawn position was wrong. */
+export const BACK_STRIKES = 3;
 /** Gliding faster than ~125 km/h reads as a glitch; cap it. */
 export const MAX_SPEED_MS = 35;
 /** Glide time bounds in seconds; the actual time tracks each vehicle's fix interval. */
@@ -48,6 +50,10 @@ export class Motion {
   private duration = GLIDE_DEFAULT_S;
 
   private lastFixTime: number;
+  /** Counts discontinuous jumps, so the fleet can crossfade them. */
+  teleports = 0;
+  /** Consecutive fixes far behind the drawn position. */
+  private backStrikes = 0;
 
   constructor(shape: Shape | undefined, fix: LonLat, fixTime: number) {
     this.lastFixTime = fixTime;
@@ -86,19 +92,24 @@ export class Motion {
         : undefined);
 
       if (p.offset <= OFF_ROUTE_M) {
-        if (!sameShape) {
-          // Entering a shape (new trip, or back from a detour): start from
-          // wherever the vehicle is drawn now if that's on the new shape.
-          const here = project(shape, this.pos);
-          this.shape = shape;
-          if (here.offset <= OFF_ROUTE_M && p.dist >= here.dist) {
-            this.dist = here.dist;
-          } else {
-            this.teleport(shape, p.dist);
-            return;
-          }
+        if (sameShape) {
+          this.glideAlong(p.dist, glide);
+          return;
         }
-        this.glideAlong(p.dist, glide);
+        // Entering a shape (new trip, or back from a detour or layover).
+        const here = project(shape, this.pos);
+        if (here.offset <= OFF_ROUTE_M && p.dist >= here.dist - JUMP_BACK_M) {
+          // Drawn on the new shape already: carry on along it from here.
+          this.shape = shape;
+          this.dist = this.target = here.dist;
+          this.speed = 0;
+          this.glideAlong(p.dist, glide);
+          return;
+        }
+        // Drawn off the shape: slide straight to the fix's spot on it, and
+        // pick the shape up from there on the next fix.
+        this.shape = undefined;
+        this.glideStraight(pointAt(shape, p.dist), glide);
         return;
       }
     }
@@ -111,7 +122,20 @@ export class Motion {
   private glideAlong(targetDist: number, glide: number) {
     const shape = this.shape!;
     const delta = targetDist - this.dist;
-    if (delta > JUMP_AHEAD_M || delta < -JUMP_BACK_M) {
+    if (delta < -JUMP_BACK_M) {
+      // Far behind: usually a one-off GPS glitch that corrects on the next
+      // fix. Hold through it; only a run of them means we're really wrong.
+      if (++this.backStrikes >= BACK_STRIKES) {
+        this.backStrikes = 0;
+        this.teleport(shape, targetDist);
+      } else {
+        this.target = this.dist;
+        this.speed = 0;
+      }
+      return;
+    }
+    this.backStrikes = 0;
+    if (delta > JUMP_AHEAD_M) {
       this.teleport(shape, targetDist);
     } else if (delta <= 0) {
       // Behind the drawn position, or not moving: hold rather than reverse.
@@ -124,6 +148,7 @@ export class Motion {
   }
 
   private teleport(shape: Shape, dist: number) {
+    this.teleports++;
     this.dist = this.target = dist;
     this.speed = 0;
     this.pos = pointAt(shape, dist);
@@ -135,6 +160,7 @@ export class Motion {
     this.to = [fix[0], fix[1]];
     const d = distM(this.from, this.to);
     if (d > JUMP_AHEAD_M) {
+      this.teleports++;
       this.pos = this.to;
       this.t = 1;
       return;
@@ -143,6 +169,19 @@ export class Motion {
     this.t = 0;
     // Same speed cap as on a shape.
     this.duration = Math.max(glide, d / MAX_SPEED_MS);
+  }
+
+  /** Jump straight to the latest fix (reduced motion). */
+  settle() {
+    if (this.shape) {
+      if (this.dist === this.target) return;
+      this.dist = this.target;
+      this.pos = pointAt(this.shape, this.dist);
+      this.heading = headingAt(this.shape, this.dist);
+    } else if (this.t < 1) {
+      this.t = 1;
+      this.pos = [this.to[0], this.to[1]];
+    }
   }
 
   /** Move the drawn position forward by `dtS` seconds. */

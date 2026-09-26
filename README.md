@@ -26,8 +26,14 @@ Then open the URL Vite prints. The dev server also serves `/api/vehicles` using 
 | `npm run dev` | Local dev server with live data |
 | `npm run build` | Typecheck and production build into `dist/` |
 | `npm test` | Unit tests (Node's built-in test runner) |
+| `npm run e2e` | End-to-end checks against the running dev server in headless Chrome |
+| `npm run perf` | Frame rate at metro, downtown and street zoom in headless Chrome (real GPU) |
+| `npm run shot -- <dir> <warmup> name:lon,lat,zoom` | Screenshots of the running app |
+| `npm run build:data` | Re-bake route data from Metro Transit's latest GTFS feed |
 | `npm run preview` | Serve `dist/` plus Functions through Wrangler, as Cloudflare would |
 | `npm run deploy` | Build and deploy to Cloudflare Pages (needs `wrangler login` once) |
+
+`e2e`, `perf` and `shot` drive your installed Google Chrome (set `CHROME` to use another path) and expect `npm run dev` to be running.
 
 ## Backlog
 

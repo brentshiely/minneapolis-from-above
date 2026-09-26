@@ -110,7 +110,9 @@ test("falls back to a straight line off the route, and rejoins it", () => {
   assert.equal(m.onShape, false);
   m.advance(15);
   near(distM(m.pos, at(400, OFF_ROUTE_M + 100)), 0, 1);
-  m.onFix(L, at(600, 0), 1030); // back on route
+  m.onFix(L, at(600, 0), 1030); // back on route: slides over first
+  m.advance(15);
+  m.onFix(L, at(800, 0), 1045);
   assert.ok(m.onShape);
 });
 
@@ -129,4 +131,59 @@ test("a repeated fix changes nothing", () => {
   const speed = m.speed;
   m.onFix(L, at(300, 0), 1015);
   assert.equal(m.speed, speed);
+});
+
+test("a one-off GPS glitch far behind is ignored, not teleported to", () => {
+  const long = buildShape("long", "r", [at(0, 0), at(8000, 0)]);
+  const m = new Motion(long, at(5000, 0), 1000);
+  m.onFix(long, at(100, 0), 1015); // glitch: 4.9 km back
+  assert.equal(m.teleports, 0);
+  near(m.dist, 5000, 0.01, "held in place");
+  m.onFix(long, at(5200, 0), 1030); // next fix is sane again
+  m.advance(15);
+  near(m.dist, 5200, 1);
+  assert.equal(m.teleports, 0);
+});
+
+test("a vehicle persistently far behind is eventually corrected", () => {
+  const long = buildShape("long", "r", [at(0, 0), at(8000, 0)]);
+  const m = new Motion(long, at(5000, 0), 1000);
+  m.onFix(long, at(1000, 0), 1015);
+  m.onFix(long, at(1050, 0), 1030);
+  assert.equal(m.teleports, 0, "two strikes: still holding");
+  m.onFix(long, at(1100, 0), 1045);
+  assert.equal(m.teleports, 1);
+  near(m.dist, 1100, 1);
+});
+
+test("rejoining a shape a few meters behind carries on without a jump", () => {
+  const m = new Motion(L, at(300, 0), 1000);
+  m.onFix(undefined, at(310, 0), 1015); // trip briefly unmatched
+  m.advance(15);
+  assert.equal(m.onShape, false);
+  m.onFix(L, at(306, 0), 1030); // matched again, fix 4 m behind drawn spot
+  assert.equal(m.teleports, 0);
+  assert.ok(m.onShape);
+});
+
+test("a trip change at the terminal continues onto the next trip's shape", () => {
+  const next = buildShape("next", "r", [at(1000, 1000), at(1000, 2000)]); // starts where L ends
+  const m = new Motion(L, at(1000, 990), 1000);
+  m.onFix(next, at(1000, 1060), 1015); // new trip, 60 m along it
+  assert.equal(m.teleports, 0);
+  m.advance(15);
+  near(m.dist, 60, 2);
+});
+
+test("rejoining from off the shape slides over instead of teleporting", () => {
+  const m = new Motion(L, at(300, 0), 1000);
+  m.onFix(L, at(500, 200), 1015); // detour: 200 m north of the route
+  m.advance(15);
+  assert.equal(m.onShape, false);
+  m.onFix(L, at(700, 0), 1030); // back on route
+  assert.equal(m.teleports, 0);
+  m.advance(15);
+  near(distM(m.pos, at(700, 0)), 0, 1, "slid to the snapped point");
+  m.onFix(L, at(900, 0), 1045);
+  assert.ok(m.onShape, "picks the shape back up on the next fix");
 });

@@ -1,7 +1,7 @@
 import { ScatterplotLayer } from "@deck.gl/layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
 import type { Mode, Transit } from "../transit/data.ts";
-import type { Vehicle } from "../live/fleet.ts";
+import type { Drawable } from "../live/fleet.ts";
 import { TRAIL_S, type Trail } from "../live/trails.ts";
 import { vehicleColor } from "../palette.ts";
 
@@ -34,7 +34,7 @@ const ADDITIVE = {
 } as const;
 
 export interface VehicleFrame {
-  vehicles: Vehicle[];
+  vehicles: Drawable[];
   trails: Trail[];
   /** Page clock in seconds. */
   now: number;
@@ -44,7 +44,7 @@ export interface VehicleFrame {
   trailsVersion: number;
 }
 
-const colorOf = (transit: Transit) => (v: Vehicle) => vehicleColor(transit.routes[v.routeId]);
+const colorOf = (transit: Transit) => (v: Drawable) => vehicleColor(transit.routes[v.routeId]);
 
 export function trailLayers(transit: Transit, f: VehicleFrame) {
   const byMode: Record<Mode, Trail[]> = { bus: [], brt: [], rail: [] };
@@ -58,7 +58,7 @@ export function trailLayers(transit: Transit, f: VehicleFrame) {
       data: byMode[mode],
       getPath: (t) => t.path,
       getTimestamps: (t) => t.times,
-      getColor: (t) => [...color(t.vehicle), look.trailAlpha],
+      getColor: (t) => [...color(t.vehicle), look.trailAlpha * t.vehicle.alpha],
       getWidth: look.trailM,
       widthUnits: "meters",
       widthMinPixels: look.trailMinPx,
@@ -75,8 +75,8 @@ export function trailLayers(transit: Transit, f: VehicleFrame) {
 }
 
 export function vehicleLayers(transit: Transit, f: VehicleFrame) {
-  const byMode: Record<Mode, Vehicle[]> = { bus: [], brt: [], rail: [] };
-  for (const v of f.vehicles) byMode[v.mode].push(v);
+  const byMode: Record<Mode, Drawable[]> = { bus: [], brt: [], rail: [] };
+  for (const v of f.vehicles) if (v.alpha > 0) byMode[v.mode].push(v);
   const color = colorOf(transit);
   const layers = [];
 
@@ -88,11 +88,11 @@ export function vehicleLayers(transit: Transit, f: VehicleFrame) {
     look.glow.forEach((alpha, i) => {
       if (!alpha) return;
       const scale = GLOW_SCALE[i];
-      layers.push(new ScatterplotLayer<Vehicle>({
+      layers.push(new ScatterplotLayer<Drawable>({
         id: `glow-${i}-${mode}`,
         data: byMode[mode],
         getPosition: (v) => v.position,
-        getFillColor: (v) => [...color(v), alpha],
+        getFillColor: (v) => [...color(v), alpha * v.alpha],
         getRadius: look.radiusM * scale,
         radiusUnits: "meters",
         radiusMinPixels: look.minPx * scale,
@@ -104,11 +104,11 @@ export function vehicleLayers(transit: Transit, f: VehicleFrame) {
   }
   for (const mode of ["bus", "brt", "rail"] as const) {
     const look = LOOK[mode];
-    layers.push(new ScatterplotLayer<Vehicle>({
+    layers.push(new ScatterplotLayer<Drawable>({
       id: `vehicles-${mode}`,
       data: byMode[mode],
       getPosition: (v) => v.position,
-      getFillColor: (v) => [...color(v), 255],
+      getFillColor: (v) => [...color(v), 255 * v.alpha],
       getRadius: look.radiusM,
       radiusUnits: "meters",
       radiusMinPixels: look.minPx,

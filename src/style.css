@@ -1,5 +1,26 @@
 html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
 #map { position: fixed; inset: 0; }
-.maplibregl-ctrl-attrib.maplibregl-compact { background: rgba(7, 11, 16, 0.6); color: #5d6b78; }
-.maplibregl-ctrl-attrib a { color: #7d8b98; }
-.maplibregl-ctrl-attrib-button { filter: invert(0.7); }
+/* Map credits are required by the OpenStreetMap license; keep them quiet. */
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib.maplibregl-compact,
+.maplibregl-ctrl-attrib.maplibregl-compact-show {
+  background: rgba(7, 11, 16, 0.55);
+  color: #4f5d6a;
+  font-size: 10px;
+}
+.maplibregl-ctrl-attrib a { color: #7a8894; }
+.maplibregl-ctrl-attrib-button { filter: invert(0.6); background-color: transparent; }
+
+#status {
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  font: 500 11px/1.3 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.04em;
+  color: #4f5d6a;
+  pointer-events: none;
+  user-select: none;
+  transition: color 0.6s;
+  font-variant-numeric: tabular-nums;
+}
+#status.stalled { color: #b98a4a; }

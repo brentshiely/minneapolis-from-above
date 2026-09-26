@@ -7,6 +7,7 @@ import { trailLayers, vehicleLayers, type VehicleFrame } from "./layers/vehicles
 import { Fleet } from "./live/fleet.ts";
 import { startFeed } from "./live/feed.ts";
 import { Trails } from "./live/trails.ts";
+import { startStatus } from "./status.ts";
 
 const map = createBaseMap(document.getElementById("map")!);
 const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
@@ -24,8 +25,7 @@ function labelsAnchor(): string | undefined {
   return layers.slice(lastRoad + 1).find((l) => l.type === "symbol")?.id;
 }
 
-/** Vehicles not reported for this long are removed from the map. */
-const STALE_S = 180;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 const transitReady = loadTransit();
 const mapReady = new Promise<void>((resolve) => map.once("load", () => resolve()));
@@ -47,25 +47,38 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     const dt = Math.min(0.25, (nowMs - last) / 1000);
     last = nowMs;
     const now = nowMs / 1000;
-    fleet.advance(dt);
-    trails.record(fleet, now);
-    if (now - lastTrailBuild >= TRAIL_REBUILD_S) {
-      lastTrailBuild = now;
-      f.trails = trails.snapshot(now);
-      f.trailsVersion++;
+    // Reduced motion: vehicles step to each new fix, with no glide or trails.
+    const still = reducedMotion.matches;
+    fleet.advance(dt, now, still);
+    if (!still) {
+      trails.record(fleet, now);
+      if (now - lastTrailBuild >= TRAIL_REBUILD_S) {
+        lastTrailBuild = now;
+        f.trails = trails.snapshot(now);
+        f.trailsVersion++;
+      }
     }
-    f.vehicles = fleet.list();
+    f.vehicles = fleet.drawables();
     f.now = now;
     f.version++;
-    overlay.setProps({ layers: [...routes, ...trailLayers(transit, f), ...vehicleLayers(transit, f)] });
+    overlay.setProps({
+      layers: [...routes, ...(still ? [] : trailLayers(transit, f)), ...vehicleLayers(transit, f)],
+    });
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 
   const feed = startFeed((feedTime, rows) => {
-    fleet.update(feedTime, rows);
-    fleet.prune(feedTime, STALE_S);
-  }, (err) => console.warn("Vehicle feed:", err));
+    fleet.update(feedTime, rows, performance.now() / 1000);
+    fleet.prune(feedTime);
+  });
+
+  // Nobody is watching a hidden tab: stop polling, and catch up on return.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") feed.pause(); else feed.resume();
+  });
+
+  startStatus(document.getElementById("status")!, fleet, feed);
 
   (window as unknown as { godmode: unknown }).godmode = { map, overlay, transit, fleet, feed, trails };
 });
