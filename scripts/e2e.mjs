@@ -69,7 +69,7 @@ try {
 
   await check("status line shows live counts", async () => {
     const text = await page.$eval("#status", (el) => el.textContent);
-    assert(/^\d+ buses · \d+ trains · \d+ planes · live$/.test(text), `got "${text}"`);
+    assert(/^\d+ buses · \d+ trains · \d+ planes( · -?\d+°F, [a-z ]+)? · live$/.test(text), `got "${text}"`);
     return text;
   });
 
@@ -262,6 +262,52 @@ try {
       assert(idle.errors.length === 0, idle.errors.join(" | "));
     });
     await idle.page.close();
+  }
+
+  {
+    const snow = await openApp({ query: "?weather=heavy-snow" });
+    await sleep(1500);
+    await check("heavy snow falls, and the status line says so", async () => {
+      const r = await snow.page.evaluate(() => {
+        const c = document.getElementById("fx");
+        const px = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+        let lit = 0;
+        for (let i = 3; i < px.length; i += 4) if (px[i] > 0) lit++;
+        return { lit, status: document.getElementById("status").textContent };
+      });
+      assert(r.lit > 1000, `only ${r.lit} snow pixels`);
+      assert(/heavy snow/.test(r.status), `status "${r.status}"`);
+      return `${r.lit} snow pixels`;
+    });
+    await snow.page.close();
+
+    const storm = await openApp({ query: "?weather=storm" });
+    await check("thunderstorms flicker with lightning now and then", async () => {
+      const flashed = await storm.page.evaluate(async () => {
+        const t0 = performance.now();
+        while (performance.now() - t0 < 16_000) {
+          if (window.fromAbove.fx.flash > 0) return true;
+          await new Promise((r) => setTimeout(r, 50));
+        }
+        return false;
+      });
+      assert(flashed, "no lightning in 16 s");
+    });
+    await storm.page.close();
+
+    const still = await openApp({ reduced: true, query: "?weather=heavy-snow" });
+    await sleep(1000);
+    await check("reduced motion: no falling snow", async () => {
+      const lit = await still.page.evaluate(() => {
+        const c = document.getElementById("fx");
+        const px = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+        let n = 0;
+        for (let i = 3; i < px.length; i += 4) if (px[i] > 0) n++;
+        return n;
+      });
+      assert(lit === 0, `${lit} particle pixels drawn`);
+    });
+    await still.page.close();
   }
 
   for (const [at, expect] of [["13:00", "day"], ["22:00", "night"]]) {

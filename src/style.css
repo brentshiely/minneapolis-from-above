@@ -93,3 +93,7 @@ html[data-sky="day"] #tip .tip-meta { color: #7b8591; }
 #caption.shown { opacity: 1; transform: none; }
 html[data-sky="day"] #caption { color: #4c5663; text-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff; }
 @media (prefers-reduced-motion: reduce) { #caption { transition: none; } }
+
+/* Weather sits over the map but never takes a click. */
+#veil, #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#veil { transition: background 4s ease; }

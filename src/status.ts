@@ -9,7 +9,7 @@ const STALLED_MS = 60_000;
  * A single quiet line in the corner: how many vehicles are moving and how
  * fresh the data is. It only asks for attention when live data stalls.
  */
-export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedStatus }, air?: AirFleet) {
+export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedStatus }, air?: AirFleet, weather?: () => string | undefined) {
   const render = () => {
     const s = feed.status;
     const moving = [...fleet.vehicles.values()].filter((v) => v.alpha > 0.5).length;
@@ -26,7 +26,8 @@ export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedS
     if (!s.lastOk) { el.textContent = "Connecting to Metro Transit…"; return; }
     const buses = moving - trains;
     const planes = air ? [...air.planes.values()].filter((p) => p.alpha > 0.5 && !p.onGround).length : 0;
-    el.textContent = `${buses} buses · ${trains} trains${air ? ` · ${planes} planes` : ""} · live`;
+    const conditions = weather?.();
+    el.textContent = `${buses} buses · ${trains} trains${air ? ` · ${planes} planes` : ""}${conditions ? ` · ${conditions}` : ""} · live`;
   };
   render();
   return setInterval(render, 1000);

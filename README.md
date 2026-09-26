@@ -21,7 +21,7 @@ npm run dev
 
 Then open the URL Vite prints. The dev server also serves the `/api/*` endpoints using the same code that runs on Cloudflare.
 
-The map follows the real sun over Minneapolis. To preview another time of day, add `?at=HH:MM` (Minneapolis time), for example `?at=13:00` for day, `?at=19:05` for the blue hour, or `?at=22:00` for night.
+The map follows the real sun over Minneapolis. To preview another time of day, add `?at=HH:MM` (Minneapolis time), for example `?at=13:00` for day, `?at=19:05` for the blue hour, or `?at=22:00` for night. Add `?weather=` with `snow`, `heavy-snow`, `rain`, `storm`, `fog` or `partly-cloudy` to preview weather.
 
 ## Scripts
 

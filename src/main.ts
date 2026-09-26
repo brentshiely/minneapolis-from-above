@@ -18,6 +18,8 @@ import { Hover } from "./hover.ts";
 import { pickLayers } from "./layers/hover.ts";
 import { Drift, IDLE_S, LANDMARKS, type Scene } from "./drift.ts";
 import { AIRLINES, kmBetween } from "./describe.ts";
+import { WeatherFx } from "./weather/effects.ts";
+import { previewWeather, type Weather } from "./weather/classify.ts";
 
 const clock = skyClock();
 let sky = skyAt(clock());
@@ -59,6 +61,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const air = new AirFleet();
   const airTrails = new Trails<Plane>(45);
   const a: AircraftFrame = { planes: [], trails: [], now: 0, version: 0, trailsVersion: 0, daylight: sky.daylight, sun: sky.sun };
+
+  // Weather at MSP, drawn over the map. ?weather=snow (etc.) previews it.
+  const fx = new WeatherFx(document.getElementById("fx") as HTMLCanvasElement, document.getElementById("veil")!);
+  fx.setDaylight(sky.daylight);
+  const weatherPreview = previewWeather(new URLSearchParams(location.search).get("weather") ?? "");
+  const weatherFeed = weatherPreview
+    ? (fx.set(weatherPreview), undefined)
+    : startPoller<Weather>("/api/weather", 5 * 60_000, (w) => fx.set(w));
 
   // When nobody's touching the map, tour it slowly.
   const idleParam = Number(new URLSearchParams(location.search).get("idle"));
@@ -114,6 +124,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     painted = sky.daylight;
     f.daylight = a.daylight = sky.daylight;
     paintSky(map, sky.daylight);
+    fx.setDaylight(sky.daylight);
     routes = routeLayers(transit, sky.daylight, anchor);
     markSky(sky.daylight);
   };
@@ -135,6 +146,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     const still = reducedMotion.matches;
     fleet.advance(dt, now, still);
     drift.tick(now);
+    fx.frame(dt, map.getBearing(), still);
     air.advance(dt, now);
     if (!still) {
       trails.record(fleet.vehicles, now);
@@ -182,12 +194,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed]) if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
-  startStatus(document.getElementById("status")!, fleet, feed, air);
+  startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current?.summary);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, sky: () => sky };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, sky: () => sky };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };
