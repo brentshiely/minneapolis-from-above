@@ -1,14 +1,19 @@
 /**
  * Cloudflare Pages Function: GET /api/aircraft
  *
- * Live aircraft over the metro from adsb.lol, a free, community-run ADS-B
- * network (no key; data under ODbL), trimmed to compact rows.
+ * Live aircraft over the metro from free, community-run ADS-B networks
+ * (no keys), trimmed to compact rows. adsb.lol first; it rate-limits
+ * Cloudflare's shared egress addresses, so adsb.fi (same format) is the
+ * fallback.
  */
 
 /** Center of the map's bounds and a radius (nautical miles) that covers them. */
 const CENTER = { lat: 44.95, lon: -93.35 };
 const RADIUS_NM = 45;
-export const AIRCRAFT_URL = `https://api.adsb.lol/v2/point/${CENTER.lat}/${CENTER.lon}/${RADIUS_NM}`;
+export const AIRCRAFT_SOURCES = [
+  `https://api.adsb.lol/v2/point/${CENTER.lat}/${CENTER.lon}/${RADIUS_NM}`,
+  `https://opendata.adsb.fi/api/v2/lat/${CENTER.lat}/lon/${CENTER.lon}/dist/${RADIUS_NM}`,
+];
 
 /** Planes cover ~1 km in 5 s at approach speed; refresh often. */
 const EDGE_TTL_S = 4;
@@ -52,10 +57,11 @@ function inArea(lat: number, lon: number) {
 
 const r5 = (n: number) => Math.round(n * 1e5) / 1e5;
 
-export function toAircraftResponse(body: { now?: number; ac?: AdsbAircraft[] }): AircraftResponse {
+/** adsb.lol names the list `ac`; adsb.fi names it `aircraft`. */
+export function toAircraftResponse(body: { now?: number; ac?: AdsbAircraft[]; aircraft?: AdsbAircraft[] }): AircraftResponse {
   const t = body.now ? body.now / 1000 : Date.now() / 1000;
   const a: AircraftRow[] = [];
-  for (const x of body.ac ?? []) {
+  for (const x of body.ac ?? body.aircraft ?? []) {
     if (typeof x.lat !== "number" || typeof x.lon !== "number" || !inArea(x.lat, x.lon)) continue;
     // Positions older than a minute are too stale to animate from.
     if ((x.seen_pos ?? 0) > 60) continue;
@@ -87,20 +93,22 @@ export const onRequestGet = async (): Promise<Response> => {
   const now = Date.now() / 1000;
   if (last && now - last.at < EDGE_TTL_S) return json(last.body, 200, `public, max-age=${EDGE_TTL_S}`);
 
-  let problem: string;
-  try {
-    const upstream = await fetch(AIRCRAFT_URL, {
-      headers: { "user-agent": "minneapolis-from-above (+https://minneapolis-from-above.pages.dev)" },
-      cf: { cacheTtl: EDGE_TTL_S, cacheEverything: true },
-    } as RequestInit);
-    if (upstream.ok) {
-      const body = toAircraftResponse(await upstream.json());
-      last = { at: now, body };
-      return json(body, 200, `public, max-age=${EDGE_TTL_S}`);
+  let problem = "The aircraft feed is unreachable.";
+  for (const url of AIRCRAFT_SOURCES) {
+    try {
+      const upstream = await fetch(url, {
+        headers: { "user-agent": "minneapolis-from-above (+https://minneapolis-from-above.pages.dev)" },
+        cf: { cacheTtl: EDGE_TTL_S, cacheEverything: true },
+      } as RequestInit);
+      if (upstream.ok) {
+        const body = toAircraftResponse(await upstream.json());
+        last = { at: now, body };
+        return json(body, 200, `public, max-age=${EDGE_TTL_S}`);
+      }
+      problem = `The aircraft feed returned ${upstream.status}.`;
+    } catch {
+      problem = "The aircraft feed is unreachable.";
     }
-    problem = `The aircraft feed returned ${upstream.status}.`;
-  } catch {
-    problem = "The aircraft feed is unreachable.";
   }
   if (last && now - last.at < STALE_OK_S) return json(last.body, 200, "no-store");
   return json({ error: problem }, 502);

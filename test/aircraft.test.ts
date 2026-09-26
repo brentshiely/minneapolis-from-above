@@ -42,6 +42,22 @@ test("endpoint returns a clear 502 when adsb.lol fails and nothing is cached", a
   assert.match(((await res.json()) as { error: string }).error, /429/);
 });
 
+test("falls back to adsb.fi when adsb.lol rate-limits", async (t) => {
+  const real = globalThis.fetch;
+  t.after(() => { globalThis.fetch = real; });
+  resetAircraftCache();
+  const asked: string[] = [];
+  globalThis.fetch = (async (url: string) => {
+    asked.push(new URL(url).host);
+    if (url.includes("adsb.lol")) return new Response("", { status: 429 });
+    return new Response(JSON.stringify({ now: fixture.now, aircraft: fixture.ac }));
+  }) as typeof fetch;
+  const res = await onRequestGet();
+  assert.equal(res.status, 200);
+  assert.deepEqual(asked, ["api.adsb.lol", "opendata.adsb.fi"]);
+  assert.ok(((await res.json()) as { a: unknown[] }).a.length > 10, "adsb.fi's `aircraft` list is read");
+});
+
 test("endpoint reuses a fresh snapshot, and rides out rate limits on a recent one", async (t) => {
   const real = globalThis.fetch;
   const realNow = Date.now;
