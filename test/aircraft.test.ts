@@ -210,3 +210,21 @@ test("ground aircraft with no track sit still", () => {
   assert.ok(p.onGround);
   assert.deepEqual(p.position, [-93.22, 44.88]);
 });
+
+test("after every source refuses, the endpoint stops asking them for 5 minutes", async (t) => {
+  const real = globalThis.fetch;
+  const realNow = Date.now;
+  t.after(() => { globalThis.fetch = real; Date.now = realNow; });
+  resetAircraftCache();
+  let calls = 0, clock = 2_000_000_000;
+  Date.now = () => clock;
+  globalThis.fetch = (async () => { calls++; return new Response("", { status: 403 }); }) as typeof fetch;
+  assert.equal((await onRequestGet()).status, 502);
+  const first = calls;
+  clock += 60_000;
+  assert.equal((await onRequestGet()).status, 502);
+  assert.equal(calls, first, "no upstream calls within 5 minutes");
+  clock += 300_000;
+  await onRequestGet();
+  assert.ok(calls > first, "tries again after 5 minutes");
+});

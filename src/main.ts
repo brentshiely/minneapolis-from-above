@@ -190,11 +190,13 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     fleet.prune(feedTime);
   });
 
+  // Aircraft feeds can refuse the live site's servers entirely; back off
+  // to one check every 5 minutes rather than asking every 5 seconds.
   const airFeed = startPoller<AircraftResponse>("/api/aircraft", 5_000, (body) => {
     const now = performance.now() / 1000;
     air.update(body.a, now);
     air.prune(now);
-  });
+  }, { maxMs: 5 * 60_000 });
 
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
@@ -202,7 +204,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     for (const p of [feed, airFeed, weatherFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
-  startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current && `${fx.current.summary} · ${fx.current.wind}`);
+  startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current && `${fx.current.summary} · ${fx.current.wind}`, airFeed.status);
 
   (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, learnedLakes, sky: () => sky };
 });

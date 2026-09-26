@@ -1,6 +1,6 @@
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
-import { startFeed, POLL_MS } from "../src/live/feed.ts";
+import { startFeed, startPoller, POLL_MS } from "../src/live/feed.ts";
 
 const flush = () => new Promise((r) => setImmediate(r));
 
@@ -51,5 +51,28 @@ test("counts failures and recovers", async (t) => {
   mock.timers.tick(POLL_MS); await flush();
   assert.equal(feed.status.failures, 0);
   assert.ok(feed.status.lastOk > 0);
+  feed.pause();
+});
+
+test("with back-off, a failing feed is asked less and less often", async (t) => {
+  mock.timers.enable({ apis: ["setTimeout"] });
+  t.after(() => mock.timers.reset());
+  const realFetch = globalThis.fetch;
+  const realWarn = console.warn;
+  t.after(() => { globalThis.fetch = realFetch; console.warn = realWarn; });
+  let warnings = 0;
+  console.warn = () => { warnings++; };
+  let calls = 0;
+  globalThis.fetch = (async () => { calls++; return new Response("", { status: 502 }); }) as typeof fetch;
+  const feed = startPoller("/api/x", 5_000, () => {}, { maxMs: 60_000 });
+  await flush();                                          // 1st call fails
+  mock.timers.tick(5_000); await flush();                 // 2nd, after 5 s
+  mock.timers.tick(5_000); await flush();
+  assert.equal(calls, 2, "3rd waits 10 s, not 5");
+  mock.timers.tick(5_000); await flush();
+  assert.equal(calls, 3);
+  mock.timers.tick(10 * 60_000); await flush();
+  assert.ok(calls < 16, `${calls} calls in 10 minutes`);
+  assert.equal(warnings, 1, "one warning per outage");
   feed.pause();
 });

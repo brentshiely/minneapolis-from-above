@@ -24,7 +24,15 @@ export interface Poller {
  * Polls a JSON endpoint whose body carries a feed timestamp `t`, and hands
  * each snapshot with a newer `t` to `onSnapshot`.
  */
-export function startPoller<T extends { t: number }>(url: string, intervalMs: number, onSnapshot: (body: T) => void): Poller {
+/**
+ * With `backoff`, repeated failures stretch the wait (doubling from the
+ * interval up to `maxMs`), so a feed that's down isn't asked every few
+ * seconds by every open page.
+ */
+export function startPoller<T extends { t: number }>(
+  url: string, intervalMs: number, onSnapshot: (body: T) => void,
+  backoff?: { maxMs: number },
+): Poller {
   let lastT = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let inFlight = false;
@@ -32,7 +40,10 @@ export function startPoller<T extends { t: number }>(url: string, intervalMs: nu
 
   function schedule() {
     clearTimeout(timer);
-    if (!status.paused) timer = setTimeout(tick, intervalMs);
+    const wait = backoff && status.failures > 1
+      ? Math.min(backoff.maxMs, intervalMs * 2 ** (status.failures - 1))
+      : intervalMs;
+    if (!status.paused) timer = setTimeout(tick, wait);
   }
 
   async function tick() {
@@ -50,7 +61,8 @@ export function startPoller<T extends { t: number }>(url: string, intervalMs: nu
       }
     } catch (err) {
       status.failures++;
-      console.warn("Live feed:", err);
+      // One warning per outage, not one per retry.
+      if (status.failures === 1) console.warn("Live feed:", err);
     } finally {
       inFlight = false;
       schedule();

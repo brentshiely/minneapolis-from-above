@@ -171,9 +171,15 @@ function sources(env: AircraftEnv): Source[] {
  */
 const STALE_OK_S = 60;
 let last: { at: number; ttl: number; body: AircraftResponse } | undefined;
+/**
+ * When every source refuses (as they do from Cloudflare's servers), don't
+ * ask them again for a while: answer from this instead.
+ */
+const FAILURE_TTL_S = 300;
+let failed: { at: number; error: string } | undefined;
 
 /** For tests. */
-export function resetAircraftCache() { last = undefined; token = undefined; }
+export function resetAircraftCache() { last = undefined; token = undefined; failed = undefined; }
 
 /** Cloudflare's per-location cache, shared by every instance there (absent in Node). */
 const CACHE_KEY = "https://minneapolis-from-above.internal/aircraft";
@@ -184,12 +190,14 @@ export const onRequestGet = async ({ env = {} }: { env?: AircraftEnv } = {}): Pr
   if (last && now - last.at < last.ttl) return json(last.body, 200, `public, max-age=${Math.ceil(last.ttl - (now - last.at))}`);
   const cached = await edgeCache()?.match(CACHE_KEY);
   if (cached) return cached;
+  if (failed && now - failed.at < FAILURE_TTL_S) return json({ error: failed.error }, 502, `public, max-age=${FAILURE_TTL_S}`);
 
   const problems: string[] = [];
   for (const src of sources(env)) {
     try {
       const body = await src.fetch();
       last = { at: now, ttl: src.ttl, body };
+      failed = undefined;
       const res = json(body, 200, `public, max-age=${src.ttl}`);
       await edgeCache()?.put(CACHE_KEY, res.clone());
       return res;
@@ -199,7 +207,8 @@ export const onRequestGet = async ({ env = {} }: { env?: AircraftEnv } = {}): Pr
   }
   if (last && now - last.at < STALE_OK_S) return json(last.body, 200, "no-store");
   // Name every source's failure: the last one alone hides what went wrong.
-  return json({ error: `No aircraft feed answered. ${problems.join("; ")}` }, 502);
+  failed = { at: now, error: `No aircraft feed answered. ${problems.join("; ")}` };
+  return json({ error: failed.error }, 502, `public, max-age=${FAILURE_TTL_S}`);
 };
 
 function json(body: unknown, status: number, cache = "no-store"): Response {

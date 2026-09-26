@@ -9,7 +9,10 @@ const STALLED_MS = 60_000;
  * A single quiet line in the corner: how many vehicles are moving and how
  * fresh the data is. It only asks for attention when live data stalls.
  */
-export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedStatus }, air?: AirFleet, weather?: () => string | undefined) {
+export function startStatus(
+  el: HTMLElement, fleet: Fleet, feed: { status: FeedStatus }, air?: AirFleet,
+  weather?: () => string | undefined, airStatus?: FeedStatus,
+) {
   const render = () => {
     const s = feed.status;
     const moving = [...fleet.vehicles.values()].filter((v) => v.alpha > 0.5).length;
@@ -26,10 +29,13 @@ export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedS
     if (!s.lastOk) { el.textContent = "Connecting to Metro Transit…"; return; }
     const buses = moving - trains;
     const planes = air ? [...air.planes.values()].filter((p) => p.alpha > 0.5 && !p.onGround).length : 0;
+    // No aircraft feed (the live site can't reach one): say nothing about
+    // planes rather than claim an empty sky.
+    const showPlanes = !!air && (!airStatus || airStatus.lastOk > 0 || air.planes.size > 0);
     const conditions = weather?.();
     // Two parts, so narrow screens can stack them on separate lines.
     const counts = document.createElement("span");
-    counts.textContent = `${buses} buses · ${trains} trains${air ? ` · ${planes} planes` : ""}`;
+    counts.textContent = `${buses} buses · ${trains} trains${showPlanes ? ` · ${planes} planes` : ""}`;
     const sky = document.createElement("span");
     sky.className = "sky";
     sky.textContent = `${conditions ? `${conditions} · ` : ""}live`;
