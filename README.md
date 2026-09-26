@@ -34,6 +34,7 @@ The map follows the real sun over Minneapolis. To preview another time of day, a
 | `npm run perf` | Frame rate at metro, downtown and street zoom in headless Chrome (real GPU) |
 | `npm run shot -- <dir> <warmup> name:lon,lat,zoom` | Screenshots of the running app |
 | `npm run build:data` | Re-bake route data from Metro Transit's latest GTFS feed |
+| `npm run build:freeways` | Re-bake the freeway sensor layout from MnDOT |
 | `npm run preview` | Serve `dist/` plus Functions through Wrangler, as Cloudflare would |
 | `npm run deploy` | Build and deploy to Cloudflare Pages (needs `wrangler login` once) |
 

@@ -19,6 +19,9 @@ import { pickLayers } from "./layers/hover.ts";
 import { Drift, IDLE_S, LANDMARKS, type Scene } from "./drift.ts";
 import { AIRLINES, kmBetween } from "./describe.ts";
 import { learnedLakes } from "./water/match.ts";
+import { loadFreeways, type Freeways } from "./traffic/freeways.ts";
+import type { TrafficResponse } from "./traffic/traffic.ts";
+import { trafficLayer, type TrafficFrame } from "./layers/traffic.ts";
 import { WeatherFx } from "./weather/effects.ts";
 import { previewWeather, type Weather } from "./weather/classify.ts";
 
@@ -127,13 +130,24 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     a.sun = sky.sun;
     if (Math.abs(sky.daylight - painted) < 0.01 && !(sky.daylight !== painted && (sky.daylight === 0 || sky.daylight === 1))) return;
     painted = sky.daylight;
-    f.daylight = a.daylight = sky.daylight;
+    f.daylight = a.daylight = tf.daylight = sky.daylight;
     paintSky(map, sky.daylight);
     fx.setDaylight(sky.daylight);
     routes = routeLayers(transit, sky.daylight, anchor);
     markSky(sky.daylight);
   };
   setInterval(followSun, 1000);
+  // Freeway speeds from MnDOT's road sensors, every 30 seconds.
+  let freeways: Freeways | undefined;
+  const tf: TrafficFrame = { readings: {}, version: 0, daylight: sky.daylight };
+  loadFreeways().then((fw) => { freeways = fw; hover.setFreeways(fw, () => tf.readings, () => trafficAge); }).catch((e) => console.warn(e));
+  let trafficAge = 0;
+  const trafficFeed = startPoller<TrafficResponse>("/api/traffic", 30_000, (body) => {
+    tf.readings = body.s;
+    trafficAge = body.t;
+    tf.version++;
+  }, { maxMs: 5 * 60_000 });
+
   const hover = new Hover(map, overlay, fleet, air, transit, () => f.daylight);
 
   /** Trail geometry is rebuilt a few times a second; the fade animates every frame. */
@@ -173,6 +187,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
+        ...(freeways ? [trafficLayer(freeways, tf, anchor)] : []),
         ...routes,
         ...(still ? [] : trailLayers(transit, f)),
         ...vehicleLayers(transit, f),
@@ -201,12 +216,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current && `${fx.current.summary} · ${fx.current.wind}`, airFeed.status);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, learnedLakes, sky: () => sky };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, learnedLakes, tf, freeways: () => freeways, sky: () => sky };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };

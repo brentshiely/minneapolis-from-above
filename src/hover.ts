@@ -1,6 +1,6 @@
 import type { Map as MapLibreMap } from "maplibre-gl";
 import type { MapboxOverlay } from "@deck.gl/mapbox";
-import type { PickingInfo } from "@deck.gl/core";
+import type { Layer, PickingInfo } from "@deck.gl/core";
 import type { Fleet, Vehicle } from "./live/fleet.ts";
 import type { AirFleet, Plane } from "./live/aircraft.ts";
 import type { Transit } from "./transit/data.ts";
@@ -8,6 +8,8 @@ import { describePlane, describeVehicle, type Description, type FlightInfo } fro
 import { gaugeHighlight, planeHighlight, vehicleHighlight } from "./layers/hover.ts";
 import { describeGauge, type Gauge, type GaugeDetail } from "./water/gauges.ts";
 import { gaugeAt, learnLakeGauges } from "./water/match.ts";
+import type { Freeways, Stretch } from "./traffic/freeways.ts";
+import { describeStation, type Readings } from "./traffic/traffic.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -16,7 +18,9 @@ type Target =
   | { kind: "vehicle"; id: string }
   | { kind: "plane"; id: string }
   /** Water: the gauge that speaks for it, and where the cursor is. */
-  | { kind: "water"; lid: string; at: [number, number] };
+  | { kind: "water"; lid: string; at: [number, number] }
+  /** A freeway: the sensor station for that stretch, and where the cursor is. */
+  | { kind: "traffic"; station: string; at: [number, number] };
 
 /** How often to refresh the list of river and lake gauges. */
 const GAUGE_REFRESH_MS = 10 * 60_000;
@@ -35,6 +39,13 @@ export class Hover {
   private flights = new Map<string, FlightInfo | "pending">();
   private gauges: Gauge[] = [];
   private gaugeDetails = new Map<string, GaugeDetail | "pending">();
+  private freeways?: Freeways;
+  private readings: () => Readings = () => ({});
+  private trafficTime: () => number = () => 0;
+
+  setFreeways(fw: Freeways, readings: () => Readings, trafficTime: () => number) {
+    this.freeways = fw; this.readings = readings; this.trafficTime = trafficTime;
+  }
   private map: MapLibreMap;
   private fleet: Fleet;
   private air: AirFleet;
@@ -81,6 +92,9 @@ export class Hover {
     let next: Target | null = null;
     if (obj && info.layer?.id === "pick-vehicles") next = { kind: "vehicle", id: (obj as Vehicle).id };
     else if (obj && info.layer?.id === "pick-planes") next = { kind: "plane", id: (obj as Plane).id };
+    else if (obj && info.layer?.id === "traffic" && info.coordinate) {
+      next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
+    }
     else if (info.coordinate && this.gauges.length) {
       // Nothing moving under the cursor: is it water with a gauge?
       const at: [number, number] = [info.coordinate[0], info.coordinate[1]];
@@ -140,7 +154,7 @@ export class Hover {
     if (!this.target) return [];
     let desc: Description;
     let position: [number, number];
-    let layers;
+    let layers: Layer[];
     if (this.target.kind === "vehicle") {
       const v = this.fleet.vehicles.get(this.target.id);
       if (!v || v.alpha === 0) { this.clear(); return []; }
@@ -151,6 +165,12 @@ export class Hover {
       });
       position = v.position;
       layers = vehicleHighlight(this.transit, v, version, this.daylight());
+    } else if (this.target.kind === "traffic") {
+      const info = this.freeways?.stations[this.target.station];
+      if (!info) { this.clear(); return []; }
+      desc = describeStation(info, this.readings()[this.target.station], nowS_wall() - this.trafficTime());
+      position = this.target.at;
+      layers = [];
     } else if (this.target.kind === "water") {
       const lid = this.target.lid;
       const g = this.gauges.find((x) => x.lid === lid);

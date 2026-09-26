@@ -238,6 +238,30 @@ try {
     assert(land === "", `dry land showed "${land}"`);
   });
 
+  await check("hovering a freeway shows its live speed in plain words", async () => {
+    // A stretch of I-94 with a current reading, near its middle.
+    const target = await page.evaluate(() => {
+      const g = window.fromAbove, fw = g.freeways();
+      // In the core metro, where the camera can go (the map's pan limits stop short of Monticello).
+      const core = ([lon, lat]) => lon > -93.4 && lon < -93.0 && lat > 44.9 && lat < 45.05;
+      const s = fw.stretches.find((x) => fw.stations[x.station]?.route === "I-94" && g.tf.readings[x.station]?.[0] != null
+        && x.path.length >= 3 && core(x.path[Math.floor(x.path.length / 2)]));
+      return s && { at: s.path[Math.floor(s.path.length / 2)], station: s.station };
+    });
+    assert(target, "no I-94 stretch with a reading");
+    await page.evaluate((c) => window.fromAbove.map.jumpTo({ center: c, zoom: 15 }), target.at);
+    await sleep(2500);
+    await page.mouse.move(5, 5);
+    const pt = await page.evaluate((c) => window.fromAbove.map.project(c), target.at);
+    await page.mouse.move(pt.x, pt.y);
+    await sleep(800);
+    const tip = await page.$eval("#tip", (el) => (el.hidden ? "" : el.innerText));
+    await page.mouse.move(5, 5);
+    assert(/^I-94 (east|west)bound/.test(tip), `got "${tip}"`);
+    assert(/\d+ mph, (moving freely|slowing|heavy traffic|stop and go)\. The limit is \d+\./.test(tip), `got "${tip}"`);
+    return tip.replace(/\n/g, " | ");
+  });
+
   await check("tapping pins the tooltip until tapping elsewhere", async () => {
     const t = await page.evaluate(() => {
       const v = window.fromAbove.fleet.list().find((x) => x.alpha === 1);
@@ -452,6 +476,9 @@ try {
       await p.touchscreen.tap(30, 120);
     });
     await check("phone: touching the screen stops the drift", async () => {
+      // A tap can land on a freeway and pin its tooltip, which (rightly) holds
+      // the drift still; start from a clear screen.
+      await p.evaluate(() => window.fromAbove.hover.clear());
       await sleep(6000);
       const before = await p.evaluate(() => window.fromAbove.drift.drifting);
       await p.touchscreen.tap(200, 300);

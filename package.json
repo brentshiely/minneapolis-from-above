@@ -12,7 +12,8 @@
     "build:data": "node scripts/build-gtfs.mjs",
     "perf": "node scripts/perf.mjs",
     "shot": "node scripts/shot.mjs",
-    "e2e": "node scripts/e2e.mjs"
+    "e2e": "node scripts/e2e.mjs",
+    "build:freeways": "node scripts/build-mndot.mjs"
   },
   "author": "",
   "license": "UNLICENSED",
