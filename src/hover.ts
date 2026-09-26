@@ -51,6 +51,9 @@ export class Hover {
     if (!next) this.hideTip();
   }
 
+  /** True while a tooltip is pinned open by a tap. */
+  get pinnedOpen() { return this.pinned && this.target !== null; }
+
   clear() {
     this.target = null;
     this.pinned = false;

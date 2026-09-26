@@ -75,3 +75,21 @@ html[data-sky="day"] #tip {
 }
 html[data-sky="day"] #tip .tip-detail { color: #4c5663; }
 html[data-sky="day"] #tip .tip-meta { color: #7b8591; }
+
+/* The drift's quiet caption: what the camera is looking at. */
+#caption {
+  position: fixed;
+  left: max(16px, env(safe-area-inset-left));
+  top: max(14px, env(safe-area-inset-top));
+  font: 500 13px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.02em;
+  color: #9aa7b3;
+  text-shadow: 0 0 4px #070b10, 0 0 8px #070b10;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 1.6s ease, transform 1.6s ease;
+}
+#caption.shown { opacity: 1; transform: none; }
+html[data-sky="day"] #caption { color: #4c5663; text-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff; }
+@media (prefers-reduced-motion: reduce) { #caption { transition: none; } }

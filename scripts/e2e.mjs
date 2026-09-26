@@ -226,6 +226,44 @@ try {
   });
   await page.close();
 
+  {
+    const idle = await openApp({ query: "?idle=3" });
+    await check("after sitting idle, the camera drifts and captions the view", async () => {
+      const start = await idle.page.evaluate(() => window.fromAbove.map.getCenter().toArray());
+      await sleep(6000);
+      const r = await idle.page.evaluate(() => ({
+        drifting: window.fromAbove.drift.drifting,
+        center: window.fromAbove.map.getCenter().toArray(),
+        caption: document.getElementById("caption").textContent,
+        shown: document.getElementById("caption").classList.contains("shown"),
+      }));
+      assert(r.drifting, "not drifting");
+      assert(r.center[0] !== start[0] || r.center[1] !== start[1], "camera didn't move");
+      assert(r.shown && r.caption.length > 0, "no caption");
+      return r.caption;
+    });
+    await check("moving the mouse stops the drift at once", async () => {
+      await idle.page.mouse.move(400, 300);
+      await idle.page.mouse.move(420, 320);
+      await sleep(200);
+      const a = await idle.page.evaluate(() => ({
+        drifting: window.fromAbove.drift.drifting,
+        moving: window.fromAbove.map.isMoving(),
+        center: window.fromAbove.map.getCenter().toArray(),
+        shown: document.getElementById("caption").classList.contains("shown"),
+      }));
+      await sleep(1000);
+      const b = await idle.page.evaluate(() => window.fromAbove.map.getCenter().toArray());
+      assert(!a.drifting && !a.moving, "still drifting");
+      assert(!a.shown, "caption still shown");
+      assert(a.center[0] === b[0] && a.center[1] === b[1], "camera kept moving");
+    });
+    await check("drifting: no console errors", async () => {
+      assert(idle.errors.length === 0, idle.errors.join(" | "));
+    });
+    await idle.page.close();
+  }
+
   for (const [at, expect] of [["13:00", "day"], ["22:00", "night"]]) {
     const sky = await openApp({ query: `?at=${at}` });
     await sleep(1500);

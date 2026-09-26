@@ -16,6 +16,8 @@ import { Trails } from "./live/trails.ts";
 import { startStatus } from "./status.ts";
 import { Hover } from "./hover.ts";
 import { pickLayers } from "./layers/hover.ts";
+import { Drift, IDLE_S, LANDMARKS, type Scene } from "./drift.ts";
+import { AIRLINES, kmBetween } from "./describe.ts";
 
 const clock = skyClock();
 let sky = skyAt(clock());
@@ -58,6 +60,50 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const airTrails = new Trails<Plane>(45);
   const a: AircraftFrame = { planes: [], trails: [], now: 0, version: 0, trailsVersion: 0, daylight: sky.daylight, sun: sky.sun };
 
+  // When nobody's touching the map, tour it slowly.
+  const idleParam = Number(new URLSearchParams(location.search).get("idle"));
+  const trainScene: Scene = {
+    kind: "follow", zoom: 14.6, pitch: 40,
+    find() {
+      const trains = fleet.list().filter((v) => v.mode === "rail" && v.alpha === 1 && v.motion.onShape && v.motion.speed > 0);
+      const v = trains[Math.floor(Math.random() * trains.length)];
+      if (!v) return undefined;
+      const name = transit.routes[v.routeId]?.name ?? "light rail";
+      return { name: `Riding along with a METRO ${name} train`, position: () => { const x = fleet.vehicles.get(v.id); return x && x.alpha > 0 ? x.position : undefined; } };
+    },
+  };
+  const MSP: [number, number] = [-93.2218, 44.882];
+  const landingScene: Scene = {
+    kind: "follow", zoom: 12.8, pitch: 35,
+    find() {
+      const p = air.list().find((x) => !x.onGround && x.alpha === 1 && (x.verticalFpm ?? 0) < -300 && (x.altFt ?? 99999) < 8000
+        && kmBetween(x.position[1], x.position[0], MSP[1], MSP[0]) < 30);
+      if (!p) return undefined;
+      const airline = AIRLINES[p.callsign.slice(0, 3)];
+      const flight = p.callsign.replace(/^[A-Z]{3}(?=\d)/, "");
+      const name = airline ? `Following ${airline} flight ${flight} into MSP` : "Following a plane into MSP";
+      return { name, position: () => { const x = air.planes.get(p.id); return x && !x.onGround && x.alpha > 0 ? x.position : undefined; } };
+    },
+  };
+  const [overview, mpls, uofm, stpaul, univ, lakes, approach, lake] = LANDMARKS;
+  const drift = new Drift(map, [overview, mpls, trainScene, uofm, stpaul, landingScene, lakes, univ, approach, trainScene, lake],
+    performance.now() / 1000, idleParam > 0 ? idleParam : IDLE_S);
+  drift.holdStill = () => reducedMotion.matches || hover.pinnedOpen;
+  const caption = document.getElementById("caption")!;
+  drift.onCaption = (text) => {
+    caption.classList.toggle("shown", !!text);
+    if (text) caption.textContent = text;
+  };
+  // Any real input hands control back. Tiny pointer jitter doesn't count.
+  let lastPointer: [number, number] | undefined;
+  const wake = () => drift.wake(performance.now() / 1000);
+  addEventListener("pointermove", (e) => {
+    const p: [number, number] = [e.clientX, e.clientY];
+    if (lastPointer && Math.hypot(p[0] - lastPointer[0], p[1] - lastPointer[1]) > 3) wake();
+    lastPointer = p;
+  }, { passive: true });
+  for (const type of ["pointerdown", "wheel", "keydown", "touchstart"]) addEventListener(type, wake, { passive: true });
+
   // Follow the sun: check once a second and repaint when daylight shifts.
   // Dawn and dusk each take about an hour, so steps of 0.01 are invisible.
   let painted = sky.daylight;
@@ -88,6 +134,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     // Reduced motion: vehicles step to each new fix, with no glide or trails.
     const still = reducedMotion.matches;
     fleet.advance(dt, now, still);
+    drift.tick(now);
     air.advance(dt, now);
     if (!still) {
       trails.record(fleet.vehicles, now);
@@ -140,7 +187,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   startStatus(document.getElementById("status")!, fleet, feed, air);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, sky: () => sky };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, sky: () => sky };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };
