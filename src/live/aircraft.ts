@@ -5,8 +5,11 @@ import type { LonLat } from "./geometry.ts";
 export type { AircraftRow };
 
 const KT_TO_MS = 0.514444;
-/** Stop extrapolating after this long without a fix; better to wait than wander. */
-const MAX_EXTRAPOLATE_S = 30;
+/**
+ * Stop extrapolating after this long without a fix; better to wait than
+ * wander. Covers OpenSky's 30 s refresh with room to spare.
+ */
+const MAX_EXTRAPOLATE_S = 60;
 /** Position corrections decay with this time constant (seconds). */
 const CORRECT_TAU_S = 1.5;
 /** Headings ease toward the reported track with this time constant. */
@@ -14,10 +17,10 @@ const HEADING_TAU_S = 1;
 /** A correction bigger than this is a jump; fade instead of sliding. */
 const JUMP_M = 3000;
 export const PLANE_FADE_IN_S = 1.5;
-/** Planes unheard from this long fade out... */
-export const PLANE_STALE_FADE_S = 25;
+/** Planes unheard from this long fade out (updates can be 30 s apart)... */
+export const PLANE_STALE_FADE_S = 70;
 /** ...and are gone by this long. */
-export const PLANE_STALE_S = 45;
+export const PLANE_STALE_S = 90;
 
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 

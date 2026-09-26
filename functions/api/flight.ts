@@ -69,8 +69,12 @@ export async function lookupFlight(callsign: string, hex: string): Promise<Fligh
     info.origin = airport(fr.origin);
     info.destination = airport(fr.destination);
   }
-  const ac = craft?.aircraft as { manufacturer?: string; type?: string; registered_owner?: string } | undefined;
+  const ac = craft?.aircraft as
+    | { manufacturer?: string; type?: string; registered_owner?: string; icao_type?: string; registration?: string }
+    | undefined;
   if (ac) {
+    if (ac.icao_type) info.icaoType = ac.icao_type;
+    if (ac.registration) info.registration = ac.registration;
     if (ac.manufacturer) info.manufacturer = ac.manufacturer;
     if (ac.type) info.model = ac.type;
     if (ac.registered_owner) info.owner = ac.registered_owner;

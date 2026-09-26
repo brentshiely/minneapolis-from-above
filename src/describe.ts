@@ -199,6 +199,9 @@ export interface FlightInfo {
   manufacturer?: string;
   model?: string;
   owner?: string;
+  /** ICAO type designator and registration, for feeds that don't send them. */
+  icaoType?: string;
+  registration?: string;
 }
 
 export interface Airport {
@@ -292,7 +295,9 @@ function mspPhase(p: PlaneFacts): string | undefined {
 
 const isPrivateCallsign = (cs: string, reg: string) => !cs || cs === reg || /^N\d/.test(cs);
 
-export function describePlane(p: PlaneFacts, info?: FlightInfo): Description {
+export function describePlane(facts: PlaneFacts, info?: FlightInfo): Description {
+  // Some feeds (OpenSky) omit type and registration; the lookup fills them in.
+  const p = { ...facts, type: facts.type || info?.icaoType || "", registration: facts.registration || info?.registration || "" };
   const typeName = AIRCRAFT_TYPES[p.type]
     ?? (info?.manufacturer && info.model ? `${info.manufacturer} ${info.model}` : p.type ? `${p.type} aircraft` : "aircraft");
   const prefix = p.callsign.slice(0, 3);

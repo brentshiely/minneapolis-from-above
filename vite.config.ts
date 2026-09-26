@@ -13,7 +13,7 @@ function pagesFunctions(): Plugin {
         if (!name || !["vehicles", "aircraft", "flight", "weather"].includes(name)) return next();
         try {
           const mod = await server.ssrLoadModule(`/functions/api/${name}.ts`);
-          const response: Response = await mod.onRequestGet({ request: new Request(`http://localhost/api${req.url}`) });
+          const response: Response = await mod.onRequestGet({ request: new Request(`http://localhost/api${req.url}`), env: process.env });
           res.statusCode = response.status;
           response.headers.forEach((v, k) => res.setHeader(k, v));
           res.end(Buffer.from(await response.arrayBuffer()));

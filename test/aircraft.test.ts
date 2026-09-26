@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { toAircraftResponse, onRequestGet, resetAircraftCache, type AircraftRow } from "../functions/api/aircraft.ts";
+import { fromOpenSky, toAircraftResponse, onRequestGet, resetAircraftCache, type AircraftRow } from "../functions/api/aircraft.ts";
 import { AirFleet, PLANE_STALE_S } from "../src/live/aircraft.ts";
 import { distM, M_PER_DEG_LAT } from "../src/transit/data.ts";
 
@@ -42,6 +42,62 @@ test("endpoint returns a clear 502 when adsb.lol fails and nothing is cached", a
   assert.match(((await res.json()) as { error: string }).error, /429/);
 });
 
+const opensky = JSON.parse(readFileSync(new URL("./fixtures/opensky.json", import.meta.url), "utf8"));
+
+test("reads OpenSky's state vectors in feet, knots and feet per minute", () => {
+  const body = fromOpenSky(opensky);
+  assert.ok(body.a.length > 10, `${body.a.length} aircraft`);
+  assert.equal(body.t, opensky.time);
+  const sky = body.a.find((r) => r[1] === "SKW149R")!;
+  assert.equal(sky[0], "aae377");
+  assert.equal(sky[4], 3825, "1165.86 m is 3,825 ft");
+  assert.equal(sky[5], 168.2, "86.55 m/s is 168.2 kt");
+  assert.equal(sky[6], 121.1);
+  assert.equal(sky[9], 1, "position age from the snapshot time");
+  const parked = body.a.find((r) => r[0] === "a9ea5d")!;
+  assert.equal(parked[4], 0, "on the ground");
+});
+
+test("uses OpenSky when credentials are set, signing in once and caching the token", async (t) => {
+  const real = globalThis.fetch;
+  t.after(() => { globalThis.fetch = real; });
+  resetAircraftCache();
+  const asked: string[] = [];
+  globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    asked.push(new URL(url).host + new URL(url).pathname.split("/").slice(0, 3).join("/"));
+    if (url.includes("auth.opensky")) {
+      assert.match(String(init?.body), /grant_type=client_credentials/);
+      return new Response(JSON.stringify({ access_token: "tok", expires_in: 1800 }));
+    }
+    assert.equal((init?.headers as Record<string, string>).authorization, "Bearer tok");
+    return new Response(JSON.stringify(opensky));
+  }) as typeof fetch;
+  const env = { OPENSKY_CLIENT_ID: "id", OPENSKY_CLIENT_SECRET: "secret" };
+  const res = await onRequestGet({ env });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("cache-control")!, /max-age=30/, "OpenSky answers are shared for 30 s");
+  assert.deepEqual(asked, ["auth.opensky-network.org/auth/realms", "opensky-network.org/api/states"]);
+  const realNow = Date.now;
+  t.after(() => { Date.now = realNow; });
+  const start = Date.now();
+  Date.now = () => start + 31_000;
+  await onRequestGet({ env });
+  assert.equal(asked.filter((a) => a.startsWith("auth")).length, 1, "token reused");
+});
+
+test("falls back to the community feeds when OpenSky fails", async (t) => {
+  const real = globalThis.fetch;
+  t.after(() => { globalThis.fetch = real; });
+  resetAircraftCache();
+  globalThis.fetch = (async (url: string) => {
+    if (url.includes("opensky")) return new Response("", { status: 503 });
+    return new Response(JSON.stringify(fixture));
+  }) as typeof fetch;
+  const res = await onRequestGet({ env: { OPENSKY_CLIENT_ID: "id", OPENSKY_CLIENT_SECRET: "s" } });
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("cache-control")!, /max-age=4/);
+});
+
 test("falls back to adsb.fi when adsb.lol rate-limits", async (t) => {
   const real = globalThis.fetch;
   t.after(() => { globalThis.fetch = real; });
@@ -76,8 +132,8 @@ test("endpoint reuses a fresh snapshot, and rides out rate limits on a recent on
   const busy = await onRequestGet();
   assert.equal(busy.status, 200, "rate-limited: serves the 12 s old snapshot");
   assert.ok(((await busy.json()) as { a: unknown[] }).a.length > 10);
-  clock += 30_000;
-  assert.equal((await onRequestGet()).status, 502, "too old to serve");
+  clock += 50_000;
+  assert.equal((await onRequestGet()).status, 502, "over a minute old: too old to serve");
 });
 
 // A plane at 44.9,-93.2 heading due east at 200 kt (~102.9 m/s).
@@ -130,13 +186,15 @@ test("headings ease through turns", () => {
   assert.ok(Math.abs(air.planes.get("abc")!.heading - 180) < 0.1);
 });
 
-test("stops extrapolating after 30 s without a fix, then fades out", () => {
+test("stops extrapolating after 60 s without a fix, then fades out", () => {
   const air = new AirFleet();
   air.update([row(-93.2)], 0);
   air.advance(30, 30);
-  const at30 = air.planes.get("abc")!.position;
-  air.advance(10, 40);
-  assert.deepEqual(air.planes.get("abc")!.position, at30, "holds after 30 s");
+  assert.equal(air.planes.get("abc")!.alpha, 1, "a 30 s gap between updates is normal");
+  air.advance(30, 60);
+  const at60 = air.planes.get("abc")!.position;
+  air.advance(25, 85);
+  assert.deepEqual(air.planes.get("abc")!.position, at60, "holds after 60 s");
   assert.ok(air.planes.get("abc")!.alpha < 0.5);
   air.prune(PLANE_STALE_S + 1);
   assert.equal(air.planes.size, 0);

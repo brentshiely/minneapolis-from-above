@@ -151,3 +151,10 @@ test("unknown types use the lookup's manufacturer and model", () => {
   const d = describePlane(plane({ callsign: "N5X", registration: "N5X", type: "ZZZZ", verticalFpm: 0 }), { manufacturer: "Acme", model: "Skyrocket" });
   assert.equal(d.title, "An Acme Skyrocket (N5X).");
 });
+
+test("fills in type and registration from the lookup when the feed has none (OpenSky)", () => {
+  const d = describePlane(plane({ callsign: "SKW149R", registration: "", type: "", verticalFpm: 0, altFt: 3_800 }),
+    { airline: "SkyWest Airlines", flightNumber: "OO149", icaoType: "CRJ9", registration: "N149SY" });
+  assert.equal(d.detail, "A Bombardier CRJ900, cruising at 3,800 feet at 485 mph.");
+  assert.equal(d.meta, "SKW149R · N149SY · updated just now");
+});
