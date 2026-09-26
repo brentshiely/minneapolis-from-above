@@ -69,7 +69,7 @@ try {
 
   await check("status line shows live counts", async () => {
     const text = await page.$eval("#status", (el) => el.textContent);
-    assert(/^\d+ buses · \d+ trains · live from Metro Transit$/.test(text), `got "${text}"`);
+    assert(/^\d+ buses · \d+ trains · \d+ planes · live$/.test(text), `got "${text}"`);
     return text;
   });
 
@@ -126,6 +126,20 @@ try {
     assert(r.mid.vehicle > 0.2 && r.mid.vehicle < 0.8, `vehicle alpha mid-fade ${r.mid.vehicle}`);
     assert(r.after.vehicle === 1, "fade-in didn't complete");
     return `mid-fade alpha ${r.mid.vehicle.toFixed(2)}`;
+  });
+
+  await check("planes are in the sky and moving continuously", async () => {
+    const r = await page.evaluate(async () => {
+      const air = window.fromAbove.air;
+      const flying = () => [...air.planes.values()].filter((p) => !p.onGround && p.alpha > 0.9 && (p.speedKt ?? 0) > 80);
+      const before = new Map(flying().map((p) => [p.id, [...p.position]]));
+      await new Promise((r) => setTimeout(r, 1000));
+      const moved = flying().filter((p) => { const b = before.get(p.id); return b && (b[0] !== p.position[0] || b[1] !== p.position[1]); });
+      return { flying: before.size, moved: moved.length };
+    });
+    assert(r.flying > 0, "no planes airborne");
+    assert(r.moved === r.flying, `${r.moved}/${r.flying} moved within 1 s`);
+    return `${r.flying} flying, all moved within 1 s`;
   });
 
   await check("no console errors", async () => {

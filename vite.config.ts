@@ -8,10 +8,12 @@ function pagesFunctions(): Plugin {
   return {
     name: "pages-functions",
     configureServer(server) {
-      server.middlewares.use("/api/vehicles", async (req, res) => {
+      server.middlewares.use("/api", async (req, res, next) => {
+        const name = /^\/(\w+)/.exec(req.url ?? "")?.[1];
+        if (!name || !["vehicles", "aircraft"].includes(name)) return next();
         try {
-          const mod = await server.ssrLoadModule("/functions/api/vehicles.ts");
-          const response: Response = await mod.onRequestGet({ request: new Request(`http://localhost${req.url}`) });
+          const mod = await server.ssrLoadModule(`/functions/api/${name}.ts`);
+          const response: Response = await mod.onRequestGet({ request: new Request(`http://localhost/api${req.url}`) });
           res.statusCode = response.status;
           response.headers.forEach((v, k) => res.setHeader(k, v));
           res.end(Buffer.from(await response.arrayBuffer()));

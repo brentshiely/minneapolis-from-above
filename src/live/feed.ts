@@ -12,11 +12,19 @@ export interface FeedStatus {
   paused: boolean;
 }
 
+export interface Poller {
+  status: FeedStatus;
+  /** Stop polling (e.g. while the tab is hidden). */
+  pause(): void;
+  /** Resume polling with an immediate fetch. */
+  resume(): void;
+}
+
 /**
- * Polls /api/vehicles and hands each new snapshot to `onSnapshot`.
- * Snapshots whose feed timestamp hasn't advanced are skipped.
+ * Polls a JSON endpoint whose body carries a feed timestamp `t`, and hands
+ * each snapshot with a newer `t` to `onSnapshot`.
  */
-export function startFeed(onSnapshot: (feedTime: number, rows: VehicleRow[]) => void) {
+export function startPoller<T extends { t: number }>(url: string, intervalMs: number, onSnapshot: (body: T) => void): Poller {
   let lastT = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let inFlight = false;
@@ -24,25 +32,25 @@ export function startFeed(onSnapshot: (feedTime: number, rows: VehicleRow[]) => 
 
   function schedule() {
     clearTimeout(timer);
-    if (!status.paused) timer = setTimeout(tick, POLL_MS);
+    if (!status.paused) timer = setTimeout(tick, intervalMs);
   }
 
   async function tick() {
     if (inFlight || status.paused) return;
     inFlight = true;
     try {
-      const res = await fetch("/api/vehicles", { cache: "no-store" });
-      if (!res.ok) throw new Error(`vehicles ${res.status}`);
-      const body = (await res.json()) as VehiclesResponse;
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`${url} ${res.status}`);
+      const body = (await res.json()) as T;
       status.lastOk = performance.now();
       status.failures = 0;
       if (body.t > lastT) {
         lastT = body.t;
-        onSnapshot(body.t, body.v);
+        onSnapshot(body);
       }
     } catch (err) {
       status.failures++;
-      console.warn("Vehicle feed:", err);
+      console.warn("Live feed:", err);
     } finally {
       inFlight = false;
       schedule();
@@ -52,9 +60,12 @@ export function startFeed(onSnapshot: (feedTime: number, rows: VehicleRow[]) => 
   tick();
   return {
     status,
-    /** Stop polling (e.g. while the tab is hidden). */
     pause() { status.paused = true; clearTimeout(timer); },
-    /** Resume polling with an immediate fetch. */
     resume() { if (!status.paused) return; status.paused = false; tick(); },
   };
+}
+
+/** Buses and trains: polls /api/vehicles every 15 s. */
+export function startFeed(onSnapshot: (feedTime: number, rows: VehicleRow[]) => void): Poller {
+  return startPoller<VehiclesResponse>("/api/vehicles", POLL_MS, (b) => onSnapshot(b.t, b.v));
 }

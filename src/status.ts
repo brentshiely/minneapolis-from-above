@@ -1,5 +1,6 @@
 import type { Fleet } from "./live/fleet.ts";
 import type { FeedStatus } from "./live/feed.ts";
+import type { AirFleet } from "./live/aircraft.ts";
 
 /** Live data older than this reads as stalled. */
 const STALLED_MS = 60_000;
@@ -8,7 +9,7 @@ const STALLED_MS = 60_000;
  * A single quiet line in the corner: how many vehicles are moving and how
  * fresh the data is. It only asks for attention when live data stalls.
  */
-export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedStatus }) {
+export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedStatus }, air?: AirFleet) {
   const render = () => {
     const s = feed.status;
     const moving = [...fleet.vehicles.values()].filter((v) => v.alpha > 0.5).length;
@@ -24,7 +25,8 @@ export function startStatus(el: HTMLElement, fleet: Fleet, feed: { status: FeedS
     }
     if (!s.lastOk) { el.textContent = "Connecting to Metro Transit…"; return; }
     const buses = moving - trains;
-    el.textContent = `${buses} buses · ${trains} trains · live from Metro Transit`;
+    const planes = air ? [...air.planes.values()].filter((p) => p.alpha > 0.5 && !p.onGround).length : 0;
+    el.textContent = `${buses} buses · ${trains} trains${air ? ` · ${planes} planes` : ""} · live`;
   };
   render();
   return setInterval(render, 1000);

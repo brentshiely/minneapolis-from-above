@@ -1,7 +1,7 @@
 import { ScatterplotLayer } from "@deck.gl/layers";
 import { TripsLayer } from "@deck.gl/geo-layers";
 import type { Mode, Transit } from "../transit/data.ts";
-import type { Drawable } from "../live/fleet.ts";
+import type { Drawable, Vehicle } from "../live/fleet.ts";
 import { TRAIL_S, type Trail } from "../live/trails.ts";
 import { vehicleColor } from "../palette.ts";
 
@@ -35,7 +35,7 @@ const ADDITIVE = {
 
 export interface VehicleFrame {
   vehicles: Drawable[];
-  trails: Trail[];
+  trails: Trail<Vehicle>[];
   /** Page clock in seconds. */
   now: number;
   /** Bumps whenever positions change, so deck.gl re-reads them. */
@@ -47,13 +47,13 @@ export interface VehicleFrame {
 const colorOf = (transit: Transit) => (v: Drawable) => vehicleColor(transit.routes[v.routeId]);
 
 export function trailLayers(transit: Transit, f: VehicleFrame) {
-  const byMode: Record<Mode, Trail[]> = { bus: [], brt: [], rail: [] };
+  const byMode: Record<Mode, Trail<Vehicle>[]> = { bus: [], brt: [], rail: [] };
   for (const t of f.trails) byMode[t.vehicle.mode].push(t);
   const color = colorOf(transit);
 
   return (["bus", "brt", "rail"] as const).map((mode) => {
     const look = LOOK[mode];
-    return new TripsLayer<Trail>({
+    return new TripsLayer<Trail<Vehicle>>({
       id: `trails-${mode}`,
       data: byMode[mode],
       getPath: (t) => t.path,

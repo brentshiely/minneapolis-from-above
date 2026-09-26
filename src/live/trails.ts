@@ -1,5 +1,4 @@
 import { distM } from "../transit/data.ts";
-import type { Fleet, Vehicle } from "./fleet.ts";
 import type { LonLat } from "./geometry.ts";
 
 /** How long a trail lasts, in seconds. */
@@ -9,8 +8,14 @@ const SAMPLE_S = 1;
 /** A jump longer than this between samples is a teleport; the trail restarts. */
 const BREAK_M = 250;
 
-export interface Trail {
-  vehicle: Vehicle;
+/** Anything that moves and can leave a trail. */
+export interface Mover {
+  id: string;
+  position: LonLat;
+}
+
+export interface Trail<T extends Mover = Mover> {
+  vehicle: T;
   path: LonLat[];
   /** Seconds on the page clock, one per path point. */
   times: number[];
@@ -21,15 +26,20 @@ export interface Trail {
  * `snapshot` appends each vehicle's current position so the trail meets the
  * vehicle exactly.
  */
-export class Trails {
-  private trails = new Map<string, Trail>();
+export class Trails<T extends Mover> {
+  private trails = new Map<string, Trail<T>>();
   private lastSample = -Infinity;
+  private seconds: number;
 
-  record(fleet: Fleet, now: number) {
+  constructor(seconds = TRAIL_S) {
+    this.seconds = seconds;
+  }
+
+  record(movers: Map<string, T>, now: number) {
     if (now - this.lastSample < SAMPLE_S) return;
     this.lastSample = now;
-    const cutoff = now - TRAIL_S;
-    for (const v of fleet.vehicles.values()) {
+    const cutoff = now - this.seconds;
+    for (const v of movers.values()) {
       let t = this.trails.get(v.id);
       if (!t) this.trails.set(v.id, (t = { vehicle: v, path: [], times: [] }));
       t.vehicle = v;
@@ -41,12 +51,12 @@ export class Trails {
       while (drop < t.times.length - 1 && t.times[drop] < cutoff) drop++;
       if (drop) { t.path.splice(0, drop); t.times.splice(0, drop); }
     }
-    for (const id of this.trails.keys()) if (!fleet.vehicles.has(id)) this.trails.delete(id);
+    for (const id of this.trails.keys()) if (!movers.has(id)) this.trails.delete(id);
   }
 
   /** Trails with each vehicle's live position appended as the head. */
-  snapshot(now: number): Trail[] {
-    const out: Trail[] = [];
+  snapshot(now: number): Trail<T>[] {
+    const out: Trail<T>[] = [];
     for (const t of this.trails.values()) {
       const head = t.vehicle.position;
       const last = t.path[t.path.length - 1];
