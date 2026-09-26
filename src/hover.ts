@@ -25,8 +25,10 @@ export class Hover {
   private air: AirFleet;
   private transit: Transit;
 
-  constructor(map: MapLibreMap, overlay: MapboxOverlay, fleet: Fleet, air: AirFleet, transit: Transit) {
-    this.map = map; this.fleet = fleet; this.air = air; this.transit = transit;
+  private daylight: () => number;
+
+  constructor(map: MapLibreMap, overlay: MapboxOverlay, fleet: Fleet, air: AirFleet, transit: Transit, daylight: () => number = () => 0) {
+    this.map = map; this.fleet = fleet; this.air = air; this.transit = transit; this.daylight = daylight;
     this.tip = document.getElementById("tip")!;
     overlay.setProps({
       onHover: (info: PickingInfo) => { if (!this.pinned) this.pick(info); },
@@ -92,7 +94,7 @@ export class Hover {
         ageS: this.fleet.feedTime - v.fixTime,
       });
       position = v.position;
-      layers = vehicleHighlight(this.transit, v, version);
+      layers = vehicleHighlight(this.transit, v, version, this.daylight());
     } else {
       const p = this.air.planes.get(this.target.id);
       if (!p || p.alpha === 0) { this.clear(); return []; }
@@ -102,7 +104,7 @@ export class Hover {
         ageS: nowS - p.fixAt,
       }, this.flightInfo(p));
       position = p.position;
-      layers = planeHighlight(p, version);
+      layers = planeHighlight(p, version, this.daylight());
     }
     this.renderTip(desc, position);
     return layers;

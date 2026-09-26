@@ -5,8 +5,13 @@ import type { Trail } from "../live/trails.ts";
 import type { LonLat } from "../live/geometry.ts";
 import { M_PER_DEG_LAT } from "../transit/data.ts";
 import { PLANE_ICON } from "../icons.ts";
+import { groundPlaneColor, planeColor } from "../palette.ts";
+import type { SunPosition } from "../sun.ts";
 
 export interface AircraftFrame {
+  /** Daylight, 0 (night) to 1 (day), and where the sun is. */
+  daylight: number;
+  sun: SunPosition;
   planes: Plane[];
   trails: Trail<Plane>[];
   now: number;
@@ -22,23 +27,30 @@ const height = (p: Plane) => (p.onGround ? 0 : (p.altFt ?? 10_000) / 30_000);
 function sizePx(p: Plane) { return p.onGround ? 13 : lerp(30, 16, height(p)); }
 function opacity(p: Plane) { return p.onGround ? 0.45 : lerp(1, 0.6, height(p)); }
 
-const SKY: [number, number, number] = [232, 238, 248];
-const GROUND: [number, number, number] = [150, 162, 178];
+
+/** Longest shadow offset drawn, in meters; a low sun would otherwise fling it off the map. */
+const MAX_SHADOW_M = 2500;
 
 /**
- * A plane's shadow falls southeast of it (afternoon sun), farther the higher
- * it flies, so low planes visibly trail their shadow across the ground.
+ * A plane's shadow falls directly away from the sun, offset by its
+ * altitude over the tangent of the sun's elevation: low planes trail their
+ * shadow closely, high ones cast it far across the ground.
  */
-function shadowAt(p: Plane): LonLat {
-  if (p.onGround) return p.position;
-  const m = Math.min(1500, ((p.altFt ?? 0) * 0.3048) * 0.18);
+function shadowAt(p: Plane, sun: SunPosition): LonLat {
+  if (p.onGround || sun.elevation <= 1) return p.position;
+  const altM = (p.altFt ?? 0) * 0.3048;
+  const m = Math.min(MAX_SHADOW_M, altM / Math.tan((sun.elevation * Math.PI) / 180));
+  const away = ((sun.azimuth + 180) * Math.PI) / 180;
   const kx = M_PER_DEG_LAT * Math.cos((p.position[1] * Math.PI) / 180);
-  const d = m / Math.SQRT2;
-  return [p.position[0] + d / kx, p.position[1] - d / M_PER_DEG_LAT];
+  return [p.position[0] + (m * Math.sin(away)) / kx, p.position[1] + (m * Math.cos(away)) / M_PER_DEG_LAT];
 }
 
 export function aircraftLayers(f: AircraftFrame) {
   const airborne = f.trails.filter((t) => !t.vehicle.onGround);
+  const d = f.daylight;
+  const sky = planeColor(d), ground = groundPlaneColor(d);
+  // Shadows only exist while the sun is up.
+  const shadowStrength = d;
   return [
     new TripsLayer<Trail<Plane>>({
       id: "contrails",
@@ -46,7 +58,7 @@ export function aircraftLayers(f: AircraftFrame) {
       getPath: (t) => t.flat,
       positionFormat: "XY",
       getTimestamps: (t) => t.times,
-      getColor: (t) => [...SKY, 70 * t.vehicle.alpha * opacity(t.vehicle)],
+      getColor: (t) => [...sky, (70 - 25 * d) * t.vehicle.alpha * opacity(t.vehicle)],
       getWidth: 2,
       widthUnits: "pixels",
       capRounded: true,
@@ -60,18 +72,18 @@ export function aircraftLayers(f: AircraftFrame) {
       trailLength: 45,
       currentTime: f.now,
       parameters: { depthCompare: "always" },
-      updateTriggers: { getPath: f.trailsVersion, getTimestamps: f.trailsVersion, getColor: f.trailsVersion },
+      updateTriggers: { getPath: f.trailsVersion, getTimestamps: f.trailsVersion, getColor: [f.trailsVersion, d] },
     }),
     new IconLayer<Plane>({
       id: "plane-shadows",
       data: f.planes,
       getIcon: () => PLANE_ICON,
-      getPosition: shadowAt,
+      getPosition: (p) => shadowAt(p, f.sun),
       getAngle: (p) => -p.heading,
       getSize: sizePx,
       sizeUnits: "pixels",
       billboard: false,
-      getColor: (p) => [0, 0, 0, lerp(90, 30, height(p)) * p.alpha * (p.onGround ? 0 : 1)],
+      getColor: (p) => [20, 28, 38, lerp(80, 35, height(p)) * shadowStrength * p.alpha * (p.onGround ? 0 : 1)],
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: f.version, getAngle: f.version, getColor: f.version, getSize: f.version },
     }),
@@ -84,7 +96,7 @@ export function aircraftLayers(f: AircraftFrame) {
       getSize: sizePx,
       sizeUnits: "pixels",
       billboard: false,
-      getColor: (p) => [...(p.onGround ? GROUND : SKY), 255 * opacity(p) * p.alpha],
+      getColor: (p) => [...(p.onGround ? ground : sky), 255 * opacity(p) * p.alpha],
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: f.version, getAngle: f.version, getColor: f.version, getSize: f.version },
     }),

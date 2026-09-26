@@ -1,6 +1,6 @@
 import { PathLayer } from "@deck.gl/layers";
 import type { Mode, Shape, Transit } from "../transit/data.ts";
-import { ROUTE_STYLE, routeColor } from "../palette.ts";
+import { ROUTE_STYLE, routeAlpha, routeColor } from "../palette.ts";
 
 /**
  * The quiet network underneath everything that moves. One layer per mode,
@@ -8,7 +8,7 @@ import { ROUTE_STYLE, routeColor } from "../palette.ts";
  * at metro zoom where its real width is a fraction of a pixel. Buses draw
  * first so rail and BRT sit on top where corridors overlap.
  */
-export function routeLayers(transit: Transit, beforeId?: string) {
+export function routeLayers(transit: Transit, d: number, beforeId?: string) {
   const byMode: Record<Mode, Shape[]> = { bus: [], brt: [], rail: [] };
   for (const s of transit.shapes) byMode[transit.routes[s.route]?.mode ?? "bus"].push(s);
 
@@ -18,7 +18,7 @@ export function routeLayers(transit: Transit, beforeId?: string) {
       id: `routes-${mode}`,
       data: byMode[mode],
       getPath: (s) => s.path,
-      getColor: (s) => [...routeColor(transit.routes[s.route]), style.alpha],
+      getColor: (s) => [...routeColor(transit.routes[s.route], d), routeAlpha(mode, d)],
       getWidth: style.widthM,
       widthUnits: "meters",
       widthMinPixels: style.minPx,
@@ -26,6 +26,7 @@ export function routeLayers(transit: Transit, beforeId?: string) {
       jointRounded: true,
       capRounded: true,
       parameters: { depthCompare: "always" },
+      updateTriggers: { getColor: d },
       ...(beforeId ? { beforeId } : {}),
     });
   });

@@ -2,6 +2,7 @@
 // which MapLibre 6 removed. Revisit when deck.gl supports 6.
 import { Map } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { blendPair, through3, type Pair } from "./color.ts";
 
 /** Frames the seven-county core: Minneapolis–Saint Paul plus inner suburbs. */
 export const METRO_CENTER: [number, number] = [-93.18, 44.96];
@@ -9,36 +10,77 @@ export const METRO_BOUNDS: [[number, number], [number, number]] = [[-94.15, 44.5
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 
+
 /**
- * Night palette applied over OpenFreeMap's dark style. The base map should
- * recede so moving vehicles carry the picture: land near-black, water a
- * lit-from-below blue, roads a faint warm grey like sodium light at a distance.
+ * The base map's two looks, painted over OpenFreeMap's dark style.
+ *
+ * Night recedes so moving vehicles carry the picture: land near-black,
+ * water a lit-from-below blue, roads a faint warm grey like sodium light
+ * at a distance. Day is a quiet printed-map look: warm off-white land,
+ * soft blue water, pale green parks, white streets and cream highways,
+ * so the saturated vehicles still read first.
  */
-const NIGHT: Record<string, Record<string, unknown>> = {
-  background: { "background-color": "#070b10" },
-  water: { "fill-color": "#0c1a2a" },
-  waterway: { "line-color": "#0f2236" },
-  landuse_residential: { "fill-color": "#0a0f15", "fill-opacity": 0.6 },
-  landcover_wood: { "fill-pattern": undefined, "fill-color": "#0a130f", "fill-opacity": 0.6 },
-  landuse_park: { "fill-color": "#0b1511" },
-  building: { "fill-color": "#10161d", "fill-outline-color": "#161e27" },
-  highway_minor: { "line-color": "#161c22" },
-  highway_path: { "line-color": "#12181e" },
-  highway_major_casing: { "line-color": "#0b0f14" },
-  highway_major_inner: { "line-color": "#1f252b" },
-  highway_major_subtle: { "line-color": "#1a2026" },
-  highway_motorway_casing: { "line-color": "#0b0f14" },
-  highway_motorway_inner: { "line-color": "#2a2621" },
-  highway_motorway_subtle: { "line-color": "#221f1b" },
-  "aeroway-runway": { "line-color": "#1b2229" },
-  "aeroway-taxiway": { "line-color": "#141a20" },
-  "aeroway-area": { "fill-color": "#0d1318" },
+const SKY: Record<string, Record<string, Pair>> = {
+  background: { "background-color": ["#070b10", "#eceee9"] },
+  water: { "fill-color": ["#0c1a2a", "#a9c7dd"] },
+  waterway: { "line-color": ["#0f2236", "#a9c7dd"] },
+  landcover_ice_shelf: { "fill-color": ["#070b10", "#eceee9"] },
+  landcover_glacier: { "fill-color": ["#070b10", "#eceee9"] },
+  landuse_residential: { "fill-color": ["#0a0f15", "#e5e6e1"], "fill-opacity": [0.6, 1] },
+  landcover_wood: { "fill-color": ["#0a130f", "#cfe0c3"], "fill-opacity": [0.6, 0.75] },
+  landuse_park: { "fill-color": ["#0b1511", "#d3e5c8"] },
+  building: { "fill-color": ["#10161d", "#dadad3"], "fill-outline-color": ["#161e27", "#cacac2"] },
+  "aeroway-taxiway": { "line-color": ["#141a20", "#d6d6d0"] },
+  "aeroway-runway-casing": { "line-color": ["#0b0f14", "#c6c6bf"] },
+  "aeroway-area": { "fill-color": ["#0d1318", "#e0e0da"] },
+  "aeroway-runway": { "line-color": ["#1b2229", "#c1c1ba"] },
+  road_area_pier: { "fill-color": ["#070b10", "#eceee9"] },
+  road_pier: { "line-color": ["#070b10", "#eceee9"] },
+  highway_path: { "line-color": ["#12181e", "#f6f6f2"] },
+  highway_minor: { "line-color": ["#161c22", "#ffffff"] },
+  highway_major_casing: { "line-color": ["#0b0f14", "#d2d0c6"] },
+  highway_major_inner: { "line-color": ["#1f252b", "#ffffff"] },
+  highway_major_subtle: { "line-color": ["#1a2026", "#f3f2ec"] },
+  highway_motorway_casing: { "line-color": ["#0b0f14", "#d8bd87"] },
+  highway_motorway_inner: { "line-color": ["#2a2621", "#f5e1b4"] },
+  highway_motorway_subtle: { "line-color": ["#221f1b", "#eedaae"] },
+  railway: { "line-color": ["#1a1f25", "#c8c8c2"] },
+  railway_dashline: { "line-color": ["#070b10", "#eceee9"] },
+  railway_minor: { "line-color": ["#1a1f25", "#c8c8c2"] },
+  railway_minor_dashline: { "line-color": ["#070b10", "#eceee9"] },
+  boundary_state: { "line-color": ["#2a3139", "#b8b8c3"] },
+  "boundary_country_z0-4": { "line-color": ["#2a3139", "#b8b8c3"] },
+  "boundary_country_z5-": { "line-color": ["#2a3139", "#b8b8c3"] },
 };
 
-const LABEL_COLOR = "#5d6b78";
-const LABEL_HALO = "#070b10";
+/**
+ * Labels get explicit night, blue-hour and day colors: blending text and
+ * halo toward the same midpoint would erase the contrast between them.
+ */
+const LABEL: Record<string, [string, string, string]> = {
+  "text-color": ["#5d6b78", "#aebccb", "#56606a"],
+  "text-halo-color": ["#070b10", "#1c2838", "#ffffff"],
+};
 
-export function createBaseMap(container: HTMLElement): Map {
+/** Layers to leave out entirely: they compete with live transit. */
+const HIDDEN = ["road_oneway", "road_oneway_opposite", "railway_transit", "railway_transit_dashline"];
+
+/** Repaint the base map for a daylight level from 0 (night) to 1 (day). */
+export function paintSky(map: Map, d: number) {
+  for (const layer of map.getStyle().layers) {
+    if (layer.type === "symbol") {
+      for (const [prop, [n, t, dy]] of Object.entries(LABEL)) map.setPaintProperty(layer.id, prop as never, through3(n, t, dy, d) as never);
+      continue;
+    }
+    const paint = SKY[layer.id];
+    if (!paint) continue;
+    for (const [prop, pair] of Object.entries(paint)) {
+      map.setPaintProperty(layer.id, prop as never, blendPair(pair, d) as never);
+    }
+  }
+}
+
+export function createBaseMap(container: HTMLElement, initialDaylight = 0): Map {
   const map = new Map({
     container,
     style: STYLE_URL,
@@ -53,18 +95,10 @@ export function createBaseMap(container: HTMLElement): Map {
   });
 
   map.on("style.load", () => {
-    for (const layer of map.getStyle().layers) {
-      const paint = NIGHT[layer.id];
-      if (paint) for (const [k, v] of Object.entries(paint)) map.setPaintProperty(layer.id, k as never, v as never);
-      if (layer.type === "symbol") {
-        map.setPaintProperty(layer.id, "text-color", LABEL_COLOR);
-        map.setPaintProperty(layer.id, "text-halo-color", LABEL_HALO);
-      }
-    }
-    // Railway and oneway arrows compete with live transit; drop them.
-    for (const id of ["road_oneway", "road_oneway_opposite", "railway_transit", "railway_transit_dashline"]) {
-      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
-    }
+    // The style's wood texture is a dark-mode pattern; flat color reads better in both.
+    if (map.getLayer("landcover_wood")) map.setPaintProperty("landcover_wood", "fill-pattern", undefined);
+    for (const id of HIDDEN) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
+    paintSky(map, initialDaylight);
   });
 
   return map;

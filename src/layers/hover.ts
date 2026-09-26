@@ -2,7 +2,8 @@ import { IconLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Vehicle } from "../live/fleet.ts";
 import type { Plane } from "../live/aircraft.ts";
 import type { Transit } from "../transit/data.ts";
-import { vehicleColor } from "../palette.ts";
+import { planeColor, vehicleColor } from "../palette.ts";
+import { mixRgb } from "../color.ts";
 import { BUS_ICON, TRAIN_ICON } from "../icons.ts";
 
 /**
@@ -39,15 +40,17 @@ export function pickLayers(vehicles: Vehicle[], planes: Plane[], version: number
 }
 
 /** The hovered vehicle, drawn as a bus or train icon on a dark disc. */
-export function vehicleHighlight(transit: Transit, v: Vehicle, version: number) {
-  const color = vehicleColor(transit.routes[v.routeId]);
+export function vehicleHighlight(transit: Transit, v: Vehicle, version: number, d = 0) {
+  const color = vehicleColor(transit.routes[v.routeId], d);
+  // A dark disc at night, a white one by day.
+  const disc = mixRgb([7, 11, 16], [255, 255, 255], d);
   const data = [v];
   return [
     new ScatterplotLayer<Vehicle>({
       id: "hover-disc",
       data,
       getPosition: (x) => x.position,
-      getFillColor: [7, 11, 16, 220],
+      getFillColor: [...disc, 230],
       getLineColor: [...color, 255],
       stroked: true,
       lineWidthUnits: "pixels",
@@ -55,7 +58,7 @@ export function vehicleHighlight(transit: Transit, v: Vehicle, version: number) 
       getRadius: 17,
       radiusUnits: "pixels",
       parameters: { depthCompare: "always" },
-      updateTriggers: { getPosition: version },
+      updateTriggers: { getPosition: version, getFillColor: d, getLineColor: d },
     }),
     new IconLayer<Vehicle>({
       id: "hover-icon",
@@ -68,27 +71,28 @@ export function vehicleHighlight(transit: Transit, v: Vehicle, version: number) 
       billboard: false,
       getColor: [...color, 255],
       parameters: { depthCompare: "always" },
-      updateTriggers: { getPosition: version, getAngle: version },
+      updateTriggers: { getPosition: version, getAngle: version, getColor: d },
     }),
   ];
 }
 
 /** A soft ring around the hovered plane. */
-export function planeHighlight(p: Plane, version: number) {
+export function planeHighlight(p: Plane, version: number, d = 0) {
+  const ring = planeColor(d);
   return [
     new ScatterplotLayer<Plane>({
       id: "hover-plane-ring",
       data: [p],
       getPosition: (x) => x.position,
-      getFillColor: [232, 238, 248, 18],
-      getLineColor: [232, 238, 248, 150],
+      getFillColor: [...ring, 18],
+      getLineColor: [...ring, 150],
       stroked: true,
       lineWidthUnits: "pixels",
       getLineWidth: 1.2,
       getRadius: 22,
       radiusUnits: "pixels",
       parameters: { depthCompare: "always" },
-      updateTriggers: { getPosition: version },
+      updateTriggers: { getPosition: version, getFillColor: d, getLineColor: d },
     }),
   ];
 }

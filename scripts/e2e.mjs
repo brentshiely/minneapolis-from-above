@@ -30,7 +30,7 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1280, height: 800 },
 });
 
-async function openApp({ reduced = false } = {}) {
+async function openApp({ reduced = false, query = "" } = {}) {
   const page = await browser.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -48,7 +48,7 @@ async function openApp({ reduced = false } = {}) {
     Object.defineProperty(document, "visibilityState", { get: () => (hidden ? "hidden" : "visible") });
     window.__setHidden = (h) => { hidden = h; document.dispatchEvent(new Event("visibilitychange")); };
   });
-  await page.goto(url, { waitUntil: "load" });
+  await page.goto(url + query, { waitUntil: "load" });
   await page.waitForFunction(() => window.fromAbove?.fleet?.vehicles.size > 50, { timeout: 30_000 });
   return { page, errors };
 }
@@ -225,6 +225,25 @@ try {
     assert(errors.length === 0, errors.join(" | "));
   });
   await page.close();
+
+  for (const [at, expect] of [["13:00", "day"], ["22:00", "night"]]) {
+    const sky = await openApp({ query: `?at=${at}` });
+    await sleep(1500);
+    await check(`at ${at} the map shows ${expect}`, async () => {
+      const r = await sky.page.evaluate(() => ({
+        mark: document.documentElement.dataset.sky,
+        bg: window.fromAbove.map.getPaintProperty("background", "background-color"),
+        daylight: window.fromAbove.sky().daylight,
+      }));
+      assert(r.mark === expect, `page marked ${r.mark}`);
+      const n = parseInt(String(r.bg).slice(1), 16);
+      const lum = (((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255)) / 765;
+      assert(expect === "day" ? lum > 0.8 : lum < 0.1, `background ${r.bg}`);
+      assert(sky.errors.length === 0, sky.errors.join(" | "));
+      return `background ${r.bg}, daylight ${r.daylight.toFixed(2)}`;
+    });
+    await sky.page.close();
+  }
 
   const reduced = await openApp({ reduced: true });
   await sleep(2000);

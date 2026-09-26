@@ -22,6 +22,8 @@ html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-
   user-select: none;
   transition: color 0.6s;
   font-variant-numeric: tabular-nums;
+  /* A soft halo in the map's own tone keeps it legible through dusk. */
+  text-shadow: 0 0 3px #070b10, 0 0 6px #070b10;
 }
 #status.stalled { color: #b98a4a; }
 
@@ -43,6 +45,7 @@ html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-
   display: grid;
   gap: 3px;
 }
+#tip[hidden] { display: none; }
 #tip .tip-title { font-weight: 600; text-wrap: balance; }
 #tip .tip-detail { color: #b3bec8; }
 #tip .tip-meta {
@@ -51,3 +54,24 @@ html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-
   font: 500 11px/1.3 ui-monospace, "SF Mono", Menlo, monospace;
   letter-spacing: 0.02em;
 }
+
+/* Daytime: the page chrome follows the map from dark to light. */
+html[data-sky="day"], html[data-sky="day"] body { background: #eceee9; }
+html[data-sky="day"] #status { color: #56606a; text-shadow: 0 0 3px #ffffff, 0 0 6px #ffffff; }
+html[data-sky="day"] #status.stalled { color: #a4661f; }
+html[data-sky="day"] .maplibregl-ctrl-bottom-right .maplibregl-ctrl.maplibregl-ctrl-attrib,
+html[data-sky="day"] .maplibregl-ctrl-attrib.maplibregl-compact,
+html[data-sky="day"] .maplibregl-ctrl-attrib.maplibregl-compact-show {
+  background: rgba(255, 255, 255, 0.7);
+  color: #6b7580;
+}
+html[data-sky="day"] .maplibregl-ctrl.maplibregl-ctrl-attrib a { color: #4f5a66; }
+html[data-sky="day"] .maplibregl-ctrl-attrib-button { filter: none; }
+html[data-sky="day"] #tip {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(40, 50, 64, 0.14);
+  box-shadow: 0 6px 24px rgba(30, 40, 55, 0.18);
+  color: #1e2731;
+}
+html[data-sky="day"] #tip .tip-detail { color: #4c5663; }
+html[data-sky="day"] #tip .tip-meta { color: #7b8591; }

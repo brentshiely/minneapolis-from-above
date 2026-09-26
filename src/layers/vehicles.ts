@@ -22,7 +22,7 @@ const LOOK: Record<Mode, ModeLook> = {
 };
 
 /** Light adds up: overlapping glows brighten like real light, never darken. */
-const ADDITIVE = {
+export const ADDITIVE = {
   depthCompare: "always",
   blend: true,
   blendColorOperation: "add",
@@ -42,14 +42,23 @@ export interface VehicleFrame {
   version: number;
   /** Bumps whenever `trails` is rebuilt. */
   trailsVersion: number;
+  /** Daylight, 0 (night) to 1 (day). */
+  daylight: number;
 }
 
-const colorOf = (transit: Transit) => (v: Drawable) => vehicleColor(transit.routes[v.routeId]);
+const colorOf = (transit: Transit, d: number) => (v: Drawable) => vehicleColor(transit.routes[v.routeId], d);
+
+/** Normal alpha blending: by day, additive light on a light map disappears. */
+const NORMAL = { depthCompare: "always" } as const;
+
+/** Night trails glow; day trails are ink. */
+const trailBlend = (d: number) => (d < 0.5 ? ADDITIVE : NORMAL);
 
 export function trailLayers(transit: Transit, f: VehicleFrame) {
   const byMode: Record<Mode, Trail<Vehicle>[]> = { bus: [], brt: [], rail: [] };
   for (const t of f.trails) byMode[t.vehicle.mode].push(t);
-  const color = colorOf(transit);
+  const color = colorOf(transit, f.daylight);
+  const d = f.daylight;
 
   return (["bus", "brt", "rail"] as const).map((mode) => {
     const look = LOOK[mode];
@@ -59,7 +68,8 @@ export function trailLayers(transit: Transit, f: VehicleFrame) {
       getPath: (t) => t.flat,
       positionFormat: "XY",
       getTimestamps: (t) => t.times,
-      getColor: (t) => [...color(t.vehicle), look.trailAlpha * t.vehicle.alpha],
+      // Day trails are a touch lighter: ink on paper reads stronger than light.
+      getColor: (t) => [...color(t.vehicle), look.trailAlpha * (1 - 0.35 * d) * t.vehicle.alpha],
       getWidth: look.trailM,
       widthUnits: "meters",
       widthMinPixels: look.trailMinPx,
@@ -74,8 +84,8 @@ export function trailLayers(transit: Transit, f: VehicleFrame) {
       _pathType: "open",
       trailLength: look.trailS,
       currentTime: f.now,
-      parameters: ADDITIVE,
-      updateTriggers: { getPath: f.trailsVersion, getTimestamps: f.trailsVersion, getColor: f.trailsVersion },
+      parameters: trailBlend(d),
+      updateTriggers: { getPath: f.trailsVersion, getTimestamps: f.trailsVersion, getColor: [f.trailsVersion, d] },
     });
   });
 }
@@ -83,7 +93,10 @@ export function trailLayers(transit: Transit, f: VehicleFrame) {
 export function vehicleLayers(transit: Transit, f: VehicleFrame) {
   const byMode: Record<Mode, Drawable[]> = { bus: [], brt: [], rail: [] };
   for (const v of f.vehicles) if (v.alpha > 0) byMode[v.mode].push(v);
-  const color = colorOf(transit);
+  const d = f.daylight;
+  const color = colorOf(transit, d);
+  // Glow is a night thing; it fades out as the sun comes up.
+  const glowStrength = 1 - d;
   const layers = [];
 
   // Glow first (graded halos stacked additively read as a soft falloff),
@@ -92,13 +105,13 @@ export function vehicleLayers(transit: Transit, f: VehicleFrame) {
   for (const mode of ["bus", "brt", "rail"] as const) {
     const look = LOOK[mode];
     look.glow.forEach((alpha, i) => {
-      if (!alpha) return;
+      if (!alpha || glowStrength <= 0) return;
       const scale = GLOW_SCALE[i];
       layers.push(new ScatterplotLayer<Drawable>({
         id: `glow-${i}-${mode}`,
         data: byMode[mode],
         getPosition: (v) => v.position,
-        getFillColor: (v) => [...color(v), alpha * v.alpha],
+        getFillColor: (v) => [...color(v), alpha * glowStrength * v.alpha],
         getRadius: look.radiusM * scale,
         radiusUnits: "meters",
         radiusMinPixels: look.minPx * scale,
@@ -117,10 +130,15 @@ export function vehicleLayers(transit: Transit, f: VehicleFrame) {
       getFillColor: (v) => [...color(v), 255 * v.alpha],
       getRadius: look.radiusM,
       radiusUnits: "meters",
-      radiusMinPixels: look.minPx,
+      radiusMinPixels: look.minPx + 0.6 * d,
       radiusMaxPixels: look.maxPx,
+      // By day a thin white rim lifts each dot off the light map.
+      stroked: d > 0,
+      getLineColor: (v) => [255, 255, 255, 235 * d * v.alpha],
+      getLineWidth: 1,
+      lineWidthUnits: "pixels",
       parameters: { depthCompare: "always" },
-      updateTriggers: { getPosition: f.version, getFillColor: f.version },
+      updateTriggers: { getPosition: f.version, getFillColor: f.version, getLineColor: f.version },
     }));
   }
   return layers;
