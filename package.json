@@ -1,0 +1,32 @@
+{
+  "name": "minneapolis-god-mode",
+  "version": "1.0.0",
+  "description": "Ambient living map of Minneapolis–Saint Paul: live transit moving on real streets.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "typecheck": "tsc",
+    "test": "node --test test/",
+    "preview": "wrangler pages dev dist",
+    "deploy": "npm run build && wrangler pages deploy dist"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "type": "module",
+  "dependencies": {
+    "@deck.gl/core": "^9.4.0",
+    "@deck.gl/geo-layers": "^9.4.0",
+    "@deck.gl/layers": "^9.4.0",
+    "@deck.gl/mapbox": "^9.4.0",
+    "gtfs-realtime-bindings": "^2.2.0",
+    "maplibre-gl": "^6.11.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260926.1",
+    "fflate": "^0.8.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "wrangler": "^4.141.0"
+  },
+  "private": true
+}
