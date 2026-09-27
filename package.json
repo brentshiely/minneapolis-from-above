@@ -8,12 +8,14 @@
     "typecheck": "tsc",
     "test": "node --test \"test/**/*.test.ts\"",
     "preview": "wrangler pages dev dist",
-    "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy": "node scripts/build-satellites.mjs && npm run build && wrangler pages deploy dist",
     "build:data": "node scripts/build-gtfs.mjs",
     "perf": "node scripts/perf.mjs",
     "shot": "node scripts/shot.mjs",
     "e2e": "node scripts/e2e.mjs",
-    "build:freeways": "node scripts/build-mndot.mjs"
+    "build:freeways": "node scripts/build-mndot.mjs",
+    "build:sats": "node scripts/build-satellites.mjs",
+    "build:ucs": "node scripts/build-ucs.mjs"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -23,7 +25,8 @@
     "@deck.gl/geo-layers": "^9.4.0",
     "@deck.gl/layers": "^9.4.0",
     "@deck.gl/mapbox": "^9.4.0",
-    "maplibre-gl": "5.24.0"
+    "maplibre-gl": "5.24.0",
+    "satellite.js": "7.1.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260926.1",

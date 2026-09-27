@@ -11,7 +11,7 @@ const STALLED_MS = 60_000;
  */
 export function startStatus(
   el: HTMLElement, fleet: Fleet, feed: { status: FeedStatus }, air?: AirFleet,
-  weather?: () => string | undefined, airStatus?: FeedStatus,
+  weather?: () => string | undefined, airStatus?: FeedStatus, satellitesUp?: () => number,
 ) {
   const render = () => {
     const s = feed.status;
@@ -35,7 +35,8 @@ export function startStatus(
     const conditions = weather?.();
     // Two parts, so narrow screens can stack them on separate lines.
     const counts = document.createElement("span");
-    counts.textContent = `${buses} buses · ${trains} trains${showPlanes ? ` · ${planes} planes` : ""}`;
+    const up = satellitesUp?.() ?? 0;
+    counts.textContent = `${buses} buses · ${trains} trains${showPlanes ? ` · ${planes} planes` : ""}${up ? ` · ${up.toLocaleString("en-US")} satellites up` : ""}`;
     const sky = document.createElement("span");
     sky.className = "sky";
     sky.textContent = `${conditions ? `${conditions} · ` : ""}live`;

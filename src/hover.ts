@@ -10,6 +10,8 @@ import { describeGauge, type Gauge, type GaugeDetail } from "./water/gauges.ts";
 import { gaugeAt, learnLakeGauges } from "./water/match.ts";
 import type { Freeways, Stretch } from "./traffic/freeways.ts";
 import { describeStation, type Readings } from "./traffic/traffic.ts";
+import type { Sat } from "./sky/satellites.ts";
+import { describeSatellite, type SatcatRecord, type UcsRow } from "./sky/describe.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -20,7 +22,8 @@ type Target =
   /** Water: the gauge that speaks for it, and where the cursor is. */
   | { kind: "water"; lid: string; at: [number, number] }
   /** A freeway: the sensor station for that stretch, and where the cursor is. */
-  | { kind: "traffic"; station: string; at: [number, number] };
+  | { kind: "traffic"; station: string; at: [number, number] }
+  | { kind: "satellite"; id: number };
 
 /** How often to refresh the list of river and lake gauges. */
 const GAUGE_REFRESH_MS = 10 * 60_000;
@@ -42,6 +45,29 @@ export class Hover {
   private freeways?: Freeways;
   private readings: () => Readings = () => ({});
   private trafficTime: () => number = () => 0;
+
+  private sats: () => Sat[] = () => [];
+  private sunElevation: () => number = () => 0;
+  private satcat = new Map<number, SatcatRecord | "pending">();
+  private ucs?: Record<string, UcsRow> | "pending";
+
+  setSatellites(list: () => Sat[], sunElevation: () => number) { this.sats = list; this.sunElevation = sunElevation; }
+
+  private satInfo(id: number): { catalog?: SatcatRecord; ucs?: UcsRow } {
+    const c = this.satcat.get(id);
+    if (c === undefined) {
+      this.satcat.set(id, "pending");
+      fetch(`/api/satinfo?id=${id}`).then((r) => (r.ok ? r.json() : {})).then((j: SatcatRecord) => this.satcat.set(id, j)).catch(() => this.satcat.set(id, {}));
+    }
+    if (this.ucs === undefined) {
+      this.ucs = "pending";
+      fetch("/data/ucs.json").then((r) => (r.ok ? r.json() : {})).then((j: Record<string, UcsRow>) => { this.ucs = j; }).catch(() => { this.ucs = {}; });
+    }
+    return {
+      catalog: c && c !== "pending" ? c : undefined,
+      ucs: this.ucs && this.ucs !== "pending" ? this.ucs[String(id)] : undefined,
+    };
+  }
 
   setFreeways(fw: Freeways, readings: () => Readings, trafficTime: () => number) {
     this.freeways = fw; this.readings = readings; this.trafficTime = trafficTime;
@@ -92,6 +118,7 @@ export class Hover {
     let next: Target | null = null;
     if (obj && info.layer?.id === "pick-vehicles") next = { kind: "vehicle", id: (obj as Vehicle).id };
     else if (obj && info.layer?.id === "pick-planes") next = { kind: "plane", id: (obj as Plane).id };
+    else if (obj && info.layer?.id === "pick-sats") next = { kind: "satellite", id: (obj as unknown as Sat).id };
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
@@ -165,6 +192,13 @@ export class Hover {
       });
       position = v.position;
       layers = vehicleHighlight(this.transit, v, version, this.daylight());
+    } else if (this.target.kind === "satellite") {
+      const id = this.target.id;
+      const sat = this.sats().find((x) => x.id === id);
+      if (!sat) { this.clear(); return []; }
+      desc = describeSatellite({ id, name: sat.name, kind: sat.kind, live: sat.live, sunElevation: this.sunElevation(), ...this.satInfo(id) });
+      position = sat.position;
+      layers = [];
     } else if (this.target.kind === "traffic") {
       const info = this.freeways?.stations[this.target.station];
       if (!info) { this.clear(); return []; }

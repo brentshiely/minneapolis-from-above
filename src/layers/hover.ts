@@ -3,6 +3,7 @@ import type { Vehicle } from "../live/fleet.ts";
 import type { Plane } from "../live/aircraft.ts";
 import type { Transit } from "../transit/data.ts";
 import type { Gauge } from "../water/gauges.ts";
+import type { Sat } from "../sky/satellites.ts";
 import { planeColor, vehicleColor } from "../palette.ts";
 import { mixRgb } from "../color.ts";
 import { BUS_ICON, TRAIN_ICON } from "../icons.ts";
@@ -15,8 +16,20 @@ const FINGER = coarse ? 1.8 : 1;
  * Invisible, generous hit areas so small moving dots are easy to hover.
  * Alpha 1/255 rather than 0 so they still render into the picking pass.
  */
-export function pickLayers(vehicles: Vehicle[], planes: Plane[], version: number) {
+export function pickLayers(vehicles: Vehicle[], planes: Plane[], version: number, sats: Sat[] = []) {
   return [
+    new ScatterplotLayer<Sat>({
+      id: "pick-sats",
+      data: sats,
+      pickable: true,
+      getPosition: (x) => x.position,
+      getFillColor: [0, 0, 0, 1],
+      getRadius: 1,
+      radiusUnits: "pixels",
+      radiusMinPixels: 13 * FINGER,
+      parameters: { depthCompare: "always" },
+      updateTriggers: { getPosition: version },
+    }),
     new ScatterplotLayer<Vehicle>({
       id: "pick-vehicles",
       data: vehicles,

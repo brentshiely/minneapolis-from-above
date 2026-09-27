@@ -70,7 +70,7 @@ try {
 
   await check("status line shows live counts", async () => {
     const text = await page.$eval("#status", (el) => el.textContent);
-    assert(/^\d+ buses · \d+ trains · \d+ planes( · -?\d+°F, [a-z ]+ · (calm|([NESW]{1,2} )?wind \d+ mph(, gusting to \d+)?))? · live$/.test(text), `got "${text}"`);
+    assert(/^\d+ buses · \d+ trains · \d+ planes( · [\d,]+ satellites up)?( · -?\d+°F, [a-z ]+ · (calm|([NESW]{1,2} )?wind \d+ mph(, gusting to \d+)?))? · live$/.test(text), `got "${text}"`);
     return text;
   });
 
@@ -260,6 +260,35 @@ try {
     assert(/^I-94 (east|west)bound/.test(tip), `got "${tip}"`);
     assert(/\d+ mph, (moving freely|slowing|heavy traffic|stop and go)\. The limit is \d+\./.test(tip), `got "${tip}"`);
     return tip.replace(/\n/g, " | ");
+  });
+
+  await check("satellites: all loaded, hundreds above the horizon, and one crossing the map can be hovered", async () => {
+    await page.waitForFunction(() => window.fromAbove.sats.ready, { timeout: 60_000 });
+    await page.evaluate(() => window.fromAbove.map.jumpTo({ center: [-93.2, 44.95], zoom: 9 }));
+    let tip = "", info;
+    for (let i = 0; i < 30 && !tip; i++) {
+      await sleep(3000);
+      info = await page.evaluate(() => {
+        const g = window.fromAbove, b = g.map.getBounds();
+        const inner = (p) => p[0] > b.getWest() + 0.2 && p[0] < b.getEast() - 0.2 && p[1] > b.getSouth() + 0.15 && p[1] < b.getNorth() - 0.15;
+        const s = g.sats.list.find((x) => inner(x.position));
+        return { total: g.sats.total, up: g.sats.aboveHorizon, id: s?.id };
+      });
+      if (!info.id) continue;
+      for (let k = 0; k < 3; k++) {
+        const pt = await page.evaluate((id) => { const g = window.fromAbove; const s = g.sats.list.find((x) => x.id === id); return s && g.map.project(s.position); }, info.id);
+        if (!pt) break;
+        await page.mouse.move(pt.x, pt.y);
+        await sleep(600);
+      }
+      tip = await page.$eval("#tip", (el) => (el.hidden ? "" : el.innerText));
+    }
+    await page.mouse.move(5, 5);
+    assert(info.total > 10_000, `only ${info.total} satellites loaded`);
+    assert(info.up > 200, `only ${info.up} above the horizon`);
+    assert(/Now [\d,]+ miles up, moving at [\d,]+ mph\./.test(tip), `got "${tip}"`);
+    assert(/(visible|shadow|too bright|Too low)/i.test(tip), `no visibility in "${tip}"`);
+    return `${info.total.toLocaleString()} loaded, ${info.up} up; ${tip.split("\n")[0]}`;
   });
 
   await check("tapping pins the tooltip until tapping elsewhere", async () => {

@@ -1,0 +1,74 @@
+{
+ "24876": {
+  "OBJECT_ID": "1997-035A",
+  "OBJECT_TYPE": "PAY",
+  "OWNER": "US",
+  "LAUNCH_DATE": "1997-07-23",
+  "LAUNCH_SITE": "AFETR",
+  "PERIOD": 717.97,
+  "INCLINATION": 56.05,
+  "APOGEE": 20464,
+  "PERIGEE": 19900,
+  "RCS": 3.1622
+ },
+ "25544": {
+  "OBJECT_ID": "1998-067A",
+  "OBJECT_TYPE": "PAY",
+  "OWNER": "ISS",
+  "LAUNCH_DATE": "1998-11-20",
+  "LAUNCH_SITE": "TYMSC",
+  "PERIOD": 92.98,
+  "INCLINATION": 51.63,
+  "APOGEE": 425,
+  "PERIGEE": 416,
+  "RCS": 399.0524
+ },
+ "43159": {
+  "OBJECT_ID": "2018-008E",
+  "OBJECT_TYPE": "PAY",
+  "OWNER": "PRC",
+  "LAUNCH_DATE": "2018-01-19",
+  "LAUNCH_SITE": "JSC",
+  "PERIOD": 93.74,
+  "INCLINATION": 97.17,
+  "APOGEE": 464,
+  "PERIGEE": 451,
+  "RCS": null
+ },
+ "48274": {
+  "OBJECT_ID": "2021-035A",
+  "OBJECT_TYPE": "PAY",
+  "OWNER": "PRC",
+  "LAUNCH_DATE": "2021-04-29",
+  "LAUNCH_SITE": "WSC",
+  "PERIOD": 92.29,
+  "INCLINATION": 41.47,
+  "APOGEE": 388,
+  "PERIGEE": 386,
+  "RCS": null
+ },
+ "57166": {
+  "OBJECT_ID": "2023-091A",
+  "OBJECT_TYPE": "PAY",
+  "OWNER": "CIS",
+  "LAUNCH_DATE": "2023-06-27",
+  "LAUNCH_SITE": "VOSTO",
+  "PERIOD": 101.12,
+  "INCLINATION": 98.6,
+  "APOGEE": 814,
+  "PERIGEE": 809,
+  "RCS": null
+ },
+ "68149": {
+  "OBJECT_ID": "2026-049H",
+  "OBJECT_TYPE": "PAY",
+  "OWNER": "US",
+  "LAUNCH_DATE": "2026-03-13",
+  "LAUNCH_SITE": "AFWTR",
+  "PERIOD": 93.91,
+  "INCLINATION": 97.29,
+  "APOGEE": 467,
+  "PERIGEE": 465,
+  "RCS": null
+ }
+}

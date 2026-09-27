@@ -22,6 +22,9 @@ import { learnedLakes } from "./water/match.ts";
 import { loadFreeways, type Freeways } from "./traffic/freeways.ts";
 import type { TrafficResponse } from "./traffic/traffic.ts";
 import { trafficLayer, type TrafficFrame } from "./layers/traffic.ts";
+import { Satellites } from "./sky/satellites.ts";
+import { sunPosition } from "./sun.ts";
+import { satelliteLayers, type SatFrame } from "./layers/satellites.ts";
 import { WeatherFx } from "./weather/effects.ts";
 import { previewWeather, type Weather } from "./weather/classify.ts";
 
@@ -150,6 +153,17 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   const hover = new Hover(map, overlay, fleet, air, transit, () => f.daylight);
 
+  // Every active satellite, animated while it crosses the map.
+  const sats = new Satellites(() => {
+    const b = map.getBounds();
+    return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+  });
+  const sf: SatFrame = { sats: [], now: 0, version: 0, daylight: sky.daylight, sunElevation: sky.sun.elevation };
+  // Satellites are always shown in real time, so whether one is visible
+  // depends on the real sun, even while ?at= previews another time of day.
+  const realSunElevation = () => sunPosition(new Date()).elevation;
+  hover.setSatellites(() => sats.list, realSunElevation);
+
   /** Trail geometry is rebuilt a few times a second; the fade animates every frame. */
   const TRAIL_REBUILD_S = 0.25;
   let lastTrailBuild = -Infinity;
@@ -165,6 +179,8 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     const still = reducedMotion.matches;
     fleet.advance(dt, now, still);
     drift.tick(now);
+    sats.frame(now);
+    sf.sats = sats.list; sf.now = now; sf.version++; sf.daylight = f.daylight; sf.sunElevation = realSunElevation();
     fx.frame(dt, map.getBearing(), still);
     air.advance(dt, now);
     if (!still) {
@@ -192,7 +208,9 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(still ? [] : trailLayers(transit, f)),
         ...vehicleLayers(transit, f),
         ...aircraftLayers(a),
-        ...pickLayers(fleet.list().filter((v) => v.alpha > 0.3), a.planes, f.version),
+        // Satellites fly highest of all.
+        ...satelliteLayers(sf),
+        ...pickLayers(fleet.list().filter((v) => v.alpha > 0.3), a.planes, f.version, sf.sats),
         ...hover.frame(now, f.version),
       ],
     });
@@ -219,9 +237,9 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     for (const p of [feed, airFeed, weatherFeed, trafficFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
-  startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current && `${fx.current.summary} · ${fx.current.wind}`, airFeed.status);
+  startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current && `${fx.current.summary} · ${fx.current.wind}`, airFeed.status, () => sats.aboveHorizon);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, learnedLakes, tf, freeways: () => freeways, sky: () => sky };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, learnedLakes, tf, freeways: () => freeways, sats, sky: () => sky };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };

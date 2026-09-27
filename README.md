@@ -35,8 +35,10 @@ The map follows the real sun over Minneapolis. To preview another time of day, a
 | `npm run shot -- <dir> <warmup> name:lon,lat,zoom` | Screenshots of the running app |
 | `npm run build:data` | Re-bake route data from Metro Transit's latest GTFS feed |
 | `npm run build:freeways` | Re-bake the freeway sensor layout from MnDOT |
+| `npm run build:sats` | Snapshot every active satellite's orbit from CelesTrak (also runs on every deploy) |
+| `npm run build:ucs` | Re-bake satellite operators and purposes from the UCS database |
 | `npm run preview` | Serve `dist/` plus Functions through Wrangler, as Cloudflare would |
-| `npm run deploy` | Build and deploy to Cloudflare Pages (needs `wrangler login` once) |
+| `npm run deploy` | Refresh the satellite snapshot, build, and deploy to Cloudflare Pages (needs `wrangler login` once) |
 
 `e2e`, `perf` and `shot` drive your installed Google Chrome (set `CHROME` to use another path) and expect `npm run dev` to be running.
 
