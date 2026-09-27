@@ -370,6 +370,19 @@ try {
     });
     await snow.page.close();
 
+    const smoke = await openApp({ query: "?air=smoke-160" });
+    await sleep(5000);
+    await check("wildfire smoke hazes the map, and the status line names it", async () => {
+      const r = await smoke.page.evaluate(() => ({
+        opacity: Number(getComputedStyle(document.getElementById("haze")).opacity),
+        status: document.getElementById("status").textContent,
+      }));
+      assert(r.opacity > 0.2 && r.opacity < 0.6, `haze opacity ${r.opacity}`);
+      assert(/AQI 160, unhealthy \(smoke\)/.test(r.status), `status "${r.status}"`);
+      return `haze ${r.opacity.toFixed(2)}`;
+    });
+    await smoke.page.close();
+
     const breeze = await openApp({ query: "?weather=breezy" });
     await sleep(1500);
     await check("wind threads drift the way the wind blows, at a pace proportional to it", async () => {

@@ -27,6 +27,8 @@ import { sunPosition } from "./sun.ts";
 import { satelliteLayers, type SatFrame } from "./layers/satellites.ts";
 import { WeatherFx } from "./weather/effects.ts";
 import { previewWeather, type Weather } from "./weather/classify.ts";
+import { AirHaze } from "./weather/haze.ts";
+import { airPhrase, previewAir, type Air } from "./weather/air.ts";
 
 const clock = skyClock();
 let sky = skyAt(clock());
@@ -80,6 +82,13 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const weatherFeed = weatherPreview
     ? (fx.set(weatherPreview), undefined)
     : startPoller<Weather>("/api/weather", 5 * 60_000, (w) => fx.set(w));
+  // Smoke or ozone haze when the air turns bad. ?air=smoke-200 (etc.) previews it.
+  const haze = new AirHaze(document.getElementById("haze")!);
+  haze.setDaylight(sky.daylight);
+  const airPreview = previewAir(new URLSearchParams(location.search).get("air") ?? "");
+  const airQualityFeed = airPreview
+    ? (haze.set(airPreview), undefined)
+    : startPoller<Air>("/api/air", 15 * 60_000, (x) => haze.set(x), { maxMs: 60 * 60_000 });
 
   // When nobody's touching the map, tour it slowly.
   const idleParam = Number(new URLSearchParams(location.search).get("idle"));
@@ -136,6 +145,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     f.daylight = a.daylight = tf.daylight = sky.daylight;
     paintSky(map, sky.daylight);
     fx.setDaylight(sky.daylight);
+    haze.setDaylight(sky.daylight);
     routes = routeLayers(transit, sky.daylight, anchor);
     markSky(sky.daylight);
   };
@@ -234,12 +244,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
-  startStatus(document.getElementById("status")!, fleet, feed, air, () => fx.current && `${fx.current.summary} · ${fx.current.wind}`, airFeed.status, () => sats.aboveHorizon);
+  startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, learnedLakes, tf, freeways: () => freeways, sats, sky: () => sky };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf, freeways: () => freeways, sats, sky: () => sky };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };

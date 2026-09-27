@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { defineConfig, type Plugin } from "vite";
 
 /**
@@ -10,7 +11,8 @@ function pagesFunctions(): Plugin {
     configureServer(server) {
       server.middlewares.use("/api", async (req, res, next) => {
         const name = /^\/(\w+)/.exec(req.url ?? "")?.[1];
-        if (!name || !["vehicles", "aircraft", "flight", "weather", "water", "traffic", "satellites", "satinfo", "debris"].includes(name)) return next();
+        // Any file in functions/api/ is an endpoint, as on Cloudflare.
+        if (!name || !existsSync(`functions/api/${name}.ts`)) return next();
         try {
           const mod = await server.ssrLoadModule(`/functions/api/${name}.ts`);
           const response: Response = await mod.onRequestGet({ request: new Request(`http://localhost/api${req.url}`), env: process.env });

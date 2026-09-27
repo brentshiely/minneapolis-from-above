@@ -95,8 +95,18 @@ html[data-sky="day"] #caption { color: #4c5663; text-shadow: 0 0 4px #ffffff, 0 
 @media (prefers-reduced-motion: reduce) { #caption { transition: none; } }
 
 /* Weather sits over the map but never takes a click. */
-#veil, #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#veil, #haze, #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #veil { transition: background 4s ease; }
+/* Smoke and ozone haze; strength is its opacity, so changes fade. */
+#haze { opacity: 0; transition: opacity 4s ease; }
+
+/* Mid-width screens: the weather and air-quality part gets its own line,
+   and the status line stays clear of the map credits. */
+@media (max-width: 1500px) {
+  #status { right: 360px; line-height: 1.45; }
+  #status .sep { display: none; }
+  #status .sky { display: block; }
+}
 
 /* Phones: stack the status line, keep it clear of the map credits, and
    keep everything inside the notch and home-bar safe areas. */
