@@ -12,6 +12,8 @@ import type { Freeways, Stretch } from "./traffic/freeways.ts";
 import { describeStation, type Readings } from "./traffic/traffic.ts";
 import type { Sat } from "./sky/satellites.ts";
 import { describeSatellite, type SatcatRecord, type UcsRow } from "./sky/describe.ts";
+import { LOCKS, describeLock, describePassage, type Boat, type Lock, type LockNo, type Passage } from "./river/river.ts";
+import { riverHighlight } from "./layers/river.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -24,6 +26,9 @@ type Target =
   /** A freeway: the sensor station for that stretch, and where the cursor is. */
   | { kind: "traffic"; station: string; at: [number, number] }
   | { kind: "satellite"; id: number }
+  /** A boat that went through a lock lately, or the lock itself. */
+  | { kind: "boat"; key: string }
+  | { kind: "lock"; no: LockNo }
   /** The moon's glow at the edge of the map (a spot on screen, not the map). */
   | { kind: "moon" };
 
@@ -38,8 +43,8 @@ export interface MoonSpot {
 const GAUGE_REFRESH_MS = 10 * 60_000;
 
 /**
- * Hover (or tap) a bus, train or plane to see what it is, water to see
- * its level, or the moon for its phase. The tooltip
+ * Hover (or tap) a bus, train, plane, satellite or boat to see what it
+ * is, water to see its level, or the moon for its phase. The tooltip
  * follows its subject as it moves. On touch screens a tap pins it until
  * the next tap elsewhere.
  */
@@ -64,6 +69,10 @@ export class Hover {
   setMoon(moon: MoonSpot) { this.moon = moon; }
 
   setSatellites(list: () => Sat[], sunElevation: () => number) { this.sats = list; this.sunElevation = sunElevation; }
+
+  private boats: () => Boat[] = () => [];
+  private passages: () => Passage[] = () => [];
+  setRiver(boats: () => Boat[], passages: () => Passage[]) { this.boats = boats; this.passages = passages; }
 
   private satInfo(id: number): { catalog?: SatcatRecord; ucs?: UcsRow } {
     const c = this.satcat.get(id);
@@ -107,13 +116,13 @@ export class Hover {
       fetch("/api/water")
         .then((r) => (r.ok ? (r.json() as Promise<{ gauges?: Gauge[] }>) : undefined))
         .then((b) => {
-          if (!b?.gauges) throw new Error("no gauges");
+          if (!b?.gauges || (b as { unavailable?: string }).unavailable) throw new Error("no gauges");
           this.gauges = b.gauges;
           this.gaugeDetails.clear();
           learnLakeGauges(map, this.gauges);
           setTimeout(loadGauges, GAUGE_REFRESH_MS);
         })
-        .catch(() => setTimeout(loadGauges, 30_000));
+        .catch(() => setTimeout(loadGauges, 60_000));
     };
     loadGauges();
     // Learn which lake each lake gauge sits on as its area loads. Not on the
@@ -131,6 +140,8 @@ export class Hover {
     if (obj && info.layer?.id === "pick-vehicles") next = { kind: "vehicle", id: (obj as Vehicle).id };
     else if (obj && info.layer?.id === "pick-planes") next = { kind: "plane", id: (obj as Plane).id };
     else if (obj && info.layer?.id === "pick-sats") next = { kind: "satellite", id: (obj as unknown as Sat).id };
+    else if (obj && info.layer?.id === "pick-boats") next = { kind: "boat", key: (obj as unknown as Boat).key };
+    else if (obj && info.layer?.id === "pick-locks") next = { kind: "lock", no: (obj as unknown as Lock).no };
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
@@ -218,6 +229,18 @@ export class Hover {
       desc = describeSatellite({ id, name: sat.name, kind: sat.kind, live: sat.live, sunElevation: this.sunElevation(), ...this.satInfo(id) });
       position = sat.position;
       layers = [];
+    } else if (this.target.kind === "boat") {
+      const key = this.target.key;
+      const boat = this.boats().find((b) => b.key === key);
+      if (!boat) { this.clear(); return []; }
+      desc = describePassage(boat.p, nowS_wall());
+      position = boat.position;
+      layers = riverHighlight(boat.position, this.daylight());
+    } else if (this.target.kind === "lock") {
+      const lock = LOCKS[this.target.no];
+      desc = describeLock(lock, this.passages(), nowS_wall());
+      position = lock.at;
+      layers = riverHighlight(lock.at, this.daylight());
     } else if (this.target.kind === "traffic") {
       const info = this.freeways?.stations[this.target.station];
       if (!info) { this.clear(); return []; }
@@ -267,8 +290,14 @@ export class Hover {
       parts.push(meta);
       this.tip.replaceChildren(...parts);
     }
-    this.tip.hidden = false;
     const pt = onScreen ? { x: at[0], y: at[1] } : this.map.project(at);
+    // When the camera moves its subject off screen (drift, a jump, a zoom),
+    // hide the tooltip rather than leave it describing something unseen.
+    if (pt.x < -8 || pt.y < -8 || pt.x > innerWidth + 8 || pt.y > innerHeight + 8) {
+      this.tip.hidden = true;
+      return;
+    }
+    this.tip.hidden = false;
     const w = this.tip.offsetWidth, h = this.tip.offsetHeight;
     const vw = innerWidth, vh = innerHeight;
     // Up and to the right of the subject, flipped to stay on screen.

@@ -47,7 +47,11 @@ export const onRequestGet = async ({ request }: { request: Request }): Promise<R
     return json(body, 200, `public, max-age=${LIST_TTL_S}`);
   } catch (err) {
     if (lid === null && lastList && Date.now() / 1000 - lastList.at < STALE_OK_S) return json(lastList.body, 200, "no-store");
-    return json({ error: err instanceof Error ? err.message : "The water service is unreachable." }, 502);
+    const why = err instanceof Error ? err.message : "The water service is unreachable.";
+    // The gauge list is optional scenery: during an outage say so plainly
+    // (no gauges, retry soon) instead of an error in every visitor's console.
+    if (lid === null) return json({ t: Math.floor(Date.now() / 1000), gauges: [], unavailable: why }, 200, "no-store");
+    return json({ error: why }, 502);
   }
 };
 

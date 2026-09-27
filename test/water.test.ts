@@ -77,5 +77,9 @@ test("the endpoint rides out a brief NWS outage on the last good list", async (t
   assert.equal(during.status, 200, "served the last good list");
   assert.ok(((await during.json()) as { gauges: unknown[] }).gauges.length > 30);
   resetWaterCache();
-  assert.equal((await onRequestGet(req)).status, 502, "nothing cached: a clear error");
+  const none = await onRequestGet(req);
+  assert.equal(none.status, 200, "nothing cached: an honest empty answer, not an error");
+  const body = (await none.json()) as { gauges: unknown[]; unavailable?: string };
+  assert.equal(body.gauges.length, 0);
+  assert.match(body.unavailable!, /502/);
 });

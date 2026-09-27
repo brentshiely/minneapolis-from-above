@@ -10,7 +10,7 @@ import { BUS_ICON, TRAIN_ICON } from "../icons.ts";
 
 /** Fingers are bigger than mouse pointers: widen hit areas on touch screens. */
 const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
-const FINGER = coarse ? 1.8 : 1;
+export const FINGER = coarse ? 1.8 : 1;
 
 /**
  * Invisible, generous hit areas so small moving dots are easy to hover.

@@ -49,6 +49,25 @@ export const SATELLITE_ICON = {
   width: 64, height: 64, mask: true, id: "satellite",
 };
 
+/** A towboat running light: square bow with push knees, wheelhouse cut out. */
+export const TOWBOAT_ICON = {
+  url: svg(`<path fill="#fff" fill-rule="evenodd" d="M22 12h6v6h8v-6h6v40a6 6 0 0 1-6 6h-8a6 6 0 0 1-6-6zm7 14v9h6v-9z"/>`),
+  width: 64, height: 64, mask: true, id: "towboat",
+};
+
+/** A towboat pushing barges ahead of it (north). */
+export const TOW_ICON = {
+  url: svg(`<path fill="#fff" fill-rule="evenodd" d="M21 2h22v19H21zM21 23h22v19H21zM25 44h14v14a4 4 0 0 1-4 4h-6a4 4 0 0 1-4-4zm4 4v6h6v-6z"/>`),
+  width: 64, height: 64, mask: true, id: "tow",
+};
+
+/** A lock from above: two chamber walls with a gate across each end. */
+export const LOCK_ICON = {
+  url: svg(`<g fill="#fff"><rect x="18" y="4" width="7" height="56" rx="2"/><rect x="39" y="4" width="7" height="56" rx="2"/>`
+    + `<rect x="25" y="12" width="14" height="4"/><rect x="25" y="48" width="14" height="4"/></g>`),
+  width: 64, height: 64, mask: true, id: "lock",
+};
+
 /** A Starlink: a flat panel with one long solar array. */
 export const STARLINK_ICON = {
   url: svg(`<g fill="#fff"><rect x="22" y="26" width="12" height="12" rx="1.5"/><rect x="36" y="29" width="24" height="6" rx="1"/></g>`),

@@ -30,6 +30,8 @@ import { previewWeather, type Weather } from "./weather/classify.ts";
 import { AirHaze } from "./weather/haze.ts";
 import { airPhrase, previewAir, type Air } from "./weather/air.ts";
 import { MoonGlow } from "./moonlight.ts";
+import { boatsAt, type Passage, type RiverResponse } from "./river/river.ts";
+import { riverLayers, type RiverFrame } from "./layers/river.ts";
 
 const clock = skyClock();
 let sky = skyAt(clock());
@@ -149,7 +151,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     moon.update(t, sky.sun, sky.daylight);
     if (Math.abs(sky.daylight - painted) < 0.01 && !(sky.daylight !== painted && (sky.daylight === 0 || sky.daylight === 1))) return;
     painted = sky.daylight;
-    f.daylight = a.daylight = tf.daylight = sky.daylight;
+    f.daylight = a.daylight = tf.daylight = rf.daylight = sky.daylight;
     paintSky(map, sky.daylight);
     fx.setDaylight(sky.daylight);
     haze.setDaylight(sky.daylight);
@@ -170,6 +172,16 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   const hover = new Hover(map, overlay, fleet, air, transit, () => f.daylight);
   hover.setMoon(moon);
+
+  // Boats through the Mississippi locks, from the Army Corps' lock logs.
+  // They're passages, not positions, and real ones: always in real time.
+  let passages: Passage[] = [];
+  const rf: RiverFrame = { boats: [], version: 0, daylight: sky.daylight };
+  const placeBoats = () => { rf.boats = boatsAt(passages, Date.now() / 1000); rf.version++; };
+  const riverFeed = startPoller<RiverResponse>("/api/river", 5 * 60_000, (body) => { passages = body.p; placeBoats(); }, { maxMs: 30 * 60_000 });
+  // Boats drift a few meters a minute: re-placing them once a second is plenty.
+  setInterval(placeBoats, 1000);
+  hover.setRiver(() => rf.boats, () => passages);
 
   // Every active satellite, animated while it crosses the map.
   const sats = new Satellites(() => {
@@ -226,6 +238,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...routes,
         ...(still ? [] : trailLayers(transit, f)),
         ...vehicleLayers(transit, f),
+        ...riverLayers(rf),
         ...aircraftLayers(a),
         // Satellites fly highest of all.
         ...satelliteLayers(sf),
@@ -253,12 +266,16 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf, freeways: () => freeways, sats, sky: () => sky, moon };
+  (window as unknown as { fromAbove: unknown }).fromAbove = {
+    map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
+    freeways: () => freeways, sats, sky: () => sky, moon,
+    river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
+  };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };

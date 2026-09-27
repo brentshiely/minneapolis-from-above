@@ -70,7 +70,7 @@ try {
 
   await check("status line shows live counts", async () => {
     const text = await page.$eval("#status", (el) => el.textContent);
-    assert(/^\d+ buses · \d+ trains · \d+ planes( · [\d,]+ satellites up)?( · -?\d+°F, [a-z ]+ · (calm|([NESW]{1,2} )?wind \d+ mph(, gusting to \d+)?))? · live$/.test(text), `got "${text}"`);
+    assert(/^\d+ buses · \d+ trains · \d+ planes( · [\d,]+ satellites up)?( · -?\d+°F, [a-z ]+ · (calm|([NESW]{1,2} )?wind \d+ mph(, gusting to \d+)?)( · AQI \d+, [a-z ]+( \([a-z ]+\))?)?)? · live$/.test(text), `got "${text}"`);
     return text;
   });
 
@@ -112,6 +112,8 @@ try {
   await check("a teleport crossfades: ghost fades out, vehicle fades in", async () => {
     const r = await page.evaluate(async () => {
       const f = window.fromAbove.fleet;
+      // Hold the live feed still, so a real update can't jump this vehicle mid-check.
+      window.fromAbove.feed.pause();
       const v = f.list().find((x) => x.alpha === 1);
       const ghostsBefore = f.drawables().length - f.vehicles.size;
       const [lon, lat] = v.position;
@@ -121,6 +123,7 @@ try {
       await new Promise((r) => setTimeout(r, 600));
       const mid = { vehicle: v.alpha, drawn: f.drawables().length };
       await new Promise((r) => setTimeout(r, 1000));
+      window.fromAbove.feed.resume();
       return { ghosts, mid, after: { vehicle: v.alpha, ghostGone: !f.drawables().some((d) => d !== v && d.position === v.position) } };
     });
     assert(r.ghosts === 1, `expected 1 ghost, got ${r.ghosts}`);
@@ -260,6 +263,33 @@ try {
     assert(/^I-94 (east|west)bound/.test(tip), `got "${tip}"`);
     assert(/\d+ mph, (moving freely|slowing|heavy traffic|stop and go)\. The limit is \d+\./.test(tip), `got "${tip}"`);
     return tip.replace(/\n/g, " | ");
+  });
+
+  await check("river: hovering Lock and Dam 1 names it, and a boat that just locked through reads plainly", async () => {
+    // The lock logs come every 5 minutes and boats are rare, so add one that just went through.
+    const real = await page.evaluate(() => window.fromAbove.river.passages().length);
+    await page.evaluate(() => {
+      const now = Date.now() / 1000;
+      const g = window.fromAbove.river;
+      g.setPassages([{ lock: "01", vessel: "MARGARET D", up: true, barges: 2, arrived: now - 1800, done: now - 60, rec: false }, ...g.passages()]);
+      window.fromAbove.map.jumpTo({ center: [-93.2021, 44.9148], zoom: 15 });
+    });
+    await sleep(2500);
+    const hoverAt = async (lngLat, dx = 0, dy = 0) => {
+      await page.mouse.move(5, 5);
+      const pt = await page.evaluate((c) => window.fromAbove.map.project(c), lngLat);
+      await page.mouse.move(pt.x + dx, pt.y + dy);
+      await sleep(600);
+      return page.$eval("#tip", (el) => (el.hidden ? "" : el.innerText));
+    };
+    const boatAt = await page.evaluate(() => window.fromAbove.river.rf.boats.find((b) => b.p.vessel === "MARGARET D").position);
+    const boat = await hoverAt(boatAt);
+    assert(/^Towboat Margaret D heading upstream with 2 barges, through Lock and Dam 1 at \d+:\d\d [AP]M\./.test(boat), `got "${boat}"`);
+    // Beside the lock mark, clear of the boat sitting on it.
+    const lock = await hoverAt([-93.2021, 44.9148], -10, 8);
+    await page.mouse.move(5, 5);
+    assert(/^Lock and Dam 1\./.test(lock) && /Last through: Margaret D, heading upstream with 2 barges/.test(lock), `got "${lock}"`);
+    return `${real} passages from the Corps; ${boat.split("\n")[0]}`;
   });
 
   await check("satellites: all loaded, hundreds above the horizon, and one crossing the map can be hovered", async () => {
