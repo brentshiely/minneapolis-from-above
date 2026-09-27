@@ -191,11 +191,13 @@ test("when the Corps is rate-limiting, the last good list is served and it isn't
     await onRequestGet();
     assert.equal(corps.calls.length, 4, "backs off after a refusal");
 
-    // With nothing to fall back on, it says what went wrong.
+    // With nothing to fall back on: a quiet river and why, not an error.
     resetRiverCache();
     const bad = await onRequestGet();
-    assert.equal(bad.status, 502);
-    assert.match((await read(bad)).error ?? "", /Rate limit exceeded/);
+    assert.equal(bad.status, 200);
+    const body = await read(bad);
+    assert.deepEqual(body.p, []);
+    assert.match((body as { unavailable?: string }).unavailable ?? "", /Rate limit exceeded/);
   } finally {
     corps.restore();
     dateMock.mock.restore();

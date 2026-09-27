@@ -120,10 +120,15 @@ async function refresh(now: number): Promise<Response> {
   }
 }
 
+/**
+ * The last good answer while the Corps is busy; with nothing kept, an
+ * honest empty answer (no passages, and why) rather than an error in
+ * every visitor's console. The page simply shows a quiet river.
+ */
 function stale(prev: Kept | undefined, now: number, error: string): Response {
   return prev && now - prev.at < LAST_OK_S
     ? json(prev.body, 200, `public, max-age=${FRESH_S}`)
-    : json({ error }, 502, `public, max-age=${FRESH_S}`);
+    : json({ t: Math.floor(now), p: [], unavailable: error }, 200, `public, max-age=${FRESH_S}`);
 }
 
 function json(body: unknown, status: number, cache = "no-store"): Response {

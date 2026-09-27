@@ -69,6 +69,8 @@ export interface RiverResponse {
   t: number;
   /** Newest first. */
   p: Passage[];
+  /** Set when the Corps couldn't be reached and nothing was kept: why. */
+  unavailable?: string;
 }
 
 // --- time ---------------------------------------------------------------------
