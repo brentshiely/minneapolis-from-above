@@ -30,6 +30,8 @@ import { previewWeather, type Weather } from "./weather/classify.ts";
 import { AirHaze } from "./weather/haze.ts";
 import { airPhrase, previewAir, type Air } from "./weather/air.ts";
 import { MoonGlow } from "./moonlight.ts";
+import { PlanetsGlow } from "./planetlight.ts";
+import { showerStatus } from "./meteors.ts";
 import { boatsAt, type Passage, type RiverResponse } from "./river/river.ts";
 import { riverLayers, type RiverFrame } from "./layers/river.ts";
 import { fallsLayers, type FallsFrame } from "./layers/falls.ts";
@@ -103,6 +105,10 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const moon = new MoonGlow(document.getElementById("veil")!);
   moon.update(clock(), sky.sun, sky.daylight);
 
+  // The naked-eye planets, glowing faintly at the map's edge when they're up.
+  const planets = new PlanetsGlow(document.getElementById("veil")!);
+  planets.update(clock(), sky.daylight);
+
   // When nobody's touching the map, tour it slowly.
   const idleParam = Number(new URLSearchParams(location.search).get("idle"));
   const trainScene: Scene = {
@@ -155,6 +161,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     sky = skyAt(t);
     a.sun = sky.sun;
     moon.update(t, sky.sun, sky.daylight);
+    planets.update(t, sky.daylight);
     if (Math.abs(sky.daylight - painted) < 0.01 && !(sky.daylight !== painted && (sky.daylight === 0 || sky.daylight === 1))) return;
     painted = sky.daylight;
     f.daylight = a.daylight = tf.daylight = rf.daylight = snowFrame.daylight = sky.daylight;
@@ -178,6 +185,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   const hover = new Hover(map, overlay, fleet, air, transit, () => f.daylight);
   hover.setMoon(moon);
+  hover.setPlanets(planets);
 
   // Boats through the Mississippi locks, from the Army Corps' lock logs.
   // They're passages, not positions, and real ones: always in real time.
@@ -243,6 +251,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     sf.sats = sats.list; sf.now = now; sf.version++; sf.daylight = f.daylight; sf.sunElevation = realSunElevation();
     fx.frame(dt, map.getBearing(), still);
     moon.frame(map.getBearing(), fx.current?.cloudCover ?? 0);
+    planets.frame(map.getBearing(), fx.current?.cloudCover ?? 0);
     air.advance(dt, now);
     if (!still) {
       trails.record(fleet.vehicles, now);
@@ -304,11 +313,11 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
-  startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
+  startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock())].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
   (window as unknown as { fromAbove: unknown }).fromAbove = {
     map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
-    freeways: () => freeways, sats, sky: () => sky, moon, snow,
+    freeways: () => freeways, sats, sky: () => sky, moon, planets, snow,
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
   };

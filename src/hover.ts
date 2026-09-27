@@ -17,6 +17,8 @@ import { LOCKS, describeLock, describePassage, type Boat, type Lock, type LockNo
 import { riverHighlight } from "./layers/river.ts";
 import { routeRule, type City, type Stage } from "./snow/rules.ts";
 import type { SnowRoute } from "./snow/routes.ts";
+import type { PlanetsField } from "./planetlight.ts";
+import type { PlanetName } from "./planets.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -34,6 +36,8 @@ type Target =
   | { kind: "lock"; no: LockNo }
   /** The moon's glow at the edge of the map (a spot on screen, not the map). */
   | { kind: "moon" }
+  /** A planet's glow at the edge of the map (a spot on screen, not the map). */
+  | { kind: "planet"; name: PlanetName }
   /** A lit snow emergency route, and where the cursor is. */
   | { kind: "snow"; city: City; name: string; at: [number, number] }
   | { kind: "falls" };
@@ -74,6 +78,9 @@ export class Hover {
 
   private moon?: MoonSpot;
   setMoon(moon: MoonSpot) { this.moon = moon; }
+
+  private planets?: PlanetsField;
+  setPlanets(planets: PlanetsField) { this.planets = planets; }
 
   setSatellites(list: () => Sat[], sunElevation: () => number) { this.sats = list; this.sunElevation = sunElevation; }
 
@@ -163,6 +170,7 @@ export class Hover {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
     else if (this.moon?.hit(info.x, info.y)) next = { kind: "moon" };
+    else if (this.planets?.hit(info.x, info.y) !== undefined) next = { kind: "planet", name: this.planets.hit(info.x, info.y)! };
     else if (info.coordinate && this.gauges.length) {
       // Nothing moving under the cursor: is it water with a gauge?
       const at: [number, number] = [info.coordinate[0], info.coordinate[1]];
@@ -227,6 +235,12 @@ export class Hover {
       const d = this.moon?.describe();
       if (!d) { this.clear(); return []; }
       this.renderTip(d, this.moon!.anchor(), true);
+      return [];
+    }
+    if (this.target.kind === "planet") {
+      const d = this.planets?.describe(this.target.name);
+      if (!d) { this.clear(); return []; }
+      this.renderTip(d, this.planets!.anchor(this.target.name), true);
       return [];
     }
     if (this.target.kind === "vehicle") {
