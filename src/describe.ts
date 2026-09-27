@@ -276,20 +276,40 @@ function shortAirline(name: string): string {
   return name.replace(/\s+(Air ?Lines|Airlines|Airways|Aviation|Air Transport|International)$/i, "").trim();
 }
 
-const MSP_AIRPORT = { lat: 44.882, lon: -93.2218 };
+/**
+ * Every field a small plane in the metro is plausibly using, so a low
+ * climb or descent near Saint Paul Downtown isn't reported as MSP just
+ * because MSP is the airport everyone's heard of. MSP itself gets a
+ * wider net (bigger airport, faster climb-out, airliners cruise higher
+ * before leveling off) than the general-aviation fields around it.
+ */
+const METRO_AIRPORTS = [
+  { name: "Minneapolis–Saint Paul", lat: 44.882, lon: -93.2218, radiusKm: 35, maxAltFt: 9_000, groundKm: 4 },
+  { name: "Saint Paul Downtown", lat: 44.9344, lon: -93.0599, radiusKm: 15, maxAltFt: 4_000, groundKm: 3 },
+  { name: "Flying Cloud", lat: 44.8271, lon: -93.4569, radiusKm: 15, maxAltFt: 4_000, groundKm: 3 },
+  { name: "Anoka County–Blaine", lat: 45.145, lon: -93.2119, radiusKm: 15, maxAltFt: 4_000, groundKm: 3 },
+  { name: "Crystal", lat: 45.0621, lon: -93.354, radiusKm: 12, maxAltFt: 3_500, groundKm: 3 },
+  { name: "South Saint Paul", lat: 44.8577, lon: -93.0499, radiusKm: 12, maxAltFt: 3_500, groundKm: 3 },
+  { name: "Airlake", lat: 44.6277, lon: -93.2283, radiusKm: 12, maxAltFt: 3_500, groundKm: 3 },
+];
 
 /**
- * When no route is known, what the plane is evidently doing at MSP:
- * low and descending nearby is an arrival, low and climbing a departure.
+ * When no route is known, what the plane is evidently doing at whichever
+ * metro airport it's actually nearest: low and descending nearby is an
+ * arrival, low and climbing a departure.
  */
-function mspPhase(p: PlaneFacts): string | undefined {
+function airportPhase(p: PlaneFacts): string | undefined {
   const [lon, lat] = p.position;
-  const km = kmBetween(lat, lon, MSP_AIRPORT.lat, MSP_AIRPORT.lon);
-  if (p.onGround) return km < 4 ? "at Minneapolis–Saint Paul airport" : undefined;
-  if (km > 35 || (p.altFt ?? Infinity) > 9_000) return undefined;
+  let nearest = METRO_AIRPORTS[0], bestKm = Infinity;
+  for (const a of METRO_AIRPORTS) {
+    const km = kmBetween(lat, lon, a.lat, a.lon);
+    if (km < bestKm) { bestKm = km; nearest = a; }
+  }
+  if (p.onGround) return bestKm < nearest.groundKm ? `at ${nearest.name} airport` : undefined;
+  if (bestKm > nearest.radiusKm || (p.altFt ?? Infinity) > nearest.maxAltFt) return undefined;
   const v = p.verticalFpm ?? 0;
-  if (v < -300) return "approaching Minneapolis–Saint Paul";
-  if (v > 300) return "departing Minneapolis–Saint Paul";
+  if (v < -300) return `approaching ${nearest.name}`;
+  if (v > 300) return `departing ${nearest.name}`;
   return undefined;
 }
 
@@ -306,7 +326,7 @@ export function describePlane(facts: PlaneFacts, info?: FlightInfo): Description
 
   const route = info?.origin && info.destination && routeFits(p, info.origin, info.destination)
     ? ` from ${info.origin.place} to ${info.destination.place}` : "";
-  const phase = route ? undefined : mspPhase(p);
+  const phase = route ? undefined : airportPhase(p);
   let title: string;
   if (airline) {
     title = `${airline} flight ${number}${route}${phase ? `, ${phase}` : ""}`;

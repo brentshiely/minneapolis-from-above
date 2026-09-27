@@ -132,12 +132,24 @@ test("private planes read as the aircraft itself", () => {
 });
 
 test("says what a plane is evidently doing at MSP when no route is known", () => {
-  const climbing = describePlane(plane({ position: [-93.15, 44.92], altFt: 3_000, verticalFpm: 2_000 }), { airline: "Delta Air Lines", flightNumber: "DL5" });
+  const climbing = describePlane(plane({ position: [-93.21, 44.90], altFt: 3_000, verticalFpm: 2_000 }), { airline: "Delta Air Lines", flightNumber: "DL5" });
   assert.equal(climbing.title, "Delta flight 5, departing Minneapolis–Saint Paul.");
   const parked = describePlane(plane({ position: [-93.21, 44.88], onGround: true, altFt: 0, speedKt: 0 }), { airline: "Delta Air Lines", flightNumber: "DL5" });
   assert.equal(parked.title, "Delta flight 5, at Minneapolis–Saint Paul airport.");
   const faraway = describePlane(plane({ position: [-93.9, 45.2], altFt: 3_000, verticalFpm: -800 }), { airline: "Delta Air Lines", flightNumber: "DL5" });
-  assert.equal(faraway.title, "Delta flight 5.", "too far from MSP to say");
+  assert.equal(faraway.title, "Delta flight 5.", "too far from any metro airport to say");
+});
+
+test("tells apart a nearby GA field from MSP, so a Saint Paul Downtown departure isn't called MSP", () => {
+  // Climbing out right next to Saint Paul Downtown (KSTP), well clear of MSP.
+  const stp = describePlane(plane({ position: [-93.06, 44.935], altFt: 1_500, verticalFpm: 900, callsign: "N191DB", registration: "N191DB" }));
+  assert.match(stp.title, /^A .+, departing Saint Paul Downtown\.$/, stp.title);
+  const parked = describePlane(plane({ position: [-93.06, 44.934], onGround: true, altFt: 0, speedKt: 0, callsign: "N191DB", registration: "N191DB" }));
+  assert.match(parked.title, /at Saint Paul Downtown airport\.$/, parked.title);
+  // A high overflight passing near a small field shouldn't claim it departed from there.
+  const overflight = describePlane(plane({ position: [-93.06, 44.935], altFt: 30_000, verticalFpm: 0, heading: 90 }),
+    { airline: "Delta Air Lines", flightNumber: "DL9" });
+  assert.equal(overflight.title, "Delta flight 9.", "too high for a small field's departure/arrival window");
 });
 
 test("planes on the ground", () => {
