@@ -79,7 +79,7 @@ export function satelliteLayers(f: SatFrame) {
       getAngle: (s) => -s.heading,
       getSize: (s) => SIZE[s.kind as IconKind],
       sizeUnits: "pixels",
-      billboard: false,
+      billboard: true, // face the camera; a flat "sticker on the ground" icon foreshortens to a sliver when the drift camera pitches
       getColor: (s) => [...ink, alpha(s)],
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: f.version, getAngle: f.version, getColor: d },

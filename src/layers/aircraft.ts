@@ -82,7 +82,7 @@ export function aircraftLayers(f: AircraftFrame) {
       getAngle: (p) => -p.heading,
       getSize: sizePx,
       sizeUnits: "pixels",
-      billboard: false,
+      billboard: true, // face the camera; a flat "sticker on the ground" icon foreshortens to a sliver when the drift camera pitches
       getColor: (p) => [20, 28, 38, lerp(80, 35, height(p)) * shadowStrength * p.alpha * (p.onGround ? 0 : 1)],
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: f.version, getAngle: f.version, getColor: f.version, getSize: f.version },
@@ -95,7 +95,7 @@ export function aircraftLayers(f: AircraftFrame) {
       getAngle: (p) => -p.heading,
       getSize: sizePx,
       sizeUnits: "pixels",
-      billboard: false,
+      billboard: true, // face the camera; a flat "sticker on the ground" icon foreshortens to a sliver when the drift camera pitches
       getColor: (p) => [...(p.onGround ? ground : sky), 255 * opacity(p) * p.alpha],
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: f.version, getAngle: f.version, getColor: f.version, getSize: f.version },

@@ -10,6 +10,7 @@ import { describeGauge, type Gauge, type GaugeDetail } from "./water/gauges.ts";
 import { gaugeAt, learnLakeGauges } from "./water/match.ts";
 import type { Freeways, Stretch } from "./traffic/freeways.ts";
 import { describeStation, type Readings } from "./traffic/traffic.ts";
+import { describeFalls, FALLS_LOCATION } from "./water/falls.ts";
 import type { Sat } from "./sky/satellites.ts";
 import { describeSatellite, type SatcatRecord, type UcsRow } from "./sky/describe.ts";
 import { LOCKS, describeLock, describePassage, type Boat, type Lock, type LockNo, type Passage } from "./river/river.ts";
@@ -34,7 +35,8 @@ type Target =
   /** The moon's glow at the edge of the map (a spot on screen, not the map). */
   | { kind: "moon" }
   /** A lit snow emergency route, and where the cursor is. */
-  | { kind: "snow"; city: City; name: string; at: [number, number] };
+  | { kind: "snow"; city: City; name: string; at: [number, number] }
+  | { kind: "falls" };
 
 /** The moon, as the hover sees it: a spot on screen that can describe itself. */
 export interface MoonSpot {
@@ -80,6 +82,9 @@ export class Hover {
   setRiver(boats: () => Boat[], passages: () => Passage[]) { this.boats = boats; this.passages = passages; }
   private snowStage: (city: City) => Stage | undefined = () => undefined;
   setSnow(stage: (city: City) => Stage | undefined) { this.snowStage = stage; }
+
+  private fallsGauge: () => Gauge | undefined = () => undefined;
+  setFalls(gauge: () => Gauge | undefined) { this.fallsGauge = gauge; }
 
   private satInfo(id: number): { catalog?: SatcatRecord; ucs?: UcsRow } {
     const c = this.satcat.get(id);
@@ -153,6 +158,7 @@ export class Hover {
       const r = obj as unknown as SnowRoute;
       next = { kind: "snow", city: r.city, name: r.name, at: [info.coordinate[0], info.coordinate[1]] };
     }
+    else if (obj && info.layer?.id === "pick-falls") next = { kind: "falls" };
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
@@ -252,6 +258,10 @@ export class Hover {
       desc = describeLock(lock, this.passages(), nowS_wall());
       position = lock.at;
       layers = riverHighlight(lock.at, this.daylight());
+    } else if (this.target.kind === "falls") {
+      desc = describeFalls(this.fallsGauge(), nowS_wall());
+      position = FALLS_LOCATION;
+      layers = [];
     } else if (this.target.kind === "snow") {
       const stage = this.snowStage(this.target.city);
       if (!stage) { this.clear(); return []; }

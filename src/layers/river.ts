@@ -36,7 +36,7 @@ export function riverLayers(f: RiverFrame) {
       getAngle: (l) => -downstream(l),
       getSize: 20,
       sizeUnits: "pixels",
-      billboard: false,
+      billboard: true, // face the camera; a flat "sticker on the ground" icon foreshortens to a sliver when the drift camera pitches
       getColor: [...lockColor(d), 230],
       parameters: { depthCompare: "always" },
       updateTriggers: { getColor: d },
@@ -59,7 +59,7 @@ export function riverLayers(f: RiverFrame) {
       getAngle: (b) => -b.heading,
       getSize: (b) => (b.p.barges > 0 ? 26 : 20),
       sizeUnits: "pixels",
-      billboard: false,
+      billboard: true, // face the camera; a flat "sticker on the ground" icon foreshortens to a sliver when the drift camera pitches
       getColor: (b) => [...ink, Math.round(255 * b.alpha)],
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: f.version, getAngle: f.version, getColor: [f.version, d] },

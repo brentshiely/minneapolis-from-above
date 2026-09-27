@@ -86,7 +86,7 @@ export function vehicleHighlight(transit: Transit, v: Vehicle, version: number, 
       getAngle: (x) => -x.motion.heading,
       getSize: 26,
       sizeUnits: "pixels",
-      billboard: false,
+      billboard: true, // face the camera; a flat "sticker on the ground" icon foreshortens to a sliver when the drift camera pitches
       getColor: [...color, 255],
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: version, getAngle: version, getColor: d },

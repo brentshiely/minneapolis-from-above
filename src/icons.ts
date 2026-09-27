@@ -73,3 +73,12 @@ export const STARLINK_ICON = {
   url: svg(`<g fill="#fff"><rect x="22" y="26" width="12" height="12" rx="1.5"/><rect x="36" y="29" width="24" height="6" rx="1"/></g>`),
   width: 64, height: 64, mask: true, id: "starlink",
 };
+
+/** A small cascade glyph: three wavy lines falling, for Minnehaha Falls. */
+export const FALLS_ICON = {
+  url: svg(`<g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round">`
+    + `<path d="M16 10 Q22 18 16 26 Q10 34 16 42 Q22 50 16 54"/>`
+    + `<path d="M32 8 Q38 18 32 28 Q26 38 32 48 Q38 54 32 56"/>`
+    + `<path d="M48 10 Q42 18 48 26 Q54 34 48 42 Q42 50 48 54"/></g>`),
+  width: 64, height: 64, mask: true, id: "falls",
+};

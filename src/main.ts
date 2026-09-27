@@ -32,6 +32,9 @@ import { airPhrase, previewAir, type Air } from "./weather/air.ts";
 import { MoonGlow } from "./moonlight.ts";
 import { boatsAt, type Passage, type RiverResponse } from "./river/river.ts";
 import { riverLayers, type RiverFrame } from "./layers/river.ts";
+import { fallsLayers, type FallsFrame } from "./layers/falls.ts";
+import { FALLS_GAUGE_LID, flowLevel } from "./water/falls.ts";
+import type { Gauge } from "./water/gauges.ts";
 import { SnowWatch } from "./snow/watch.ts";
 import { previewSnow, type SnowResponse } from "./snow/rules.ts";
 import { snowLayers, type SnowFrame } from "./layers/snow.ts";
@@ -186,6 +189,20 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   setInterval(placeBoats, 1000);
   hover.setRiver(() => rf.boats, () => passages);
 
+  // Minnehaha Falls: a fixed landmark whose flow rides on the same gauge
+  // list the water-hover system already refreshes every 10 minutes.
+  let fallsGauge: Gauge | undefined;
+  const fallsFrame: FallsFrame = { level: "dry", daylight: sky.daylight, now: 0 };
+  hover.setFalls(() => fallsGauge);
+  const loadFallsGauge = () => fetch("/api/water").then((r) => (r.ok ? (r.json() as Promise<{ gauges?: Gauge[] }>) : undefined))
+    .then((b?: { gauges?: Gauge[] }) => {
+      const g = b?.gauges?.find((x) => x.lid === FALLS_GAUGE_LID);
+      if (g) { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; }
+    })
+    .catch(() => {});
+  loadFallsGauge();
+  setInterval(loadFallsGauge, 10 * 60_000);
+
   // Snow emergencies: a quiet caption and the city's snow emergency routes,
   // only while one is declared. ?snow=mpls-2 or ?snow=stp-night previews one.
   const snowPreview = previewSnow(new URLSearchParams(location.search).get("snow") ?? "");
@@ -245,6 +262,8 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     f.now = now;
     f.version++;
     snowFrame.routes = snow.lit;
+    fallsFrame.daylight = f.daylight;
+    fallsFrame.now = now;
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
@@ -254,6 +273,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(still ? [] : trailLayers(transit, f)),
         ...vehicleLayers(transit, f),
         ...riverLayers(rf),
+        ...fallsLayers(fallsFrame),
         ...aircraftLayers(a),
         // Satellites fly highest of all.
         ...satelliteLayers(sf),
@@ -290,6 +310,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
     freeways: () => freeways, sats, sky: () => sky, moon, snow,
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
+    falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
   };
 });
 
