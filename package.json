@@ -16,7 +16,8 @@
     "build:freeways": "node scripts/build-mndot.mjs",
     "build:sats": "node scripts/build-satellites.mjs",
     "build:ucs": "node scripts/build-ucs.mjs",
-    "build:debris": "node scripts/build-debris.mjs"
+    "build:debris": "node scripts/build-debris.mjs",
+    "build:snow": "node scripts/build-snow.mjs"
   },
   "author": "",
   "license": "UNLICENSED",

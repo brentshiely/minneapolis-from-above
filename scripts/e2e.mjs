@@ -340,6 +340,11 @@ try {
     assert(cleared, "tooltip not cleared by tapping elsewhere");
   });
 
+  await check("with no snow emergency declared, nothing about one shows", async () => {
+    const r = await page.evaluate(() => ({ shown: document.getElementById("snow").classList.contains("shown"), lit: window.fromAbove.snow.lit.length }));
+    assert(!r.shown && r.lit === 0, JSON.stringify(r));
+  });
+
   await check("no console errors", async () => {
     assert(errors.length === 0, errors.join(" | "));
   });
@@ -456,7 +461,29 @@ try {
     });
     await storm.page.close();
 
-    const still = await openApp({ reduced: true, query: "?weather=heavy-snow" });
+    const emergency = await openApp({ query: "?snow=mpls-2&at=13:00" });
+    await check("a snow emergency: a quiet caption, lit routes, and hovering one gives today's rule", async () => {
+      await emergency.page.waitForFunction(() => window.fromAbove.snow.lit.length > 0, { timeout: 10_000 });
+      await emergency.page.evaluate(() => window.fromAbove.map.jumpTo({ center: [-93.285, 44.945], zoom: 13.2 }));
+      await sleep(2500);
+      const caption = await emergency.page.$eval("#snow", (el) => el.classList.contains("shown") && el.textContent);
+      assert(/^Minneapolis snow emergency, day 2: no parking on the even side/.test(caption || ""), `caption "${caption}"`);
+      const hit = await emergency.page.evaluate(() => {
+        for (let y = 250; y < 550; y += 3) for (let x = 400; x < 900; x += 2) {
+          if (window.fromAbove.overlay.pickObject({ x, y, radius: 0, layerIds: ["snow-halo"] })) return [x, y];
+        }
+      });
+      assert(hit, "no lit route on screen");
+      await emergency.page.mouse.move(hit[0] - 20, hit[1] - 20);
+      await emergency.page.mouse.move(hit[0], hit[1], { steps: 4 });
+      await sleep(800);
+      const tip = await emergency.page.$eval("#tip", (el) => (el.hidden ? "" : el.textContent));
+      assert(/snow emergency route\..*Parking is allowed on both sides today/.test(tip), `tooltip "${tip}"`);
+      return caption;
+    });
+    await emergency.page.close();
+
+    const still =await openApp({ reduced: true, query: "?weather=heavy-snow" });
     await sleep(1000);
     await check("reduced motion: no falling snow", async () => {
       const lit = await still.page.evaluate(() => {

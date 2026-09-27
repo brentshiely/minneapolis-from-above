@@ -32,6 +32,9 @@ import { airPhrase, previewAir, type Air } from "./weather/air.ts";
 import { MoonGlow } from "./moonlight.ts";
 import { boatsAt, type Passage, type RiverResponse } from "./river/river.ts";
 import { riverLayers, type RiverFrame } from "./layers/river.ts";
+import { SnowWatch } from "./snow/watch.ts";
+import { previewSnow, type SnowResponse } from "./snow/rules.ts";
+import { snowLayers, type SnowFrame } from "./layers/snow.ts";
 
 const clock = skyClock();
 let sky = skyAt(clock());
@@ -151,7 +154,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     moon.update(t, sky.sun, sky.daylight);
     if (Math.abs(sky.daylight - painted) < 0.01 && !(sky.daylight !== painted && (sky.daylight === 0 || sky.daylight === 1))) return;
     painted = sky.daylight;
-    f.daylight = a.daylight = tf.daylight = rf.daylight = sky.daylight;
+    f.daylight = a.daylight = tf.daylight = rf.daylight = snowFrame.daylight = sky.daylight;
     paintSky(map, sky.daylight);
     fx.setDaylight(sky.daylight);
     haze.setDaylight(sky.daylight);
@@ -182,6 +185,16 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Boats drift a few meters a minute: re-placing them once a second is plenty.
   setInterval(placeBoats, 1000);
   hover.setRiver(() => rf.boats, () => passages);
+
+  // Snow emergencies: a quiet caption and the city's snow emergency routes,
+  // only while one is declared. ?snow=mpls-2 or ?snow=stp-night previews one.
+  const snowPreview = previewSnow(new URLSearchParams(location.search).get("snow") ?? "");
+  const snow = new SnowWatch(document.getElementById("snow")!, clock, snowPreview);
+  const snowFrame: SnowFrame = { routes: [], daylight: sky.daylight };
+  hover.setSnow((city) => snow.stages[city]);
+  const snowFeed = snowPreview ? undefined : startPoller<SnowResponse>("/api/snow", 5 * 60_000, (body) => snow.update(body), { maxMs: 30 * 60_000 });
+  // Day 2 begins at 8 AM whether or not the city's page has changed.
+  setInterval(() => snow.refresh(), 30_000);
 
   // Every active satellite, animated while it crosses the map.
   const sats = new Satellites(() => {
@@ -231,11 +244,13 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     f.vehicles = fleet.drawables();
     f.now = now;
     f.version++;
+    snowFrame.routes = snow.lit;
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
         ...(freeways ? [trafficLayer(freeways, tf, anchor)] : []),
         ...routes,
+        ...snowLayers(snowFrame, anchor),
         ...(still ? [] : trailLayers(transit, f)),
         ...vehicleLayers(transit, f),
         ...riverLayers(rf),
@@ -266,14 +281,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
   (window as unknown as { fromAbove: unknown }).fromAbove = {
     map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
-    freeways: () => freeways, sats, sky: () => sky, moon,
+    freeways: () => freeways, sats, sky: () => sky, moon, snow,
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
   };
 });

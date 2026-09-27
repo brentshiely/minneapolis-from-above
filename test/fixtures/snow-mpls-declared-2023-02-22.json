@@ -1,0 +1,64 @@
+{
+    "notices": [
+        
+		
+		{
+ "publishDate": "2022-12-09T13:58:00-06:00",
+ "expireDate": "",
+ "html": "<section class=\"organism--global-alert\"><div class=\"emergencynotice\" aria-live=\"assertive\" data-id=\"snow-emergency\" data-version=\"202302234709857.0\"><div class=\"notice notice\"><div class=\"row\"><div class=\"notice-body\"><div class=\"date\"><span class=\"dateDay\">Thursday,<\/span><br>February 23<\/div><div class=\"icon\"><img src=\"https://www.minneapolismn.gov/media/-www-content-assets/images/normalparking.gif\" style=\"max-width: 2.625rem;max-height: 2.625rem;\" alt=\"\" /><\/div><div class=\"message\"><h2 class=\"show-for-sr\">There's currently no Snow Emergency. Normal parking rules apply.<\/h2><p aria-hidden=\"true\">There's currently no Snow Emergency. Normal parking rules apply.<\/p><\/div><a href=\"https://www.minneapolismn.gov/getting-around/snow/snow-emergencies/snow-parking-rules/\" class=\"atom atom--shadow-button button tiny short\" tabindex=\"0\">Snow Emergency Parking Rules<\/a><button class=\"atom atom--close-button button close-button tiny short clear\" id=\"close-button-47098\" type=\"button\" aria-label=\"Close\" data-close> Close <span class=\"close-x fas fa-times\"><\/span> <\/button><\/div><\/div><\/div><\/div><\/section>",
+ "id": "snow-emergency",
+ "noticetype": "notice",
+ "version": "202302234709857.0"
+},
+		{
+ "date": "2023-02-23T15:05:17-06:00",
+ "noticetype": "warning",
+ "publishDate": "2023-02-22T11:56:00-06:00",
+ "expireDate": "2023-02-22T21:00:00-06:00",
+ "html": "<section class=\"organism--global-alert\"><div class=\"emergencynotice\" aria-live=\"assertive\" data-id=\"snow-emergency\" data-version=\"2522323.0\"><div class=\"notice warning\"><div class=\"row\"><div class=\"notice-body\"><div class=\"date\"><span class=\"dateDay\">Thursday,<\/span><br>February 23<\/div><div class=\"icon\"><img src=\"https://www.minneapolismn.gov/media/-www-content-assets/images/snow-emergency-icon-small.svg\" style=\"max-width: 2.625rem;max-height: 2.625rem;\" alt=\"Snow Emergency in effect\" /><\/div><div class=\"message\"><h2 class=\"show-for-sr\">The City has declared a Snow Emergency. Day 1 rules begin at 9 p.m. tonight.<\/h2><p aria-hidden=\"true\">The City has declared a Snow Emergency. Day 1 rules begin at 9 p.m. tonight.<\/p><\/div><a href=\"https://www.minneapolismn.gov/getting-around/snow/snow-emergencies/snow-parking-rules/\" class=\"atom atom--shadow-button button tiny short\" tabindex=\"0\">Snow Emergency Parking Rules<\/a><button class=\"atom atom--close-button button close-button tiny short clear\" id=\"close-button-25223\" type=\"button\" aria-label=\"Close\" data-close> Close <span class=\"close-x fas fa-times\"><\/span> <\/button><\/div><\/div><\/div><\/div><\/section>",
+ "id": "snow-emergency",
+ "version": "2522323.0"
+},{
+ "date": "2023-02-23T15:05:18-06:00",
+ "noticetype": "warning",
+ "publishDate": "2023-02-22T21:00:00-06:00",
+ "expireDate": "2023-02-23T08:00:00-06:00",
+ "html": "<section class=\"organism--global-alert\"><div class=\"emergencynotice\" aria-live=\"assertive\" data-id=\"snow-emergency\" data-version=\"2385630.0\"><div class=\"notice warning\"><div class=\"row\"><div class=\"notice-body\"><div class=\"date\"><span class=\"dateDay\">Thursday,<\/span><br>February 23<\/div><div class=\"icon\"><img src=\"https://www.minneapolismn.gov/media/-www-content-assets/images/snow-emergency-icon-small.svg\" style=\"max-width: 2.625rem;max-height: 2.625rem;\" alt=\"Snow Emergency in effect\" /><\/div><div class=\"message\"><h2 class=\"show-for-sr\">Snow Emergency Day 1 rules are in effect from 9 p.m. until 8 a.m. (overnight). Do not park on either side of Snow Emergency Routes.<\/h2><p aria-hidden=\"true\">Snow Emergency Day 1 rules are in effect from 9 p.m. until 8 a.m. (overnight). Do not park on either side of Snow Emergency Routes.<\/p><\/div><a href=\"https://www.minneapolismn.gov/getting-around/snow/snow-emergencies/snow-parking-rules/\" class=\"atom atom--shadow-button button tiny short\" tabindex=\"0\">Snow Emergency Parking Rules<\/a><button class=\"atom atom--close-button button close-button tiny short clear\" id=\"close-button-23856\" type=\"button\" aria-label=\"Close\" data-close> Close <span class=\"close-x fas fa-times\"><\/span> <\/button><\/div><\/div><\/div><\/div><\/section>",
+ "id": "snow-emergency",
+ "version": "2385630.0"
+},{
+ "date": "2023-02-23T15:05:18-06:00",
+ "noticetype": "warning",
+ "publishDate": "2023-02-23T08:00:00-06:00",
+ "expireDate": "2023-02-23T20:00:00-06:00",
+ "html": "<section class=\"organism--global-alert\"><div class=\"emergencynotice\" aria-live=\"assertive\" data-id=\"snow-emergency\" data-version=\"2384425.0\"><div class=\"notice warning\"><div class=\"row\"><div class=\"notice-body\"><div class=\"date\"><span class=\"dateDay\">Thursday,<\/span><br>February 23<\/div><div class=\"icon\"><img src=\"https://www.minneapolismn.gov/media/-www-content-assets/images/snow-emergency-icon-small.svg\" style=\"max-width: 2.625rem;max-height: 2.625rem;\" alt=\"Snow Emergency in effect\" /><\/div><div class=\"message\"><h2 class=\"show-for-sr\">Snow Emergency Day 2 rules are in effect from 8 a.m. until 8 p.m. tonight. Do not park on the even side of streets that are not Snow Emergency Routes. Do not park on either side of parkways.<\/h2><p aria-hidden=\"true\">Snow Emergency Day 2 rules are in effect from 8 a.m. until 8 p.m. tonight. Do not park on the even side of streets that are not Snow Emergency Routes. Do not park on either side of parkways.<\/p><\/div><a href=\"https://www.minneapolismn.gov/getting-around/snow/snow-emergencies/snow-parking-rules/\" class=\"atom atom--shadow-button button tiny short\" tabindex=\"0\">Snow Emergency Parking Rules<\/a><button class=\"atom atom--close-button button close-button tiny short clear\" id=\"close-button-23844\" type=\"button\" aria-label=\"Close\" data-close> Close <span class=\"close-x fas fa-times\"><\/span> <\/button><\/div><\/div><\/div><\/div><\/section>",
+ "id": "snow-emergency",
+ "version": "2384425.0"
+},{
+ "date": "2023-02-23T15:05:19-06:00",
+ "noticetype": "warning",
+ "publishDate": "2023-02-23T20:00:00-06:00",
+ "expireDate": "2023-02-24T08:00:00-06:00",
+ "html": "<section class=\"organism--global-alert\"><div class=\"emergencynotice\" aria-live=\"assertive\" data-id=\"snow-emergency\" data-version=\"281508.0\"><div class=\"notice warning\"><div class=\"row\"><div class=\"notice-body\"><div class=\"date\"><span class=\"dateDay\">Thursday,<\/span><br>February 23<\/div><div class=\"icon\"><img src=\"https://www.minneapolismn.gov/media/-www-content-assets/images/snow-emergency-icon-small.svg\" style=\"max-width: 2.625rem;max-height: 2.625rem;\" alt=\"Snow Emergency in effect\" /><\/div><div class=\"message\"><h2 class=\"show-for-sr\">A Snow Emergency is in effect. Day 2 ended at 8 p.m. Between 8 p.m. - 8 a.m., move your vehicle from the odd side of streets that are not Snow Emergency Routes. Day 3 rules begin at 8 a.m.<\/h2><p aria-hidden=\"true\">A Snow Emergency is in effect. Day 2 ended at 8 p.m. Between 8 p.m. - 8 a.m., move your vehicle from the odd side of streets that are not Snow Emergency Routes. Day 3 rules begin at 8 a.m.<\/p><\/div><a href=\"https://www.minneapolismn.gov/getting-around/snow/snow-emergencies/snow-parking-rules/\" class=\"atom atom--shadow-button button tiny short\" tabindex=\"0\">Snow Emergency Parking Rules<\/a><button class=\"atom atom--close-button button close-button tiny short clear\" id=\"close-button-28150\" type=\"button\" aria-label=\"Close\" data-close> Close <span class=\"close-x fas fa-times\"><\/span> <\/button><\/div><\/div><\/div><\/div><\/section>",
+ "id": "snow-emergency",
+ "version": "281508.0"
+},{
+ "date": "2023-02-23T15:05:19-06:00",
+ "noticetype": "warning",
+ "publishDate": "2023-02-24T08:00:00-06:00",
+ "expireDate": "2023-02-24T20:00:00-06:00",
+ "html": "<section class=\"organism--global-alert\"><div class=\"emergencynotice\" aria-live=\"assertive\" data-id=\"snow-emergency\" data-version=\"2390014.0\"><div class=\"notice warning\"><div class=\"row\"><div class=\"notice-body\"><div class=\"date\"><span class=\"dateDay\">Thursday,<\/span><br>February 23<\/div><div class=\"icon\"><img src=\"https://www.minneapolismn.gov/media/-www-content-assets/images/snow-emergency-icon-small.svg\" style=\"max-width: 2.625rem;max-height: 2.625rem;\" alt=\"Snow Emergency in effect\" /><\/div><div class=\"message\"><h2 class=\"show-for-sr\">Snow Emergency Day 3 rules are in effect from 8 a.m. until 8 p.m. tonight.<\/h2><p aria-hidden=\"true\">Snow Emergency Day 3 rules are in effect from 8 a.m. until 8 p.m. tonight.<\/p><\/div><a href=\"https://www.minneapolismn.gov/getting-around/snow/snow-emergencies/snow-parking-rules/\" class=\"atom atom--shadow-button button tiny short\" tabindex=\"0\">Snow Emergency Parking Rules<\/a><button class=\"atom atom--close-button button close-button tiny short clear\" id=\"close-button-23900\" type=\"button\" aria-label=\"Close\" data-close> Close <span class=\"close-x fas fa-times\"><\/span> <\/button><\/div><\/div><\/div><\/div><\/section>",
+ "id": "snow-emergency",
+ "version": "2390014.0"
+},
+        {
+            "": ""
+        }
+    ]
+}
+
+
+
+
+
+

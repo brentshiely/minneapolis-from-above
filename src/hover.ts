@@ -14,6 +14,8 @@ import type { Sat } from "./sky/satellites.ts";
 import { describeSatellite, type SatcatRecord, type UcsRow } from "./sky/describe.ts";
 import { LOCKS, describeLock, describePassage, type Boat, type Lock, type LockNo, type Passage } from "./river/river.ts";
 import { riverHighlight } from "./layers/river.ts";
+import { routeRule, type City, type Stage } from "./snow/rules.ts";
+import type { SnowRoute } from "./snow/routes.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -30,7 +32,9 @@ type Target =
   | { kind: "boat"; key: string }
   | { kind: "lock"; no: LockNo }
   /** The moon's glow at the edge of the map (a spot on screen, not the map). */
-  | { kind: "moon" };
+  | { kind: "moon" }
+  /** A lit snow emergency route, and where the cursor is. */
+  | { kind: "snow"; city: City; name: string; at: [number, number] };
 
 /** The moon, as the hover sees it: a spot on screen that can describe itself. */
 export interface MoonSpot {
@@ -44,7 +48,8 @@ const GAUGE_REFRESH_MS = 10 * 60_000;
 
 /**
  * Hover (or tap) a bus, train, plane, satellite or boat to see what it
- * is, water to see its level, or the moon for its phase. The tooltip
+ * is, water to see its level, a lit snow emergency route for today's
+ * parking rule, or the moon for its phase. The tooltip
  * follows its subject as it moves. On touch screens a tap pins it until
  * the next tap elsewhere.
  */
@@ -73,6 +78,8 @@ export class Hover {
   private boats: () => Boat[] = () => [];
   private passages: () => Passage[] = () => [];
   setRiver(boats: () => Boat[], passages: () => Passage[]) { this.boats = boats; this.passages = passages; }
+  private snowStage: (city: City) => Stage | undefined = () => undefined;
+  setSnow(stage: (city: City) => Stage | undefined) { this.snowStage = stage; }
 
   private satInfo(id: number): { catalog?: SatcatRecord; ucs?: UcsRow } {
     const c = this.satcat.get(id);
@@ -142,6 +149,10 @@ export class Hover {
     else if (obj && info.layer?.id === "pick-sats") next = { kind: "satellite", id: (obj as unknown as Sat).id };
     else if (obj && info.layer?.id === "pick-boats") next = { kind: "boat", key: (obj as unknown as Boat).key };
     else if (obj && info.layer?.id === "pick-locks") next = { kind: "lock", no: (obj as unknown as Lock).no };
+    else if (obj && (info.layer?.id === "snow-routes" || info.layer?.id === "snow-halo") && info.coordinate) {
+      const r = obj as unknown as SnowRoute;
+      next = { kind: "snow", city: r.city, name: r.name, at: [info.coordinate[0], info.coordinate[1]] };
+    }
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
@@ -241,6 +252,12 @@ export class Hover {
       desc = describeLock(lock, this.passages(), nowS_wall());
       position = lock.at;
       layers = riverHighlight(lock.at, this.daylight());
+    } else if (this.target.kind === "snow") {
+      const stage = this.snowStage(this.target.city);
+      if (!stage) { this.clear(); return []; }
+      desc = routeRule(stage, this.target.name || undefined);
+      position = this.target.at;
+      layers = [];
     } else if (this.target.kind === "traffic") {
       const info = this.freeways?.stations[this.target.station];
       if (!info) { this.clear(); return []; }
