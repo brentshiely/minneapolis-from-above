@@ -51,6 +51,9 @@ import type { GamesResponse } from "../functions/api/games.ts";
 import { incidentsLayers, type IncidentsFrame } from "./layers/incidents.ts";
 import { previewIncidents } from "./traffic/incidents.ts";
 import type { IncidentsResponse } from "../functions/api/incidents.ts";
+import { beachesLayers, type BeachesFrame } from "./layers/beaches.ts";
+import { previewBeaches } from "./water/beaches.ts";
+import type { BeachesResponse } from "../functions/api/beaches.ts";
 import type { WarningsResponse } from "../functions/api/warnings.ts";
 import { FALLS_GAUGE_LID, flowLevel } from "./water/falls.ts";
 import type { Gauge } from "./water/gauges.ts";
@@ -331,6 +334,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const incidentsFeed = incidentsPreview ? undefined
     : startPoller<IncidentsResponse>("/api/incidents", 60_000, (body) => { incidentsFrame.active = body.incidents; }, { maxMs: 10 * 60_000 });
 
+  // Minneapolis Park Board swimming beaches, open or closed for water
+  // quality, in season. ?beach=open (or closed) previews a status.
+  const beachesPreview = previewBeaches(new URLSearchParams(location.search).get("beach") ?? "");
+  const beachesFrame: BeachesFrame = { active: beachesPreview?.beaches ?? [] };
+  hover.setBeaches(() => beachesFrame.active);
+  const beachesFeed = beachesPreview ? undefined
+    : startPoller<BeachesResponse>("/api/beaches", 10 * 60_000, (body) => { beachesFrame.active = body.beaches; }, { maxMs: 60 * 60_000 });
+
   // Every active satellite, animated while it crosses the map.
   const sats = new Satellites(() => {
     const b = map.getBounds();
@@ -394,6 +405,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...gamesLayers(gamesFrame),
         ...(freeways ? [trafficLayer(freeways, tf, anchor)] : []),
         ...incidentsLayers(incidentsFrame, anchor),
+        ...beachesLayers(beachesFrame, anchor),
         ...cameraLayers(cameras, anchor),
         ...routes,
         ...alertLayers,
@@ -429,7 +441,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000))].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
@@ -443,6 +455,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     warnings: { frame: warningsFrame, feed: warningsFeed },
     games: { frame: gamesFrame, feed: gamesFeed },
     incidents: { frame: incidentsFrame, feed: incidentsFeed },
+    beaches: { frame: beachesFrame, feed: beachesFeed },
     aurora: { strength: () => auroraKp, feed: auroraFeed },
     imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };
