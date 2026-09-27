@@ -60,6 +60,8 @@ import type { AirportResponse } from "../functions/api/airport.ts";
 import { wildlifeLayers, type WildlifeFrame } from "./layers/wildlife.ts";
 import { previewWildlife } from "./wildlife/sightings.ts";
 import type { WildlifeResponse } from "../functions/api/wildlife.ts";
+import { fallColorPhrase, FallColorHaze, previewFallColor } from "./seasons/fallcolor.ts";
+import type { FallColorResponse } from "../functions/api/fallcolor.ts";
 import type { WarningsResponse } from "../functions/api/warnings.ts";
 import { FALLS_GAUGE_LID, flowLevel } from "./water/falls.ts";
 import type { Gauge } from "./water/gauges.ts";
@@ -364,6 +366,15 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const wildlifeFeed = wildlifePreview ? undefined
     : startPoller<WildlifeResponse>("/api/wildlife", 15 * 60_000, (body) => { wildlifeFrame.recent = body.sightings; }, { maxMs: 60 * 60_000 });
 
+  // MN DNR's fall color report, as a slow warm wash; quiet outside the
+  // season. ?fallcolor=peak (or starting, changing, past) previews a level.
+  const fallColorPreview = previewFallColor(new URLSearchParams(location.search).get("fallcolor") ?? "");
+  const fallColor = new FallColorHaze(document.getElementById("fallcolor")!);
+  let fallColorBody: FallColorResponse = fallColorPreview ?? { t: 0, samples: 0 };
+  if (fallColorPreview) fallColor.set(fallColorPreview);
+  const fallColorFeed = fallColorPreview ? undefined
+    : startPoller<FallColorResponse>("/api/fallcolor", 60 * 60_000, (body) => { fallColorBody = body; fallColor.set(body); }, { maxMs: 4 * 60 * 60_000 });
+
   // Every active satellite, animated while it crosses the map.
   const sats = new Satellites(() => {
     const b = map.getBounds();
@@ -467,10 +478,10 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed, fallColorFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
-  startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000)), airportPhrase(airportFrame.status)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
+  startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000)), airportPhrase(airportFrame.status), fallColorPhrase(fallColorBody)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
   (window as unknown as { fromAbove: unknown }).fromAbove = {
     map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
@@ -484,6 +495,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     beaches: { frame: beachesFrame, feed: beachesFeed },
     airport: { frame: airportFrame, feed: airportFeed },
     wildlife: { frame: wildlifeFrame, feed: wildlifeFeed },
+    fallColor: { body: () => fallColorBody, feed: fallColorFeed },
     aurora: { strength: () => auroraKp, feed: auroraFeed },
     imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };
