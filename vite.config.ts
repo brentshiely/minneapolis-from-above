@@ -10,7 +10,7 @@ function pagesFunctions(): Plugin {
     name: "pages-functions",
     configureServer(server) {
       server.middlewares.use("/api", async (req, res, next) => {
-        const name = /^\/(\w+)/.exec(req.url ?? "")?.[1];
+        const name = /^\/([\w-]+)/.exec(req.url ?? "")?.[1];
         // Any file in functions/api/ is an endpoint, as on Cloudflare.
         if (!name || !existsSync(`functions/api/${name}.ts`)) return next();
         try {

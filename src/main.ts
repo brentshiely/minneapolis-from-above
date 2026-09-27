@@ -2,6 +2,7 @@ import "./style.css";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createBaseMap, paintSky } from "./basemap.ts";
 import { addAerialImagery, IMAGERY_LAYER_ID, setImageryOpacity } from "./imagery.ts";
+import { addRadarLayers, currentFrame, refreshRadarTiles, setRadarFrame } from "./weather/radar.ts";
 import { skyAt, skyClock } from "./sky.ts";
 import { mixColor } from "./color.ts";
 import { loadTransit } from "./transit/data.ts";
@@ -94,6 +95,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   addAerialImagery(map, imageryAnchor);
   setImageryOpacity(map, sky.daylight, map.getZoom());
   map.on("zoom", () => setImageryOpacity(map, sky.daylight, map.getZoom()));
+  // Live radar, looping through the last half hour; drawn over the photo
+  // (added after it, same anchor) so rain reads even when the imagery
+  // is showing. Re-fetched every 5 minutes to match IEM's own refresh.
+  addRadarLayers(map, imageryAnchor);
+  let radarFrameIdx = -1;
+  setInterval(() => refreshRadarTiles(map), 5 * 60_000);
   // Live service alerts: affected routes dash instead of their usual solid
   // line, and a major one (a rail line on shuttle buses, or a detour
   // reaching several routes) gets a caption. ?alert=blueline-detour (or
@@ -339,6 +346,8 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     fallsFrame.daylight = f.daylight;
     fallsFrame.now = now;
     warningsFrame.now = now;
+    const radarIdx = currentFrame(now);
+    if (radarIdx !== radarFrameIdx) { radarFrameIdx = radarIdx; setRadarFrame(map, radarIdx); }
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
@@ -391,6 +400,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
     alerts, alertsFeed,
     warnings: { frame: warningsFrame, feed: warningsFeed },
+    radar: { frame: () => radarFrameIdx },
     imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };
 });
