@@ -26,6 +26,7 @@ import { describeGame, VENUES, type GameStatus, type Venue } from "./sports/game
 import { describeIncident, type Incident } from "./traffic/incidents.ts";
 import { describeBeach, type Beach } from "./water/beaches.ts";
 import { describeAirport, MSP_POSITION, type MspStatus } from "./airport.ts";
+import { describeSighting, type Sighting } from "./wildlife/sightings.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -61,7 +62,9 @@ type Target =
   /** A swimming beach, in season. */
   | { kind: "beach"; id: string }
   /** MSP's own operating status. */
-  | { kind: "airport" };
+  | { kind: "airport" }
+  /** A recent wildlife sighting. */
+  | { kind: "wildlife"; id: number };
 
 /** The moon, as the hover sees it: a spot on screen that can describe itself. */
 export interface MoonSpot {
@@ -125,6 +128,8 @@ export class Hover {
   setBeaches(list: () => Beach[]) { this.beaches = list; }
   private airportStatus: () => MspStatus[] = () => [];
   setAirport(list: () => MspStatus[]) { this.airportStatus = list; }
+  private sightings: () => Sighting[] = () => [];
+  setWildlife(list: () => Sighting[]) { this.sightings = list; }
 
   private satInfo(id: number): { catalog?: SatcatRecord; ucs?: UcsRow } {
     const c = this.satcat.get(id);
@@ -213,6 +218,7 @@ export class Hover {
     else if (obj && info.layer?.id === "pick-incidents") next = { kind: "incident", id: (obj as unknown as Incident).id };
     else if (obj && info.layer?.id === "pick-beaches") next = { kind: "beach", id: (obj as unknown as Beach).id };
     else if (obj && info.layer?.id === "pick-airport") next = { kind: "airport" };
+    else if (obj && info.layer?.id === "pick-wildlife") next = { kind: "wildlife", id: (obj as unknown as { s: Sighting }).s.id };
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
@@ -367,6 +373,13 @@ export class Hover {
     } else if (this.target.kind === "airport") {
       desc = describeAirport(this.airportStatus());
       position = MSP_POSITION;
+      layers = [];
+    } else if (this.target.kind === "wildlife") {
+      const id = this.target.id;
+      const s = this.sightings().find((x) => x.id === id);
+      if (!s) { this.clear(); return []; }
+      desc = describeSighting(s, nowS_wall());
+      position = s.position;
       layers = [];
     } else if (this.target.kind === "traffic") {
       const info = this.freeways?.stations[this.target.station];

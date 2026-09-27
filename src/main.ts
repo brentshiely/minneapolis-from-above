@@ -57,6 +57,9 @@ import type { BeachesResponse } from "../functions/api/beaches.ts";
 import { airportLayers, type AirportFrame } from "./layers/airport.ts";
 import { airportPhrase, previewAirport } from "./airport.ts";
 import type { AirportResponse } from "../functions/api/airport.ts";
+import { wildlifeLayers, type WildlifeFrame } from "./layers/wildlife.ts";
+import { previewWildlife } from "./wildlife/sightings.ts";
+import type { WildlifeResponse } from "../functions/api/wildlife.ts";
 import type { WarningsResponse } from "../functions/api/warnings.ts";
 import { FALLS_GAUGE_LID, flowLevel } from "./water/falls.ts";
 import type { Gauge } from "./water/gauges.ts";
@@ -353,6 +356,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const airportFeed = airportPreview ? undefined
     : startPoller<AirportResponse>("/api/airport", 2 * 60_000, (body) => { airportFrame.status = body.status; }, { maxMs: 20 * 60_000 });
 
+  // Recent, identification-verified wildlife sightings, fading out over
+  // a few days. ?wildlife=recent previews one from a few hours ago.
+  const wildlifePreview = previewWildlife(new URLSearchParams(location.search).get("wildlife") ?? "");
+  const wildlifeFrame: WildlifeFrame = { recent: wildlifePreview?.sightings ?? [], now: 0 };
+  hover.setWildlife(() => wildlifeFrame.recent);
+  const wildlifeFeed = wildlifePreview ? undefined
+    : startPoller<WildlifeResponse>("/api/wildlife", 15 * 60_000, (body) => { wildlifeFrame.recent = body.sightings; }, { maxMs: 60 * 60_000 });
+
   // Every active satellite, animated while it crosses the map.
   const sats = new Satellites(() => {
     const b = map.getBounds();
@@ -410,6 +421,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     gamesFrame.now = now;
     incidentsFrame.now = now;
     airportFrame.now = now;
+    wildlifeFrame.now = now;
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
@@ -419,6 +431,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...incidentsLayers(incidentsFrame, anchor),
         ...beachesLayers(beachesFrame, anchor),
         ...airportLayers(airportFrame),
+        ...wildlifeLayers(wildlifeFrame),
         ...cameraLayers(cameras, anchor),
         ...routes,
         ...alertLayers,
@@ -454,7 +467,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000)), airportPhrase(airportFrame.status)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
@@ -470,6 +483,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     incidents: { frame: incidentsFrame, feed: incidentsFeed },
     beaches: { frame: beachesFrame, feed: beachesFeed },
     airport: { frame: airportFrame, feed: airportFeed },
+    wildlife: { frame: wildlifeFrame, feed: wildlifeFeed },
     aurora: { strength: () => auroraKp, feed: auroraFeed },
     imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };
