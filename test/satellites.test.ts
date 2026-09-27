@@ -141,3 +141,55 @@ test("debris: kinds, and each cloud's origin story", () => {
     live: { lon: 0, lat: 0, altKm: 850, speedKms: 7.4, elevation: 40, azimuth: 0, eclipsed: true } });
   assert.equal(parent.title, "What remains of Fengyun-1C.");
 });
+
+const livePos = (over: Partial<SatPosition> = {}): SatPosition => ({
+  lon: -93.2, lat: 44.9, altKm: 550, speedKms: 7.5, elevation: 50, azimuth: 90, eclipsed: false, ...over,
+});
+
+test("a rocket body reads as the spent stage, not a mystery payload", () => {
+  const d = describeSatellite({
+    id: 40889, name: "FALCON 9 R/B", kind: "satellite", sunElevation: 10, live: livePos(),
+    catalog: { OBJECT_TYPE: "R/B", OBJECT_ID: "2015-050B", PERIOD: 95, INCLINATION: 51.6, APOGEE: 600, PERIGEE: 580, RCS: 8 },
+  });
+  assert.equal(d.title, "Falcon 9 rocket stage.");
+  assert.match(d.detail!, /^A spent rocket stage, still coasting in the orbit it delivered its payload to\./);
+  assert.match(d.detail!, /Now 342 miles up, moving at 16,800 mph\.$/);
+  assert.equal(d.meta, "NORAD 40889 · 2015-050B · radar size large");
+
+  const cz = describeSatellite({
+    id: 12345, name: "CZ-4C R/B", kind: "satellite", sunElevation: 10, live: livePos(),
+    catalog: { OBJECT_TYPE: "R/B", APOGEE: 700, PERIGEE: 690 },
+  });
+  assert.equal(cz.title, "Long March 4 rocket stage.");
+});
+
+test("with no route to a purpose, the orbit itself suggests one, hedged as trackers' belief", () => {
+  const geo = describeSatellite({
+    id: 1, name: "MYSTERY GEO 1", kind: "satellite", sunElevation: 10, live: livePos({ altKm: 35_786 }),
+    catalog: { OWNER: "US", APOGEE: 35_790, PERIGEE: 35_780, INCLINATION: 0.1, PERIOD: 1436 },
+  });
+  assert.match(geo.detail!, /A satellite from the United States\./);
+  assert.match(geo.detail!, /geostationary orbit like this is typically used for communications, weather-watching, or military relay\./);
+
+  const sunsync = describeSatellite({
+    id: 2, name: "USA 999", kind: "satellite", sunElevation: 10, live: livePos(),
+    catalog: { OWNER: "US", APOGEE: 700, PERIGEE: 680, INCLINATION: 98 },
+  });
+  assert.match(sunsync.detail!, /sun-synchronous, low orbit is the pattern trackers associate with Earth-imaging or reconnaissance satellites\./);
+
+  const molniya = describeSatellite({
+    id: 3, name: "COSMOS 2500", kind: "satellite", sunElevation: 10, live: livePos(),
+    catalog: { OWNER: "CIS", APOGEE: 39_000, PERIGEE: 600, INCLINATION: 63.4 },
+  });
+  assert.match(molniya.detail!, /lingering for hours over the far north.*missile-warning and high-latitude communications/);
+
+  const plainLeo = describeSatellite({
+    id: 4, name: "MYSTERY LEO 1", kind: "satellite", sunElevation: 10, live: livePos(),
+    catalog: { OWNER: "US", APOGEE: 800, PERIGEE: 780, INCLINATION: 30 },
+  });
+  assert.match(plainLeo.detail!, /communications, navigation or scientific research; its precise mission isn't publicly documented\./);
+
+  // Nothing at all to classify by: no purpose guess is invented from thin air.
+  const noOrbit = describeSatellite({ id: 5, name: "MYSTERY 5", kind: "satellite", sunElevation: 10, live: livePos(), catalog: { OWNER: "US" } });
+  assert.equal(noOrbit.detail, "A satellite from the United States. Now 342 miles up, moving at 16,800 mph. Sunlit, but the sky here is too bright to see it.");
+});

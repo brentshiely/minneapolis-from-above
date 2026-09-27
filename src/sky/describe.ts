@@ -158,6 +158,60 @@ function radarSize(rcs: number | null | undefined): string | undefined {
   return rcs < 0.1 ? "small" : rcs < 1 ? "medium" : "large";
 }
 
+/** Rocket family names, tidied from their catalog designators (e.g. "CZ-4C R/B" -> Long March 4). */
+const ROCKET_WORDS: [RegExp, string][] = [
+  [/^FALCON 9/, "Falcon 9"], [/^FALCON/, "Falcon"],
+  [/^CZ-?2/, "Long March 2"], [/^CZ-?3/, "Long March 3"], [/^CZ-?4/, "Long March 4"],
+  [/^CZ-?5/, "Long March 5"], [/^CZ-?6/, "Long March 6"], [/^CZ-?7/, "Long March 7"],
+  [/^CZ-?8/, "Long March 8"], [/^CZ-?11/, "Long March 11"],
+  [/^SL-4\b|^SOYUZ/, "Soyuz"], [/^SL-12\b|^PROTON/, "Proton"], [/^SL-14\b|^SL-16\b|^ZENIT/, "Zenit"],
+  [/^ARIANE/, "Ariane"], [/^ATLAS/, "Atlas"], [/^DELTA/, "Delta"], [/^MINOTAUR/, "Minotaur"],
+  [/^ELECTRON/, "Electron"], [/^H-?2A|^H-?IIA/, "H-IIA"], [/^H-?2B|^H-?IIB/, "H-IIB"],
+  [/^PSLV/, "PSLV"], [/^GSLV/, "GSLV"], [/^VEGA/, "Vega"],
+];
+
+/** "FALCON 9 R/B" -> "Falcon 9"; anything unrecognized keeps its catalog name, tidied. */
+function rocketName(name: string): string {
+  const tidy = name.replace(/\s*R\/B.*/i, "").trim();
+  const found = ROCKET_WORDS.find(([re]) => re.test(tidy));
+  return found ? found[1] : tidy.replace(/\s+/g, " ");
+}
+
+type OrbitClass = "geo" | "sunsync" | "molniya" | "leo";
+
+/** A rough orbit family from raw catalog numbers, for the purpose guess below. */
+function classifyOrbit(c: SatcatRecord): OrbitClass | undefined {
+  if (c.APOGEE === undefined || c.PERIGEE === undefined) return undefined;
+  const { APOGEE: apogee, PERIGEE: perigee } = c;
+  const incl = c.INCLINATION ?? 0;
+  if (apogee > 33_000 && perigee > 33_000) return "geo";
+  if (apogee - perigee > 15_000 && incl > 55 && incl < 70) return "molniya";
+  if (apogee < 1_500 && incl > 95 && incl < 102) return "sunsync";
+  if (apogee < 2_000) return "leo";
+  return undefined;
+}
+
+/**
+ * When neither the UCS database nor a well-known name family says what a
+ * satellite is for, its orbit still tells a story: amateur satellite
+ * trackers read these patterns the same way. Always hedged as a guess,
+ * never stated as confirmed.
+ */
+function guessPurpose(c: SatcatRecord): string | undefined {
+  switch (classifyOrbit(c)) {
+    case "geo":
+      return "Satellite trackers note that a geostationary orbit like this is typically used for communications, weather-watching, or military relay.";
+    case "sunsync":
+      return "Its sun-synchronous, low orbit is the pattern trackers associate with Earth-imaging or reconnaissance satellites.";
+    case "molniya":
+      return "Its highly elliptical orbit, lingering for hours over the far north, is the pattern used by missile-warning and high-latitude communications satellites.";
+    case "leo":
+      return "Satellites in this kind of low orbit are typically used for communications, navigation or scientific research; its precise mission isn't publicly documented.";
+    default:
+      return undefined;
+  }
+}
+
 export function describeSatellite(opts: {
   id: number;
   name: string;
@@ -186,6 +240,19 @@ export function describeSatellite(opts: {
     return { title, detail, meta };
   }
 
+  // Rocket bodies: the spent stage that delivered a payload, not a payload
+  // itself. Kept distinct from both debris and working satellites.
+  if (c?.OBJECT_TYPE === "R/B") {
+    const title = `${rocketName(opts.name)} rocket stage.`;
+    const detail = [
+      "A spent rocket stage, still coasting in the orbit it delivered its payload to.",
+      orbitSentence(c),
+      `Now ${miles(live.altKm).toLocaleString("en-US")} miles up, moving at ${mph(live.speedKms).toLocaleString("en-US")} mph.`,
+    ].filter(Boolean).join(" ");
+    const meta = [`NORAD ${id}`, c.OBJECT_ID, radarSize(c.RCS) && `radar size ${radarSize(c.RCS)}`].filter(Boolean).join(" · ");
+    return { title, detail, meta };
+  }
+
   // What it is and who runs it.
   const family = FAMILIES.find(([re]) => re.test(opts.name.trim()));
   if (kind === "iss") {
@@ -201,8 +268,10 @@ export function describeSatellite(opts: {
     sentences.push(`${who}${from ? `, from ${from}` : ""}.`);
   } else if (family) {
     sentences.push(family[1]);
-  } else if (c?.OWNER) {
+  } else if (c && c.OWNER) {
     sentences.push(`A satellite from ${OWNERS[c.OWNER] ?? c.OWNER}.`);
+    const guess = guessPurpose(c);
+    if (guess) sentences.push(guess);
   }
 
   // Launch.
