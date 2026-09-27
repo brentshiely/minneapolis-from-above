@@ -107,6 +107,18 @@ export function operatorWords(op: string): string {
   return multinational ? `${o} and international partners` : o;
 }
 
+/** Where each tracked debris cloud came from. */
+const DEBRIS_STORIES: [RegExp, string, string][] = [
+  [/^FENGYUN 1C/, "Fengyun-1C",
+    "a Chinese weather satellite that China destroyed with a missile in a January 2007 anti-satellite test, creating the largest debris cloud in history."],
+  [/^COSMOS 2251/, "Cosmos 2251",
+    "a dead Russian military satellite that collided with the working Iridium 33 in February 2009, the first accidental collision between two satellites."],
+  [/^IRIDIUM 33/, "Iridium 33",
+    "an Iridium communications satellite destroyed when a dead Russian satellite, Cosmos 2251, hit it in February 2009, the first accidental collision between two satellites."],
+  [/^COSMOS 1408/, "Cosmos 1408",
+    "a dead Soviet spy satellite that Russia destroyed with a missile in a November 2021 anti-satellite test, forcing the ISS crew to shelter."],
+];
+
 /** What well-known satellite families are for, when the UCS database has no entry. */
 const FAMILIES: [RegExp, string][] = [
   [/^STARLINK/, "A SpaceX Starlink internet satellite, from the United States."],
@@ -157,6 +169,22 @@ export function describeSatellite(opts: {
 }): Description {
   const { id, kind, live, catalog: c, ucs: u } = opts;
   const sentences: string[] = [];
+
+  // Debris: where it came from.
+  if (kind === "debris") {
+    const story = DEBRIS_STORIES.find(([re]) => re.test(opts.name.trim()));
+    const parent = story?.[1] ?? opts.name.replace(/\s*DEB\b.*/, "").trim();
+    const isFragment = /\bDEB\b/.test(opts.name);
+    const title = isFragment ? `A fragment of ${parent}.` : `What remains of ${parent}.`;
+    const detail = [
+      story ? `Space debris from ${story[2]}` : "Tracked space debris.",
+      orbitSentence(c ?? {}),
+      `Now ${miles(live.altKm).toLocaleString("en-US")} miles up, moving at ${mph(live.speedKms).toLocaleString("en-US")} mph.`,
+      isFragment ? "Far too small to see with the eye." : undefined,
+    ].filter(Boolean).join(" ");
+    const meta = [`NORAD ${id}`, c?.OBJECT_ID, radarSize(c?.RCS) && `radar size ${radarSize(c?.RCS)}`].filter(Boolean).join(" · ");
+    return { title, detail, meta };
+  }
 
   // What it is and who runs it.
   const family = FAMILIES.find(([re]) => re.test(opts.name.trim()));

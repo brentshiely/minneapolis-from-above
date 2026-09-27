@@ -114,3 +114,30 @@ test("whether you could see it", () => {
   assert.match(describe(25544, { eclipsed: false }, 20).detail!, /Sunlit, but the sky here is too bright to see it\./);
   assert.match(describe(25544, { elevation: 4 }).detail!, /Too low in the sky to see from here right now\./);
 });
+
+test("debris: kinds, and each cloud's origin story", () => {
+  assert.equal(kindOf({ id: 29228, name: "FENGYUN 1C DEB" }), "debris");
+  assert.equal(kindOf({ id: 25730, name: "FENGYUN 1C" }), "debris", "what's left of the parent is debris too");
+  assert.equal(kindOf({ id: 33772, name: "COSMOS 2251 DEB" }), "debris");
+  assert.equal(kindOf({ id: 24946, name: "IRIDIUM 33 DEB" }), "debris");
+  assert.equal(kindOf({ id: 43571, name: "IRIDIUM 140" }), "satellite", "working Iridiums aren't debris");
+
+  const frag = describeSatellite({
+    id: 29228, name: "FENGYUN 1C DEB", kind: "debris", sunElevation: -20,
+    live: { lon: -93.2, lat: 44.9, altKm: 850, speedKms: 7.43, elevation: 50, azimuth: 90, eclipsed: false },
+    catalog: { OBJECT_ID: "1999-025BX", PERIOD: 101.2, INCLINATION: 98.8, APOGEE: 880, PERIGEE: 820, RCS: 0.05 },
+  });
+  assert.equal(frag.title, "A fragment of Fengyun-1C.");
+  assert.match(frag.detail!, /^Space debris from a Chinese weather satellite that China destroyed with a missile in a January 2007 anti-satellite test/);
+  assert.match(frag.detail!, /Low Earth orbit: circles the planet every 101 minutes, tilted 98\.8° to the equator\. Now 528 miles up, moving at 16,600 mph\. Far too small to see with the eye\.$/);
+  assert.equal(frag.meta, "NORAD 29228 · 1999-025BX · radar size small");
+
+  const collision = describeSatellite({ id: 33772, name: "COSMOS 2251 DEB", kind: "debris", sunElevation: 10,
+    live: { lon: 0, lat: 0, altKm: 700, speedKms: 7.5, elevation: 40, azimuth: 0, eclipsed: true } });
+  assert.equal(collision.title, "A fragment of Cosmos 2251.");
+  assert.match(collision.detail!, /the first accidental collision between two satellites/);
+
+  const parent = describeSatellite({ id: 25730, name: "FENGYUN 1C", kind: "debris", sunElevation: 10,
+    live: { lon: 0, lat: 0, altKm: 850, speedKms: 7.4, elevation: 40, azimuth: 0, eclipsed: true } });
+  assert.equal(parent.title, "What remains of Fengyun-1C.");
+});

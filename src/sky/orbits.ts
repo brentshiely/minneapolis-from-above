@@ -26,10 +26,14 @@ export function parseTles(text: string): Tle[] {
   return out;
 }
 
-export type Kind = "iss" | "station" | "starlink" | "satellite";
+export type Kind = "iss" | "station" | "starlink" | "satellite" | "debris";
+
+/** The broken-up satellites whose remains CelesTrak tracks as debris clouds. */
+const DEBRIS_PARENTS = /^(FENGYUN 1C|COSMOS 2251|IRIDIUM 33|COSMOS 1408)\b/;
 
 /** What icon a satellite gets. */
 export function kindOf(t: Pick<Tle, "id" | "name">): Kind {
+  if (/\bDEB\b/.test(t.name) || DEBRIS_PARENTS.test(t.name)) return "debris";
   if (t.id === 25544) return "iss";
   if (/^CSS \(|TIANHE|WENTIAN|MENGTIAN/.test(t.name)) return "station";
   if (/^STARLINK/.test(t.name)) return "starlink";

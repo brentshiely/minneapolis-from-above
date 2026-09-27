@@ -32,8 +32,9 @@ export class Satellites {
   private bbox: () => [number, number, number, number];
   ready = false;
   total = 0;
-  /** Satellites above Minneapolis's horizon at the last scan. */
+  /** Working satellites, and debris pieces, above Minneapolis's horizon at the last scan. */
   aboveHorizon = 0;
+  debrisAbove = 0;
   list: Sat[] = [];
 
   constructor(bbox: () => [number, number, number, number]) {
@@ -44,6 +45,7 @@ export class Satellites {
       if (m.type === "ready") { this.ready = true; this.total = m.count; this.lastScan = -Infinity; }
       else if (m.type === "scan") {
         this.aboveHorizon = m.aboveHorizon;
+        this.debrisAbove = m.debrisAbove;
         const keep = new Map<number, { tle: Tle; rec: SatRec }>();
         for (const tle of m.candidates) {
           const had = this.recs.get(tle.id);
@@ -56,18 +58,15 @@ export class Satellites {
     this.load();
   }
 
-  /** Fresh orbits from the live endpoint; the deploy's snapshot if that's unavailable. */
+  /**
+   * Working satellites first, then the tracked debris clouds as a second
+   * batch: fresh from the live endpoint, or the deploy's snapshot.
+   */
   private async load() {
-    for (const url of ["/api/satellites", "/data/satellites.tle"]) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        const text = await res.text();
-        if (!/^1 \d/m.test(text)) continue;
-        this.post({ type: "init", tle: text });
-        return;
-      } catch { /* try the next source */ }
-    }
+    const active = await fetchTle(["/api/satellites", "/data/satellites.tle"]);
+    if (active) this.post({ type: "init", tle: active });
+    const debris = await fetchTle(["/api/debris", "/data/debris.tle"]);
+    if (debris) this.post({ type: active ? "add" : "init", tle: debris });
   }
 
   private post(m: ToWorker) { this.worker.postMessage(m); }
@@ -101,6 +100,18 @@ export class Satellites {
     }
     this.list = out;
   }
+}
+
+async function fetchTle(urls: string[]): Promise<string | undefined> {
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (/^1 \d/m.test(text)) return text;
+    } catch { /* try the next source */ }
+  }
+  return undefined;
 }
 
 function bearing(lon1: number, lat1: number, lon2: number, lat2: number): number {

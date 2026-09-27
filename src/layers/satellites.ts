@@ -6,8 +6,9 @@ import type { Kind } from "../sky/orbits.ts";
 import { ISS_ICON, SATELLITE_ICON, STARLINK_ICON, STATION_ICON } from "../icons.ts";
 import { mixRgb } from "../color.ts";
 
-const ICONS: Record<Kind, typeof ISS_ICON> = { iss: ISS_ICON, station: STATION_ICON, satellite: SATELLITE_ICON, starlink: STARLINK_ICON };
-const SIZE: Record<Kind, number> = { iss: 30, station: 26, satellite: 18, starlink: 13 };
+type IconKind = Exclude<Kind, "debris">;
+const ICONS: Record<IconKind, typeof ISS_ICON> = { iss: ISS_ICON, station: STATION_ICON, satellite: SATELLITE_ICON, starlink: STARLINK_ICON };
+const SIZE: Record<IconKind, number> = { iss: 30, station: 26, satellite: 18, starlink: 13 };
 
 export interface SatFrame {
   sats: Sat[];
@@ -24,10 +25,14 @@ export interface SatFrame {
  */
 export function satelliteLayers(f: SatFrame) {
   const d = f.daylight;
+  const working = f.sats.filter((s) => s.kind !== "debris");
+  const debris = f.sats.filter((s) => s.kind === "debris");
+  // Debris is a quieter grey than working satellites.
+  const grit = mixRgb([150, 160, 172], [104, 110, 120], d);
   const ink = mixRgb([198, 226, 255], [36, 58, 92], d);
   const alpha = (s: Sat) => (s.kind === "iss" || s.kind === "station" ? 255 : s.kind === "starlink" ? 170 : 215);
   // At night, satellites you could actually see get a soft halo.
-  const seen = f.sunElevation <= -6 ? f.sats.filter((s) => !s.live.eclipsed && s.live.elevation >= 10) : [];
+  const seen = f.sunElevation <= -6 ? working.filter((s) => !s.live.eclipsed && s.live.elevation >= 10) : [];
   return [
     new TripsLayer<Sat>({
       id: "sat-tracks",
@@ -36,7 +41,7 @@ export function satelliteLayers(f: SatFrame) {
       positionFormat: "XY",
       _pathType: "open",
       getTimestamps: (s) => s.times,
-      getColor: (s) => [...ink, s.kind === "starlink" ? 55 : 90],
+      getColor: (s) => (s.kind === "debris" ? [...grit, 38] : [...ink, s.kind === "starlink" ? 55 : 90]),
       getWidth: 1.4,
       widthUnits: "pixels",
       capRounded: true,
@@ -56,13 +61,23 @@ export function satelliteLayers(f: SatFrame) {
       parameters: { depthCompare: "always" },
       updateTriggers: { getPosition: f.version },
     }),
+    new ScatterplotLayer<Sat>({
+      id: "debris",
+      data: debris,
+      getPosition: (s) => s.position,
+      getFillColor: [...grit, 190],
+      getRadius: 2,
+      radiusUnits: "pixels",
+      parameters: { depthCompare: "always" },
+      updateTriggers: { getPosition: f.version, getFillColor: d },
+    }),
     new IconLayer<Sat>({
       id: "satellites",
-      data: f.sats,
-      getIcon: (s) => ICONS[s.kind],
+      data: working,
+      getIcon: (s) => ICONS[s.kind as IconKind],
       getPosition: (s) => s.position,
       getAngle: (s) => -s.heading,
-      getSize: (s) => SIZE[s.kind],
+      getSize: (s) => SIZE[s.kind as IconKind],
       sizeUnits: "pixels",
       billboard: false,
       getColor: (s) => [...ink, alpha(s)],

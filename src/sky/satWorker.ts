@@ -4,18 +4,20 @@
  * are above Minneapolis's horizon? Only those few are then animated
  * frame by frame on the main thread.
  */
-import { parseTles, positionAt, satrecOf, type Tle } from "./orbits.ts";
+import { kindOf, parseTles, positionAt, satrecOf, type Tle } from "./orbits.ts";
 import type { SatRec } from "satellite.js";
 
 export type ToWorker =
   | { type: "init"; tle: string }
+  /** Another batch (e.g. debris), added to what's already loaded. */
+  | { type: "add"; tle: string }
   | { type: "scan"; time: number; bbox: [number, number, number, number]; aheadS: number };
 
 export type FromWorker =
   | { type: "ready"; count: number }
-  | { type: "scan"; candidates: Tle[]; aboveHorizon: number };
+  | { type: "scan"; candidates: Tle[]; aboveHorizon: number; debrisAbove: number };
 
-let sats: { tle: Tle; rec: SatRec }[] = [];
+let sats: { tle: Tle; rec: SatRec; debris: boolean }[] = [];
 
 /** The worker's own scope, typed without pulling worker types into the whole project. */
 const scope = self as unknown as { postMessage(m: FromWorker): void; onmessage: ((ev: MessageEvent<ToWorker>) => void) | null };
@@ -24,11 +26,13 @@ const inBox = (lon: number, lat: number, [w, s, e, n]: [number, number, number, 
 
 scope.onmessage = (ev) => {
   const msg = ev.data;
-  if (msg.type === "init") {
-    sats = [];
+  if (msg.type === "init" || msg.type === "add") {
+    if (msg.type === "init") sats = [];
+    const known = new Set(sats.map((s) => s.tle.id));
     for (const tle of parseTles(msg.tle)) {
+      if (known.has(tle.id)) continue;
       const rec = satrecOf(tle);
-      if (rec) sats.push({ tle, rec });
+      if (rec) sats.push({ tle, rec, debris: kindOf(tle) === "debris" });
     }
     scope.postMessage({ type: "ready", count: sats.length });
     return;
@@ -37,11 +41,11 @@ scope.onmessage = (ev) => {
     const now = new Date(msg.time);
     const steps = 4;
     const candidates: Tle[] = [];
-    let above = 0;
+    let above = 0, debrisAbove = 0;
     for (const s of sats) {
       const p = positionAt(s.rec, now, true);
       if (!p) continue;
-      if (p.elevation > 0) above++;
+      if (p.elevation > 0) { if (s.debris) debrisAbove++; else above++; }
       // In the box now, or at any of a few moments over the coming scan window?
       let hit = inBox(p.lon, p.lat, msg.bbox);
       for (let k = 1; !hit && k <= steps; k++) {
@@ -50,6 +54,6 @@ scope.onmessage = (ev) => {
       }
       if (hit) candidates.push(s.tle);
     }
-    scope.postMessage({ type: "scan", candidates, aboveHorizon: above });
+    scope.postMessage({ type: "scan", candidates, aboveHorizon: above, debrisAbove });
   }
 };

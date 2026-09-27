@@ -10,7 +10,7 @@ function pagesFunctions(): Plugin {
     configureServer(server) {
       server.middlewares.use("/api", async (req, res, next) => {
         const name = /^\/(\w+)/.exec(req.url ?? "")?.[1];
-        if (!name || !["vehicles", "aircraft", "flight", "weather", "water", "traffic", "satellites", "satinfo"].includes(name)) return next();
+        if (!name || !["vehicles", "aircraft", "flight", "weather", "water", "traffic", "satellites", "satinfo", "debris"].includes(name)) return next();
         try {
           const mod = await server.ssrLoadModule(`/functions/api/${name}.ts`);
           const response: Response = await mod.onRequestGet({ request: new Request(`http://localhost/api${req.url}`), env: process.env });
@@ -28,6 +28,9 @@ function pagesFunctions(): Plugin {
 
 export default defineConfig({
   plugins: [pagesFunctions()],
+  // Agents' worktrees and scratch output live inside the project folder;
+  // changes there must not reload the running app.
+  server: { watch: { ignored: ["**/.claude/**", "**/.cache/**"] } },
   // The satellite worker (and satellite.js inside it) needs ES module output.
   worker: { format: "es" },
   build: { target: "es2022", chunkSizeWarningLimit: 2000 },
