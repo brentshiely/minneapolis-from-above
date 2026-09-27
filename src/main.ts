@@ -1,6 +1,7 @@
 import "./style.css";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createBaseMap, paintSky } from "./basemap.ts";
+import { addAerialImagery, IMAGERY_LAYER_ID, setImageryOpacity } from "./imagery.ts";
 import { skyAt, skyClock } from "./sky.ts";
 import { mixColor } from "./color.ts";
 import { loadTransit } from "./transit/data.ts";
@@ -83,6 +84,13 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const fleet = new Fleet(transit);
   const trails = new Trails<Vehicle>();
   const anchor = labelsAnchor();
+  // Real aerial photography, up close and by day: sits above the drawn
+  // land/water/building fills but below roads, rail and labels, so those
+  // stay legible on top of the photo.
+  const imageryAnchor = map.getStyle().layers.find((l) => l.type === "line" && /^(highway|railway|road|aeroway)/.test(l.id))?.id;
+  addAerialImagery(map, imageryAnchor);
+  setImageryOpacity(map, sky.daylight, map.getZoom());
+  map.on("zoom", () => setImageryOpacity(map, sky.daylight, map.getZoom()));
   // Live service alerts: affected routes dash instead of their usual solid
   // line, and a major one (a rail line on shuttle buses, or a detour
   // reaching several routes) gets a caption. ?alert=blueline-detour (or
@@ -184,6 +192,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     paintSky(map, sky.daylight);
     fx.setDaylight(sky.daylight);
     haze.setDaylight(sky.daylight);
+    setImageryOpacity(map, sky.daylight, map.getZoom());
     routes = routeLayers(transit, sky.daylight, anchor, alerts.affected);
     alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
     markSky(sky.daylight);
@@ -349,6 +358,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
     alerts, alertsFeed,
+    imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };
 });
 

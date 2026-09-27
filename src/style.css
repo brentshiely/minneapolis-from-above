@@ -131,7 +131,8 @@ html[data-sky="day"] #snow { color: #14607c; text-shadow: 0 0 4px #ffffff, 0 0 8
 #alerts {
   position: fixed;
   right: max(16px, env(safe-area-inset-right));
-  bottom: max(12px, env(safe-area-inset-bottom));
+  /* Clears the map's own credits line, bottom-right of the same corner. */
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 26px);
   max-width: min(420px, calc(100vw - 32px));
   text-align: right;
   font: 500 12.5px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
