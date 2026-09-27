@@ -48,6 +48,9 @@ import { legend, previewWarning, rgbCss } from "./weather/warnings.ts";
 import { gamesLayers, type GamesFrame } from "./layers/games.ts";
 import { previewGames } from "./sports/games.ts";
 import type { GamesResponse } from "../functions/api/games.ts";
+import { incidentsLayers, type IncidentsFrame } from "./layers/incidents.ts";
+import { previewIncidents } from "./traffic/incidents.ts";
+import type { IncidentsResponse } from "../functions/api/incidents.ts";
 import type { WarningsResponse } from "../functions/api/warnings.ts";
 import { FALLS_GAUGE_LID, flowLevel } from "./water/falls.ts";
 import type { Gauge } from "./water/gauges.ts";
@@ -320,6 +323,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const gamesFeed = gamesPreview ? undefined
     : startPoller<GamesResponse>("/api/games", 30_000, (body) => { gamesFrame.games = body.games; }, { maxMs: 5 * 60_000 });
 
+  // Live freeway incidents: crashes, stalls, hazards and road work,
+  // quietly marked. ?incident=crash (or stall, hazard, roadwork) previews one.
+  const incidentsPreview = previewIncidents(new URLSearchParams(location.search).get("incident") ?? "");
+  const incidentsFrame: IncidentsFrame = { active: incidentsPreview?.incidents ?? [], now: 0 };
+  hover.setIncidents(() => incidentsFrame.active);
+  const incidentsFeed = incidentsPreview ? undefined
+    : startPoller<IncidentsResponse>("/api/incidents", 60_000, (body) => { incidentsFrame.active = body.incidents; }, { maxMs: 10 * 60_000 });
+
   // Every active satellite, animated while it crosses the map.
   const sats = new Satellites(() => {
     const b = map.getBounds();
@@ -375,12 +386,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     fallsFrame.now = now;
     warningsFrame.now = now;
     gamesFrame.now = now;
+    incidentsFrame.now = now;
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
         ...warningLayers(warningsFrame, anchor),
         ...gamesLayers(gamesFrame),
         ...(freeways ? [trafficLayer(freeways, tf, anchor)] : []),
+        ...incidentsLayers(incidentsFrame, anchor),
         ...cameraLayers(cameras, anchor),
         ...routes,
         ...alertLayers,
@@ -416,7 +429,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000))].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
@@ -429,6 +442,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     alerts, alertsFeed,
     warnings: { frame: warningsFrame, feed: warningsFeed },
     games: { frame: gamesFrame, feed: gamesFeed },
+    incidents: { frame: incidentsFrame, feed: incidentsFeed },
     aurora: { strength: () => auroraKp, feed: auroraFeed },
     imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };

@@ -23,6 +23,7 @@ import type { PlanetsField } from "./planetlight.ts";
 import type { PlanetName } from "./planets.ts";
 import { describeWarning, type Warning } from "./weather/warnings.ts";
 import { describeGame, VENUES, type GameStatus, type Venue } from "./sports/games.ts";
+import { describeIncident, type Incident } from "./traffic/incidents.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -52,7 +53,9 @@ type Target =
   /** A shaded watch/warning area, and where the cursor is. */
   | { kind: "warning"; id: string; at: [number, number] }
   /** A venue currently playing a game. */
-  | { kind: "game"; venue: Venue };
+  | { kind: "game"; venue: Venue }
+  /** A live freeway incident. */
+  | { kind: "incident"; id: string };
 
 /** The moon, as the hover sees it: a spot on screen that can describe itself. */
 export interface MoonSpot {
@@ -110,6 +113,8 @@ export class Hover {
   setWarnings(list: () => Warning[]) { this.warnings = list; }
   private games: () => GameStatus[] = () => [];
   setGames(list: () => GameStatus[]) { this.games = list; }
+  private incidents: () => Incident[] = () => [];
+  setIncidents(list: () => Incident[]) { this.incidents = list; }
 
   private satInfo(id: number): { catalog?: SatcatRecord; ucs?: UcsRow } {
     const c = this.satcat.get(id);
@@ -195,6 +200,7 @@ export class Hover {
       next = { kind: "warning", id: w.properties.id, at: [info.coordinate[0], info.coordinate[1]] };
     }
     else if (obj && info.layer?.id === "pick-games") next = { kind: "game", venue: (obj as unknown as GameStatus).venue };
+    else if (obj && info.layer?.id === "pick-incidents") next = { kind: "incident", id: (obj as unknown as Incident).id };
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
@@ -331,6 +337,13 @@ export class Hover {
       if (!g) { this.clear(); return []; }
       desc = describeGame(g);
       position = VENUES[venue].position;
+      layers = [];
+    } else if (this.target.kind === "incident") {
+      const id = this.target.id;
+      const x = this.incidents().find((i) => i.id === id);
+      if (!x) { this.clear(); return []; }
+      desc = describeIncident(x, nowS_wall());
+      position = x.position;
       layers = [];
     } else if (this.target.kind === "traffic") {
       const info = this.freeways?.stations[this.target.station];
