@@ -148,6 +148,39 @@ html[data-sky="day"] #snow { color: #14607c; text-shadow: 0 0 4px #ffffff, 0 0 8
 html[data-sky="day"] #alerts { color: #8a5a1f; text-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff; }
 @media (prefers-reduced-motion: reduce) { #alerts { transition: none; } }
 
+/* A quiet legend for whatever watch/warning types are shaded on the map
+   right now: one line per type, a color swatch matching its shading. */
+#warnings-legend {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  top: max(14px, env(safe-area-inset-top));
+  display: grid;
+  gap: 4px;
+  font: 500 12px/1.3 system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+#warnings-legend.shown { opacity: 1; }
+#warnings-legend .item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  color: #dfe6ec;
+  text-shadow: 0 0 4px #070b10, 0 0 8px #070b10;
+}
+#warnings-legend .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+html[data-sky="day"] #warnings-legend .item { color: #1e2731; text-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff; }
+@media (prefers-reduced-motion: reduce) { #warnings-legend { transition: none; } }
+@media (max-width: 640px) {
+  /* The top-right corner is busy on phones (snow, alerts); the legend
+     moves under the drift's caption on the left instead. */
+  #warnings-legend { left: max(16px, env(safe-area-inset-left)); right: auto; top: calc(max(14px, env(safe-area-inset-top)) + 34px); }
+  #warnings-legend .item { justify-content: flex-start; }
+}
+
 /* Weather sits over the map but never takes a click. */
 #veil, #haze, #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #veil { transition: background 4s ease; }
@@ -176,8 +209,11 @@ html[data-sky="day"] #alerts { color: #8a5a1f; text-shadow: 0 0 4px #ffffff, 0 0
   /* The status line wraps to two or three lines here: sit at the top
      instead, under the drift's caption. */
   #snow { top: calc(max(14px, env(safe-area-inset-top)) + 24px); bottom: auto; right: 16px; font-size: 12px; }
-  /* Same reasoning: sit under the caption and snow lines instead of the
-     credits button in the bottom-right corner. */
-  #alerts { top: calc(max(14px, env(safe-area-inset-top)) + 48px); bottom: auto; right: 16px; font-size: 12px; }
+  /* Same reasoning: sit under the caption, snow and legend lines instead
+     of the credits button in the bottom-right corner. The legend moves
+     to the left here, but its box is nowhere near as wide as this one,
+     so clearance is by height, not by side: room for a few legend lines
+     even on a rare day with several watches and warnings out at once. */
+  #alerts { top: calc(max(14px, env(safe-area-inset-top)) + 90px); bottom: auto; right: 16px; font-size: 12px; }
   #tip { font-size: 12.5px; }
 }

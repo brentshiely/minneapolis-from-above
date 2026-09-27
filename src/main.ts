@@ -39,6 +39,9 @@ import { showerStatus } from "./meteors.ts";
 import { boatsAt, type Passage, type RiverResponse } from "./river/river.ts";
 import { riverLayers, type RiverFrame } from "./layers/river.ts";
 import { fallsLayers, type FallsFrame } from "./layers/falls.ts";
+import { warningLayers, type WarningsFrame } from "./layers/warnings.ts";
+import { legend, previewWarning, rgbCss } from "./weather/warnings.ts";
+import type { WarningsResponse } from "../functions/api/warnings.ts";
 import { FALLS_GAUGE_LID, flowLevel } from "./water/falls.ts";
 import type { Gauge } from "./water/gauges.ts";
 import { SnowWatch } from "./snow/watch.ts";
@@ -256,6 +259,33 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Day 2 begins at 8 AM whether or not the city's page has changed.
   setInterval(() => snow.refresh(), 30_000);
 
+  // NWS watches, warnings and advisories that touch the metro: a very
+  // subtle shaded, slowly pulsing area, plus a quiet legend of what's
+  // active. ?warning=tornado (or severe, winter) previews one.
+  const warningsPreview = previewWarning(new URLSearchParams(location.search).get("warning") ?? "");
+  const warningsFrame: WarningsFrame = { active: [], now: 0 };
+  const warningsLegendEl = document.getElementById("warnings-legend")!;
+  hover.setWarnings(() => warningsFrame.active);
+  const renderLegend = () => {
+    const items = legend(warningsFrame.active);
+    warningsLegendEl.replaceChildren(...items.map(({ event, color }) => {
+      const row = document.createElement("div");
+      row.className = "item";
+      const swatch = document.createElement("span");
+      swatch.className = "swatch";
+      swatch.style.background = rgbCss(color);
+      const label = document.createElement("span");
+      label.textContent = event;
+      row.replaceChildren(swatch, label);
+      return row;
+    }));
+    warningsLegendEl.classList.toggle("shown", items.length > 0);
+  };
+  const applyWarnings = (body: WarningsResponse) => { warningsFrame.active = body.w; renderLegend(); };
+  if (warningsPreview) applyWarnings(warningsPreview);
+  const warningsFeed = warningsPreview ? undefined
+    : startPoller<WarningsResponse>("/api/warnings", 2 * 60_000, applyWarnings, { maxMs: 20 * 60_000 });
+
   // Every active satellite, animated while it crosses the map.
   const sats = new Satellites(() => {
     const b = map.getBounds();
@@ -308,9 +338,11 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     snowFrame.routes = snow.lit;
     fallsFrame.daylight = f.daylight;
     fallsFrame.now = now;
+    warningsFrame.now = now;
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
+        ...warningLayers(warningsFrame, anchor),
         ...(freeways ? [trafficLayer(freeways, tf, anchor)] : []),
         ...cameraLayers(cameras, anchor),
         ...routes,
@@ -347,7 +379,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock())].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
@@ -358,6 +390,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
     alerts, alertsFeed,
+    warnings: { frame: warningsFrame, feed: warningsFeed },
     imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };
 });

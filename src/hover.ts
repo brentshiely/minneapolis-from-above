@@ -21,6 +21,7 @@ import { routeRule, type City, type Stage } from "./snow/rules.ts";
 import type { SnowRoute } from "./snow/routes.ts";
 import type { PlanetsField } from "./planetlight.ts";
 import type { PlanetName } from "./planets.ts";
+import { describeWarning, type Warning } from "./weather/warnings.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -46,7 +47,9 @@ type Target =
   | { kind: "snow"; city: City; name: string; at: [number, number] }
   | { kind: "falls" }
   /** A route dashed for a live service alert, and where the cursor is. */
-  | { kind: "route-alert"; routeId: string; at: [number, number] };
+  | { kind: "route-alert"; routeId: string; at: [number, number] }
+  /** A shaded watch/warning area, and where the cursor is. */
+  | { kind: "warning"; id: string; at: [number, number] };
 
 /** The moon, as the hover sees it: a spot on screen that can describe itself. */
 export interface MoonSpot {
@@ -100,6 +103,8 @@ export class Hover {
 
   private fallsGauge: () => Gauge | undefined = () => undefined;
   setFalls(gauge: () => Gauge | undefined) { this.fallsGauge = gauge; }
+  private warnings: () => Warning[] = () => [];
+  setWarnings(list: () => Warning[]) { this.warnings = list; }
 
   private satInfo(id: number): { catalog?: SatcatRecord; ucs?: UcsRow } {
     const c = this.satcat.get(id);
@@ -179,6 +184,10 @@ export class Hover {
     else if (obj && info.layer?.id === "routes-alert" && info.coordinate) {
       const s = obj as unknown as Shape;
       next = { kind: "route-alert", routeId: s.route, at: [info.coordinate[0], info.coordinate[1]] };
+    }
+    else if (obj && info.layer?.id === "warnings" && info.coordinate) {
+      const w = obj as unknown as { properties: Warning };
+      next = { kind: "warning", id: w.properties.id, at: [info.coordinate[0], info.coordinate[1]] };
     }
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
@@ -301,6 +310,13 @@ export class Hover {
       const info = this.alerts().get(this.target.routeId);
       if (!info) { this.clear(); return []; }
       desc = describeAlert(this.target.routeId, this.transit.routes[this.target.routeId], info);
+      position = this.target.at;
+      layers = [];
+    } else if (this.target.kind === "warning") {
+      const id = this.target.id;
+      const w = this.warnings().find((x) => x.id === id);
+      if (!w) { this.clear(); return []; }
+      desc = describeWarning(w);
       position = this.target.at;
       layers = [];
     } else if (this.target.kind === "traffic") {
