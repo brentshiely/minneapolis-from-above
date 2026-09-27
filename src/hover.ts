@@ -3,8 +3,9 @@ import type { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import type { Fleet, Vehicle } from "./live/fleet.ts";
 import type { AirFleet, Plane } from "./live/aircraft.ts";
-import type { Transit } from "./transit/data.ts";
-import { describePlane, describeVehicle, type Description, type FlightInfo } from "./describe.ts";
+import type { Shape, Transit } from "./transit/data.ts";
+import type { AlertInfo } from "./transit/alerts.ts";
+import { describeAlert, describePlane, describeVehicle, type Description, type FlightInfo } from "./describe.ts";
 import { gaugeHighlight, planeHighlight, vehicleHighlight } from "./layers/hover.ts";
 import { describeGauge, type Gauge, type GaugeDetail } from "./water/gauges.ts";
 import { gaugeAt, learnLakeGauges } from "./water/match.ts";
@@ -43,7 +44,9 @@ type Target =
   | { kind: "planet"; name: PlanetName }
   /** A lit snow emergency route, and where the cursor is. */
   | { kind: "snow"; city: City; name: string; at: [number, number] }
-  | { kind: "falls" };
+  | { kind: "falls" }
+  /** A route dashed for a live service alert, and where the cursor is. */
+  | { kind: "route-alert"; routeId: string; at: [number, number] };
 
 /** The moon, as the hover sees it: a spot on screen that can describe itself. */
 export interface MoonSpot {
@@ -92,6 +95,8 @@ export class Hover {
   setRiver(boats: () => Boat[], passages: () => Passage[]) { this.boats = boats; this.passages = passages; }
   private snowStage: (city: City) => Stage | undefined = () => undefined;
   setSnow(stage: (city: City) => Stage | undefined) { this.snowStage = stage; }
+  private alerts: () => Map<string, AlertInfo> = () => new Map();
+  setAlerts(affected: () => Map<string, AlertInfo>) { this.alerts = affected; }
 
   private fallsGauge: () => Gauge | undefined = () => undefined;
   setFalls(gauge: () => Gauge | undefined) { this.fallsGauge = gauge; }
@@ -171,6 +176,10 @@ export class Hover {
       next = { kind: "snow", city: r.city, name: r.name, at: [info.coordinate[0], info.coordinate[1]] };
     }
     else if (obj && info.layer?.id === "pick-falls") next = { kind: "falls" };
+    else if (obj && info.layer?.id === "routes-alert" && info.coordinate) {
+      const s = obj as unknown as Shape;
+      next = { kind: "route-alert", routeId: s.route, at: [info.coordinate[0], info.coordinate[1]] };
+    }
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
@@ -286,6 +295,12 @@ export class Hover {
       const stage = this.snowStage(this.target.city);
       if (!stage) { this.clear(); return []; }
       desc = routeRule(stage, this.target.name || undefined);
+      position = this.target.at;
+      layers = [];
+    } else if (this.target.kind === "route-alert") {
+      const info = this.alerts().get(this.target.routeId);
+      if (!info) { this.clear(); return []; }
+      desc = describeAlert(this.target.routeId, this.transit.routes[this.target.routeId], info);
       position = this.target.at;
       layers = [];
     } else if (this.target.kind === "traffic") {

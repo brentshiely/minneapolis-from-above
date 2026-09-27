@@ -3,6 +3,7 @@
  * Everything here is pure so it can be tested without a map.
  */
 import type { RouteInfo, Shape } from "./transit/data.ts";
+import { effectWord, type AlertInfo } from "./transit/alerts.ts";
 
 export interface Description {
   /** The headline: what it is and where it's going. */
@@ -136,6 +137,17 @@ export function describeVehicle(opts: {
   const detail = heading ? `Heading ${heading}.` : undefined;
   const Noun = noun[0].toUpperCase() + noun.slice(1);
   return { title, detail, meta: `${Noun} ${opts.vehicleId} · updated ${ago(opts.ageS)}` };
+}
+
+/** Hovering a route dashed for a service alert: Metro Transit's own plain-language notice. */
+export function describeAlert(routeId: string, route: RouteInfo | undefined, alert: AlertInfo): Description {
+  const mode = route?.mode ?? "bus";
+  const name = mode === "bus" ? `Route ${route?.name ?? routeId}` : `METRO ${route?.name ?? routeId}`;
+  return {
+    title: `${name}: ${effectWord(alert.effect).toLowerCase()}.`,
+    detail: alert.header.trim(),
+    meta: "Metro Transit service alert",
+  };
 }
 
 // --- planes -----------------------------------------------------------------

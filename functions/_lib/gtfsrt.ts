@@ -79,6 +79,113 @@ class Reader {
   }
 }
 
+// --- service alerts ----------------------------------------------------------
+
+/** GTFS-realtime Alert.Effect enum values we care about (unlisted ones pass through as-is). */
+export const EFFECT = {
+  NO_SERVICE: 1, REDUCED_SERVICE: 2, SIGNIFICANT_DELAYS: 3, DETOUR: 4,
+  ADDITIONAL_SERVICE: 5, MODIFIED_SERVICE: 6, OTHER_EFFECT: 7, UNKNOWN_EFFECT: 8,
+  STOP_MOVED: 9, NO_EFFECT: 10, ACCESSIBILITY_ISSUE: 11,
+} as const;
+
+/** One EntitySelector: what a piece of an alert applies to. */
+export interface AlertEntity {
+  routeId?: string;
+  /** GTFS route_type (0 light/streetcar rail, 1 subway, 2 rail, 3 bus, ...). */
+  routeType?: number;
+  stopId?: string;
+}
+
+export interface Alert {
+  id: string;
+  cause?: number;
+  effect?: number;
+  informedEntity: AlertEntity[];
+  header: string;
+  description: string;
+}
+
+export interface AlertFeed {
+  /** POSIX seconds when the feed was generated. */
+  timestamp?: number;
+  alerts: Alert[];
+}
+
+export function decodeAlertFeed(bytes: Uint8Array): AlertFeed {
+  const r = new Reader(bytes);
+  const feed: AlertFeed = { alerts: [] };
+  while (!r.done) {
+    const [f, w] = r.tag();
+    if (f === 1 && w === LEN) feed.timestamp = readHeaderTimestamp(r.sub());
+    else if (f === 2 && w === LEN) {
+      const a = readAlertEntity(r.sub());
+      if (a) feed.alerts.push(a);
+    } else r.skip(w);
+  }
+  return feed;
+}
+
+function readAlertEntity(r: Reader): Alert | undefined {
+  let id = "";
+  let alert: Omit<Alert, "id"> | undefined;
+  while (!r.done) {
+    const [f, w] = r.tag();
+    if (f === 1 && w === LEN) id = r.string();
+    else if (f === 5 && w === LEN) alert = readAlert(r.sub());
+    else r.skip(w);
+  }
+  return alert && { id, ...alert };
+}
+
+function readAlert(r: Reader): Omit<Alert, "id"> {
+  let cause: number | undefined, effect: number | undefined;
+  let header = "", description = "";
+  const informedEntity: AlertEntity[] = [];
+  while (!r.done) {
+    const [f, w] = r.tag();
+    if (f === 5 && w === LEN) informedEntity.push(readEntitySelector(r.sub()));
+    else if (f === 6 && w === VARINT) cause = r.varint();
+    else if (f === 7 && w === VARINT) effect = r.varint();
+    else if (f === 10 && w === LEN) header = readTranslatedString(r.sub());
+    else if (f === 11 && w === LEN) description = readTranslatedString(r.sub());
+    else r.skip(w);
+  }
+  return { cause, effect, informedEntity, header, description };
+}
+
+function readEntitySelector(r: Reader): AlertEntity {
+  const e: AlertEntity = {};
+  while (!r.done) {
+    const [f, w] = r.tag();
+    if (f === 2 && w === LEN) e.routeId = r.string();
+    else if (f === 3 && w === VARINT) e.routeType = r.varint();
+    else if (f === 5 && w === LEN) e.stopId = r.string();
+    else r.skip(w);
+  }
+  return e;
+}
+
+/** The English translation, falling back to the feed's first (usually only) one. */
+function readTranslatedString(r: Reader): string {
+  let en = "", first = "";
+  while (!r.done) {
+    const [f, w] = r.tag();
+    if (f === 1 && w === LEN) {
+      const t = r.sub();
+      let text = "", lang = "";
+      while (!t.done) {
+        const [tf, tw] = t.tag();
+        if (tf === 1 && tw === LEN) text = t.string();
+        else if (tf === 2 && tw === LEN) lang = t.string();
+        else t.skip(tw);
+      }
+      if (!first) first = text;
+      if (!en && (lang === "en" || !lang)) en = text;
+    } else r.skip(w);
+  }
+  return en || first;
+}
+
 export function decodeVehicleFeed(bytes: Uint8Array): VehicleFeed {
   const r = new Reader(bytes);
   const feed: VehicleFeed = { vehicles: [] };

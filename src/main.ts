@@ -4,7 +4,8 @@ import { createBaseMap, paintSky } from "./basemap.ts";
 import { skyAt, skyClock } from "./sky.ts";
 import { mixColor } from "./color.ts";
 import { loadTransit } from "./transit/data.ts";
-import { routeLayers } from "./layers/routes.ts";
+import { alertRouteLayers, routeLayers } from "./layers/routes.ts";
+import { AlertsWatch, previewAlert, startAlertsFeed } from "./transit/alerts.ts";
 import { trailLayers, vehicleLayers, type VehicleFrame } from "./layers/vehicles.ts";
 import { Fleet, type Vehicle } from "./live/fleet.ts";
 import type { Plane } from "./live/aircraft.ts";
@@ -82,7 +83,20 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const fleet = new Fleet(transit);
   const trails = new Trails<Vehicle>();
   const anchor = labelsAnchor();
-  let routes = routeLayers(transit, sky.daylight, anchor);
+  // Live service alerts: affected routes dash instead of their usual solid
+  // line, and a major one (a rail line on shuttle buses, or a detour
+  // reaching several routes) gets a caption. ?alert=blueline-detour (or
+  // greenline-detour) previews one.
+  const alertsPreview = previewAlert(new URLSearchParams(location.search).get("alert") ?? "");
+  const alerts = new AlertsWatch(document.getElementById("alerts")!, transit.routes);
+  let routes = routeLayers(transit, sky.daylight, anchor, alerts.affected);
+  let alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
+  alerts.onChange = () => {
+    routes = routeLayers(transit, sky.daylight, anchor, alerts.affected);
+    alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
+  };
+  if (alertsPreview) alerts.update(alertsPreview);
+  const alertsFeed = alertsPreview ? undefined : startAlertsFeed((body) => alerts.update(body));
   const f: VehicleFrame = { vehicles: [], trails: [], now: 0, version: 0, trailsVersion: 0, daylight: sky.daylight };
   const air = new AirFleet();
   const airTrails = new Trails<Plane>(45);
@@ -170,7 +184,8 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     paintSky(map, sky.daylight);
     fx.setDaylight(sky.daylight);
     haze.setDaylight(sky.daylight);
-    routes = routeLayers(transit, sky.daylight, anchor);
+    routes = routeLayers(transit, sky.daylight, anchor, alerts.affected);
+    alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
     markSky(sky.daylight);
   };
   setInterval(followSun, 1000);
@@ -196,6 +211,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const hover = new Hover(map, overlay, fleet, air, transit, () => f.daylight);
   hover.setMoon(moon);
   hover.setPlanets(planets);
+  hover.setAlerts(() => alerts.affected);
 
   // Boats through the Mississippi locks, from the Army Corps' lock logs.
   // They're passages, not positions, and real ones: always in real time.
@@ -289,6 +305,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(freeways ? [trafficLayer(freeways, tf, anchor)] : []),
         ...cameraLayers(cameras, anchor),
         ...routes,
+        ...alertLayers,
         ...snowLayers(snowFrame, anchor),
         ...(still ? [] : trailLayers(transit, f)),
         ...vehicleLayers(transit, f),
@@ -321,7 +338,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock())].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
@@ -331,6 +348,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     freeways: () => freeways, cameras: () => cameras, sats, sky: () => sky, moon, planets, snow,
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
+    alerts, alertsFeed,
   };
 });
 
