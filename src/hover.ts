@@ -151,7 +151,7 @@ export class Hover {
     let next: Target | null = null;
     if (obj && info.layer?.id === "pick-vehicles") next = { kind: "vehicle", id: (obj as Vehicle).id };
     else if (obj && info.layer?.id === "pick-planes") next = { kind: "plane", id: (obj as Plane).id };
-    else if (obj && info.layer?.id === "pick-sats") next = { kind: "satellite", id: (obj as unknown as Sat).id };
+    else if (obj && (info.layer?.id === "pick-sats" || info.layer?.id === "pick-sat-tracks")) next = { kind: "satellite", id: (obj as unknown as Sat).id };
     else if (obj && info.layer?.id === "pick-boats") next = { kind: "boat", key: (obj as unknown as Boat).key };
     else if (obj && info.layer?.id === "pick-locks") next = { kind: "lock", no: (obj as unknown as Lock).no };
     else if (obj && (info.layer?.id === "snow-routes" || info.layer?.id === "snow-halo") && info.coordinate) {

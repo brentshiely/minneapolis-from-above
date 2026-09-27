@@ -1,4 +1,4 @@
-import { IconLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { IconLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Vehicle } from "../live/fleet.ts";
 import type { Plane } from "../live/aircraft.ts";
 import type { Transit } from "../transit/data.ts";
@@ -18,6 +18,24 @@ export const FINGER = coarse ? 1.8 : 1;
  */
 export function pickLayers(vehicles: Vehicle[], planes: Plane[], version: number, sats: Sat[] = []) {
   return [
+    // Satellites (and debris) cover ground fast — often several times their
+    // own icon size between frames — so the point itself is a hard target.
+    // Its recent ground track is a much bigger, slower-moving one: hovering
+    // anywhere along the trail picks the same object.
+    new PathLayer<Sat>({
+      id: "pick-sat-tracks",
+      data: sats,
+      pickable: true,
+      getPath: (x) => x.trail,
+      positionFormat: "XY",
+      _pathType: "open",
+      getColor: [0, 0, 0, 1],
+      getWidth: 1,
+      widthUnits: "pixels",
+      widthMinPixels: 16 * FINGER,
+      parameters: { depthCompare: "always" },
+      updateTriggers: { getPath: version },
+    }),
     new ScatterplotLayer<Sat>({
       id: "pick-sats",
       data: sats,
