@@ -52,3 +52,14 @@ test("?at=HH:MM starts the sky clock at that Minneapolis time, and it keeps runn
   assert.ok(Math.abs(real().getTime() - Date.now()) < 50);
   assert.ok(Math.abs(skyClock("?at=nonsense")().getTime() - Date.now()) < 50, "bad values fall back to now");
 });
+
+test("?date=YYYY-MM-DD moves the sky clock to another day, with that day's daylight time", () => {
+  const fmt = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d);
+  assert.equal(fmt(skyClock("?date=2026-12-24&at=22:15")()), "2026-12-24, 22:15");
+  assert.equal(skyClock("?date=2026-12-24&at=22:15")().toISOString(), "2026-12-25T04:15:00.000Z", "CST");
+  assert.equal(skyClock("?date=2026-07-04&at=22:15")().toISOString(), "2026-07-05T03:15:00.000Z", "CDT");
+  // A date alone keeps the time of day.
+  assert.equal(fmt(skyClock("?date=2026-03-03")()).slice(-5), fmt(new Date()).slice(-5));
+  assert.ok(fmt(skyClock("?date=2026-03-03")()).startsWith("2026-03-0"));
+  assert.ok(Math.abs(skyClock("?date=soon")().getTime() - Date.now()) < 50, "bad dates fall back to now");
+});

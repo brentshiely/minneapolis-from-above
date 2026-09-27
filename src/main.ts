@@ -29,6 +29,7 @@ import { WeatherFx } from "./weather/effects.ts";
 import { previewWeather, type Weather } from "./weather/classify.ts";
 import { AirHaze } from "./weather/haze.ts";
 import { airPhrase, previewAir, type Air } from "./weather/air.ts";
+import { MoonGlow } from "./moonlight.ts";
 
 const clock = skyClock();
 let sky = skyAt(clock());
@@ -90,6 +91,10 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     ? (haze.set(airPreview), undefined)
     : startPoller<Air>("/api/air", 15 * 60_000, (x) => haze.set(x), { maxMs: 60 * 60_000 });
 
+  // The moon, calculated for the sky clock, glowing at the edge of the map.
+  const moon = new MoonGlow(document.getElementById("veil")!);
+  moon.update(clock(), sky.sun, sky.daylight);
+
   // When nobody's touching the map, tour it slowly.
   const idleParam = Number(new URLSearchParams(location.search).get("idle"));
   const trainScene: Scene = {
@@ -138,8 +143,10 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Dawn and dusk each take about an hour, so steps of 0.01 are invisible.
   let painted = sky.daylight;
   const followSun = () => {
-    sky = skyAt(clock());
+    const t = clock();
+    sky = skyAt(t);
     a.sun = sky.sun;
+    moon.update(t, sky.sun, sky.daylight);
     if (Math.abs(sky.daylight - painted) < 0.01 && !(sky.daylight !== painted && (sky.daylight === 0 || sky.daylight === 1))) return;
     painted = sky.daylight;
     f.daylight = a.daylight = tf.daylight = sky.daylight;
@@ -162,6 +169,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   }, { maxMs: 5 * 60_000 });
 
   const hover = new Hover(map, overlay, fleet, air, transit, () => f.daylight);
+  hover.setMoon(moon);
 
   // Every active satellite, animated while it crosses the map.
   const sats = new Satellites(() => {
@@ -192,6 +200,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     sats.frame(now);
     sf.sats = sats.list; sf.now = now; sf.version++; sf.daylight = f.daylight; sf.sunElevation = realSunElevation();
     fx.frame(dt, map.getBearing(), still);
+    moon.frame(map.getBearing(), fx.current?.cloudCover ?? 0);
     air.advance(dt, now);
     if (!still) {
       trails.record(fleet.vehicles, now);
@@ -249,7 +258,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
-  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf, freeways: () => freeways, sats, sky: () => sky };
+  (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf, freeways: () => freeways, sats, sky: () => sky, moon };
 });
 
 (window as unknown as { fromAbove: unknown }).fromAbove = { map, overlay };

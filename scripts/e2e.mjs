@@ -461,6 +461,30 @@ try {
   }
 
   {
+    // The full moon of Sept 26, 2026, high in the southeast late that evening.
+    const night = await openApp({ query: "?date=2026-09-26&at=23:00&weather=clear" });
+    await sleep(1500);
+    await check("the moon glows at the edge of the map and describes itself on hover", async () => {
+      const [x, y] = await night.page.evaluate(() => window.fromAbove.moon.anchor());
+      assert(x > 640 && y > 400, `moon at ${Math.round(x)}, ${Math.round(y)}, expected to the southeast`);
+      await night.page.mouse.move(x - 30, y - 30);
+      await night.page.mouse.move(x, y, { steps: 4 });
+      await sleep(400);
+      const tip = await night.page.$eval("#tip", (t) => (t.hidden ? "" : t.innerText));
+      assert(/The moon/.test(tip) && /Full moon, 100% lit\. Up now in the southeast/.test(tip), `tooltip: ${tip}`);
+      return tip.split("\n")[1];
+    });
+    await night.page.close();
+    const day = await openApp({ query: "?date=2026-09-26&at=13:00" });
+    await sleep(1500);
+    await check("no moon by day", async () => {
+      const shown = await day.page.evaluate(() => ["moon-glow", "moon-disc", "moon-light"].map((id) => Number(getComputedStyle(document.getElementById(id)).opacity)));
+      assert(shown.every((o) => o === 0), `opacities ${shown}`);
+    });
+    await day.page.close();
+  }
+
+  {
     const phone = await openApp({ phone: true, query: "?idle=4" });
     const p = phone.page;
     await sleep(2500);

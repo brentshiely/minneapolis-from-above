@@ -23,14 +23,23 @@ type Target =
   | { kind: "water"; lid: string; at: [number, number] }
   /** A freeway: the sensor station for that stretch, and where the cursor is. */
   | { kind: "traffic"; station: string; at: [number, number] }
-  | { kind: "satellite"; id: number };
+  | { kind: "satellite"; id: number }
+  /** The moon's glow at the edge of the map (a spot on screen, not the map). */
+  | { kind: "moon" };
+
+/** The moon, as the hover sees it: a spot on screen that can describe itself. */
+export interface MoonSpot {
+  hit(x: number, y: number): boolean;
+  anchor(): [number, number];
+  describe(): Description | undefined;
+}
 
 /** How often to refresh the list of river and lake gauges. */
 const GAUGE_REFRESH_MS = 10 * 60_000;
 
 /**
- * Hover (or tap) a bus, train or plane to see what it is, or water to see
- * its level. The tooltip
+ * Hover (or tap) a bus, train or plane to see what it is, water to see
+ * its level, or the moon for its phase. The tooltip
  * follows its subject as it moves. On touch screens a tap pins it until
  * the next tap elsewhere.
  */
@@ -50,6 +59,9 @@ export class Hover {
   private sunElevation: () => number = () => 0;
   private satcat = new Map<number, SatcatRecord | "pending">();
   private ucs?: Record<string, UcsRow> | "pending";
+
+  private moon?: MoonSpot;
+  setMoon(moon: MoonSpot) { this.moon = moon; }
 
   setSatellites(list: () => Sat[], sunElevation: () => number) { this.sats = list; this.sunElevation = sunElevation; }
 
@@ -122,6 +134,7 @@ export class Hover {
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
+    else if (this.moon?.hit(info.x, info.y)) next = { kind: "moon" };
     else if (info.coordinate && this.gauges.length) {
       // Nothing moving under the cursor: is it water with a gauge?
       const at: [number, number] = [info.coordinate[0], info.coordinate[1]];
@@ -182,6 +195,12 @@ export class Hover {
     let desc: Description;
     let position: [number, number];
     let layers: Layer[];
+    if (this.target.kind === "moon") {
+      const d = this.moon?.describe();
+      if (!d) { this.clear(); return []; }
+      this.renderTip(d, this.moon!.anchor(), true);
+      return [];
+    }
     if (this.target.kind === "vehicle") {
       const v = this.fleet.vehicles.get(this.target.id);
       if (!v || v.alpha === 0) { this.clear(); return []; }
@@ -227,7 +246,8 @@ export class Hover {
     return layers;
   }
 
-  private renderTip(d: Description, lngLat: [number, number]) {
+  /** `at` is a place on the map, or with `onScreen`, a point in the window. */
+  private renderTip(d: Description, at: [number, number], onScreen = false) {
     const text = `${d.title}\n${d.detail ?? ""}\n${d.meta}`;
     if (text !== this.lastText) {
       this.lastText = text;
@@ -248,7 +268,7 @@ export class Hover {
       this.tip.replaceChildren(...parts);
     }
     this.tip.hidden = false;
-    const pt = this.map.project(lngLat);
+    const pt = onScreen ? { x: at[0], y: at[1] } : this.map.project(at);
     const w = this.tip.offsetWidth, h = this.tip.offsetHeight;
     const vw = innerWidth, vh = innerHeight;
     // Up and to the right of the subject, flipped to stay on screen.
