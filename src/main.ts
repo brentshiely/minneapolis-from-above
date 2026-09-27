@@ -2,7 +2,7 @@ import "./style.css";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { createBaseMap, paintSky } from "./basemap.ts";
 import { addAerialImagery, IMAGERY_LAYER_ID, setImageryOpacity } from "./imagery.ts";
-import { addRadarLayers, currentFrame, refreshRadarTiles, setRadarFrame } from "./weather/radar.ts";
+import { addRadarLayer, refreshRadarTile } from "./weather/radar.ts";
 import { skyAt, skyClock } from "./sky.ts";
 import { mixColor } from "./color.ts";
 import { loadTransit } from "./transit/data.ts";
@@ -36,6 +36,9 @@ import { AirHaze } from "./weather/haze.ts";
 import { airPhrase, previewAir, type Air } from "./weather/air.ts";
 import { MoonGlow } from "./moonlight.ts";
 import { PlanetsGlow } from "./planetlight.ts";
+import { AuroraGlow } from "./auroralight.ts";
+import { auroraPhrase, previewAurora } from "./sky/aurora.ts";
+import type { AuroraResponse } from "../functions/api/aurora.ts";
 import { showerStatus } from "./meteors.ts";
 import { boatsAt, type Passage, type RiverResponse } from "./river/river.ts";
 import { riverLayers, type RiverFrame } from "./layers/river.ts";
@@ -95,12 +98,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   addAerialImagery(map, imageryAnchor);
   setImageryOpacity(map, sky.daylight, map.getZoom());
   map.on("zoom", () => setImageryOpacity(map, sky.daylight, map.getZoom()));
-  // Live radar, looping through the last half hour; drawn over the photo
-  // (added after it, same anchor) so rain reads even when the imagery
-  // is showing. Re-fetched every 5 minutes to match IEM's own refresh.
-  addRadarLayers(map, imageryAnchor);
-  let radarFrameIdx = -1;
-  setInterval(() => refreshRadarTiles(map), 5 * 60_000);
+  // Live radar, current picture only (no loop — this is a passive map,
+  // not a weather app to watch play out); drawn over the photo (added
+  // after it, same anchor) so rain reads even when the imagery is
+  // showing. Re-fetched every 5 minutes to match IEM's own refresh.
+  addRadarLayer(map, imageryAnchor);
+  setInterval(() => refreshRadarTile(map), 5 * 60_000);
   // Live service alerts: affected routes dash instead of their usual solid
   // line, and a major one (a rail line on shuttle buses, or a detour
   // reaching several routes) gets a caption. ?alert=blueline-detour (or
@@ -142,6 +145,17 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // The naked-eye planets, glowing faintly at the map's edge when they're up.
   const planets = new PlanetsGlow(document.getElementById("veil")!);
   planets.update(clock(), sky.daylight);
+
+  // A faint green wash toward the north when NOAA's forecast says
+  // tonight's geomagnetic activity reaches this far south. ?aurora=watch
+  // (or quiet, strong) previews a level without waiting for real activity.
+  const auroraPreview = previewAurora(new URLSearchParams(location.search).get("aurora") ?? "");
+  const aurora = new AuroraGlow(document.getElementById("veil")!);
+  aurora.setDaylight(sky.daylight);
+  if (auroraPreview) aurora.update(auroraPreview, Math.floor(Date.now() / 1000));
+  let auroraKp: AuroraResponse["kp"] = auroraPreview?.kp ?? [];
+  const applyAurora = (body: AuroraResponse) => { auroraKp = body.kp; aurora.update(body, Math.floor(Date.now() / 1000)); };
+  const auroraFeed = auroraPreview ? undefined : startPoller<AuroraResponse>("/api/aurora", 15 * 60_000, applyAurora, { maxMs: 60 * 60_000 });
 
   // When nobody's touching the map, tour it slowly.
   const idleParam = Number(new URLSearchParams(location.search).get("idle"));
@@ -202,6 +216,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     paintSky(map, sky.daylight);
     fx.setDaylight(sky.daylight);
     haze.setDaylight(sky.daylight);
+    aurora.setDaylight(sky.daylight);
     setImageryOpacity(map, sky.daylight, map.getZoom());
     routes = routeLayers(transit, sky.daylight, anchor, alerts.affected);
     alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
@@ -324,6 +339,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     fx.frame(dt, map.getBearing(), still);
     moon.frame(map.getBearing(), fx.current?.cloudCover ?? 0);
     planets.frame(map.getBearing(), fx.current?.cloudCover ?? 0);
+    aurora.frame(map.getBearing());
     air.advance(dt, now);
     if (!still) {
       trails.record(fleet.vehicles, now);
@@ -346,8 +362,6 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     fallsFrame.daylight = f.daylight;
     fallsFrame.now = now;
     warningsFrame.now = now;
-    const radarIdx = currentFrame(now);
-    if (radarIdx !== radarFrameIdx) { radarFrameIdx = radarIdx; setRadarFrame(map, radarIdx); }
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
@@ -388,10 +402,10 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
-  startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock())].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
+  startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000))].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
   (window as unknown as { fromAbove: unknown }).fromAbove = {
     map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
@@ -400,7 +414,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
     alerts, alertsFeed,
     warnings: { frame: warningsFrame, feed: warningsFeed },
-    radar: { frame: () => radarFrameIdx },
+    aurora: { strength: () => auroraKp, feed: auroraFeed },
     imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };
 });
