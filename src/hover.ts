@@ -11,6 +11,7 @@ import { gaugeAt, learnLakeGauges } from "./water/match.ts";
 import type { Freeways, Stretch } from "./traffic/freeways.ts";
 import { describeStation, type Readings } from "./traffic/traffic.ts";
 import { describeFalls, FALLS_LOCATION } from "./water/falls.ts";
+import { describeCamera, type CameraInfo } from "./traffic/cameras.ts";
 import type { Sat } from "./sky/satellites.ts";
 import { describeSatellite, type SatcatRecord, type UcsRow } from "./sky/describe.ts";
 import { LOCKS, describeLock, describePassage, type Boat, type Lock, type LockNo, type Passage } from "./river/river.ts";
@@ -30,6 +31,8 @@ type Target =
   | { kind: "water"; lid: string; at: [number, number] }
   /** A freeway: the sensor station for that stretch, and where the cursor is. */
   | { kind: "traffic"; station: string; at: [number, number] }
+  /** A traffic camera. */
+  | { kind: "camera"; name: string }
   | { kind: "satellite"; id: number }
   /** A boat that went through a lock lately, or the lock itself. */
   | { kind: "boat"; key: string }
@@ -112,6 +115,8 @@ export class Hover {
   setFreeways(fw: Freeways, readings: () => Readings, trafficTime: () => number) {
     this.freeways = fw; this.readings = readings; this.trafficTime = trafficTime;
   }
+  private cameras = new Map<string, CameraInfo>();
+  setCameras(cameras: CameraInfo[]) { this.cameras = new Map(cameras.map((c) => [c.name, c])); }
   private map: MapLibreMap;
   private fleet: Fleet;
   private air: AirFleet;
@@ -169,6 +174,7 @@ export class Hover {
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
+    else if (obj && info.layer?.id === "pick-cameras") next = { kind: "camera", name: (obj as unknown as CameraInfo).name };
     else if (this.moon?.hit(info.x, info.y)) next = { kind: "moon" };
     else if (this.planets?.hit(info.x, info.y) !== undefined) next = { kind: "planet", name: this.planets.hit(info.x, info.y)! };
     else if (info.coordinate && this.gauges.length) {
@@ -288,6 +294,12 @@ export class Hover {
       desc = describeStation(info, this.readings()[this.target.station], nowS_wall() - this.trafficTime());
       position = this.target.at;
       layers = [];
+    } else if (this.target.kind === "camera") {
+      const cam = this.cameras.get(this.target.name);
+      if (!cam) { this.clear(); return []; }
+      desc = describeCamera(cam, Date.now());
+      position = [cam.lon, cam.lat];
+      layers = [];
     } else if (this.target.kind === "water") {
       const lid = this.target.lid;
       const g = this.gauges.find((x) => x.lid === lid);
@@ -312,13 +324,23 @@ export class Hover {
 
   /** `at` is a place on the map, or with `onScreen`, a point in the window. */
   private renderTip(d: Description, at: [number, number], onScreen = false) {
-    const text = `${d.title}\n${d.detail ?? ""}\n${d.meta}`;
+    const text = `${d.title}\n${d.detail ?? ""}\n${d.meta}\n${d.image ?? ""}`;
     if (text !== this.lastText) {
       this.lastText = text;
+      const parts: HTMLElement[] = [];
+      if (d.image) {
+        const img = document.createElement("img");
+        img.className = "tip-image";
+        img.src = d.image;
+        img.alt = "";
+        // A dead or blocked snapshot shouldn't leave a broken-image glyph.
+        img.addEventListener("error", () => img.remove(), { once: true });
+        parts.push(img);
+      }
       const title = document.createElement("div");
       title.className = "tip-title";
       title.textContent = d.title;
-      const parts: HTMLElement[] = [title];
+      parts.push(title);
       if (d.detail) {
         const detail = document.createElement("div");
         detail.className = "tip-detail";

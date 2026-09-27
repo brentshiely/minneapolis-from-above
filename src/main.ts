@@ -22,6 +22,8 @@ import { learnedLakes } from "./water/match.ts";
 import { loadFreeways, type Freeways } from "./traffic/freeways.ts";
 import type { TrafficResponse } from "./traffic/traffic.ts";
 import { trafficLayer, type TrafficFrame } from "./layers/traffic.ts";
+import type { CameraInfo, CamerasFile } from "./traffic/cameras.ts";
+import { cameraLayers } from "./layers/cameras.ts";
 import { Satellites } from "./sky/satellites.ts";
 import { sunPosition } from "./sun.ts";
 import { satelliteLayers, type SatFrame } from "./layers/satellites.ts";
@@ -183,6 +185,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     tf.version++;
   }, { maxMs: 5 * 60_000 });
 
+  // MnDOT's freeway cameras: baked once, they never move.
+  let cameras: CameraInfo[] = [];
+  fetch("/data/cameras.json").then((r) => (r.ok ? (r.json() as Promise<CamerasFile>) : undefined)).then((body) => {
+    if (!body) return;
+    cameras = body.cameras;
+    hover.setCameras(cameras);
+  }).catch((e) => console.warn(e));
+
   const hover = new Hover(map, overlay, fleet, air, transit, () => f.daylight);
   hover.setMoon(moon);
   hover.setPlanets(planets);
@@ -277,6 +287,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
       // Planes fly above everything on the ground.
       layers: [
         ...(freeways ? [trafficLayer(freeways, tf, anchor)] : []),
+        ...cameraLayers(cameras, anchor),
         ...routes,
         ...snowLayers(snowFrame, anchor),
         ...(still ? [] : trailLayers(transit, f)),
@@ -317,7 +328,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   (window as unknown as { fromAbove: unknown }).fromAbove = {
     map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
-    freeways: () => freeways, sats, sky: () => sky, moon, planets, snow,
+    freeways: () => freeways, cameras: () => cameras, sats, sky: () => sky, moon, planets, snow,
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
   };

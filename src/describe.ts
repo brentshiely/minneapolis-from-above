@@ -11,6 +11,8 @@ export interface Description {
   detail?: string;
   /** Small print: ids and data freshness. */
   meta: string;
+  /** A live snapshot to show above the text, if there is one. */
+  image?: string;
 }
 
 // --- shared -----------------------------------------------------------------

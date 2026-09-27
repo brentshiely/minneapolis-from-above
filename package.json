@@ -14,6 +14,7 @@
     "shot": "node scripts/shot.mjs",
     "e2e": "node scripts/e2e.mjs",
     "build:freeways": "node scripts/build-mndot.mjs",
+    "build:cameras": "node scripts/build-cameras.mjs",
     "build:sats": "node scripts/build-satellites.mjs",
     "build:ucs": "node scripts/build-ucs.mjs",
     "build:debris": "node scripts/build-debris.mjs",

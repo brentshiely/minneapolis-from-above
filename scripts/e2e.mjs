@@ -265,6 +265,27 @@ try {
     return tip.replace(/\n/g, " | ");
   });
 
+  await check("hovering a freeway camera shows its location and live snapshot", async () => {
+    const target = await page.evaluate(() => {
+      const g = window.fromAbove;
+      const core = (lon, lat) => lon > -93.4 && lon < -93.0 && lat > 44.9 && lat < 45.05;
+      return g.cameras().find((c) => core(c.lon, c.lat));
+    });
+    assert(target, "no camera in the core metro");
+    await page.evaluate((c) => window.fromAbove.map.jumpTo({ center: c, zoom: 17 }), [target.lon, target.lat]);
+    await sleep(2500);
+    await page.mouse.move(5, 5);
+    const pt = await page.evaluate((c) => window.fromAbove.map.project(c), [target.lon, target.lat]);
+    await page.mouse.move(pt.x, pt.y);
+    await sleep(800);
+    const tip = await page.$eval("#tip", (el) => (el.hidden ? "" : el.innerText));
+    const hasImage = await page.$eval("#tip img.tip-image", (el) => el.naturalWidth > 0).catch(() => false);
+    await page.mouse.move(5, 5);
+    assert(/^(I-\d|US \d|Highway \d)/.test(tip), `got "${tip}"`);
+    assert(/MnDOT traffic camera/.test(tip), `got "${tip}"`);
+    return `${tip.replace(/\n/g, " | ")} | image loaded: ${hasImage}`;
+  });
+
   await check("river: hovering Lock and Dam 1 names it, and a boat that just locked through reads plainly", async () => {
     // The lock logs come every 5 minutes and boats are rare, so add one that just went through.
     const real = await page.evaluate(() => window.fromAbove.river.passages().length);

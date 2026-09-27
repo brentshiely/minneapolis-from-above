@@ -82,3 +82,10 @@ export const FALLS_ICON = {
     + `<path d="M48 10 Q42 18 48 26 Q54 34 48 42 Q42 50 48 54"/></g>`),
   width: 64, height: 64, mask: true, id: "falls",
 };
+
+/** A traffic camera: a small round lens on a pole-mounted box, kept tiny
+ * and plain so it reads as a fixture, not another moving dot. */
+export const CAMERA_ICON = {
+  url: svg(`<g fill="#fff"><rect x="16" y="22" width="26" height="20" rx="4"/><circle cx="46" cy="32" r="8"/><circle cx="46" cy="32" r="3.5"/><rect x="27" y="42" width="4" height="10" rx="1.5"/></g>`),
+  width: 64, height: 64, mask: true, id: "camera",
+};

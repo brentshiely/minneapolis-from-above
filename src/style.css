@@ -46,6 +46,15 @@ html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-
   gap: 3px;
 }
 #tip[hidden] { display: none; }
+#tip .tip-image {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-bottom: 2px;
+  background: rgba(120, 140, 160, 0.12);
+}
 #tip .tip-title { font-weight: 600; text-wrap: balance; }
 #tip .tip-detail { color: #b3bec8; }
 #tip .tip-meta {
