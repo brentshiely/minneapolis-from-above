@@ -119,28 +119,43 @@ const DEBRIS_STORIES: [RegExp, string, string][] = [
     "a dead Soviet spy satellite that Russia destroyed with a missile in a November 2021 anti-satellite test, forcing the ISS crew to shelter."],
 ];
 
-/** What well-known satellite families are for, when the UCS database has no entry. */
+/**
+ * What well-known satellite families are for, when the UCS database has no
+ * entry -- and, since most hovers land on one of these common fleets
+ * rather than a one-of-a-kind object, a sentence of real history: why the
+ * program exists, when it began, what it's known for.
+ */
 const FAMILIES: [RegExp, string][] = [
-  [/^STARLINK/, "A SpaceX Starlink internet satellite, from the United States."],
-  [/^ONEWEB/, "A OneWeb internet satellite, from the United Kingdom."],
-  [/^KUIPER/, "An Amazon Project Kuiper internet satellite, from the United States."],
-  [/^IRIDIUM/, "An Iridium communications satellite, from the United States."],
+  [/^STARLINK/, "A SpaceX Starlink internet satellite, from the United States. The first batch launched in 2019; "
+    + "it's now the largest satellite constellation ever built, and the reason a slow-moving \"train\" of lights is a common sight low in the sky just after dusk."],
+  [/^ONEWEB/, "A OneWeb internet satellite, from the United Kingdom -- a rival to Starlink that flies far fewer, more widely spaced satellites in a higher orbit."],
+  [/^KUIPER/, "An Amazon Project Kuiper internet satellite, from the United States -- Amazon's answer to Starlink, launching in growing numbers since 2023."],
+  [/^IRIDIUM/, "An Iridium communications satellite, from the United States, part of a global phone and data network. "
+    + "Its first-generation satellites, launched in the 1990s, were famous for \"Iridium flares\": sudden, brilliant glints as sunlight hit their antennas; this newer generation, flying since 2017, no longer produces them."],
   [/^GLOBALSTAR/, "A Globalstar communications satellite, from the United States."],
   [/^ORBCOMM/, "An Orbcomm messaging satellite, from the United States."],
-  [/^(NAVSTAR|GPS)/, "A GPS navigation satellite, run by the US military."],
-  [/^COSMOS 2\d{3} \(GLONASS|^GLONASS/, "A GLONASS navigation satellite, from Russia."],
-  [/^BEIDOU/, "A BeiDou navigation satellite, from China."],
-  [/^GSAT0\d{3}|^GALILEO/, "A Galileo navigation satellite, from the European Union."],
-  [/^METEOR/, "A Meteor weather satellite, from Russia."],
-  [/^NOAA \d/, "A NOAA weather satellite, from the United States."],
-  [/^GOES/, "A GOES weather satellite, from the United States."],
-  [/^(FENGYUN|FY-)/, "A Fengyun weather satellite, from China."],
-  [/^(METOP|METEOSAT)/, "A European weather satellite (EUMETSAT)."],
-  [/^JILIN/, "A Jilin Earth-imaging satellite, from China."],
-  [/^(FLOCK|DOVE|SKYSAT)/, "A Planet Earth-imaging satellite, from the United States."],
-  [/^LANDSAT/, "A Landsat Earth-observing satellite (NASA and USGS)."],
-  [/^SENTINEL/, "A Sentinel Earth-observing satellite (European Copernicus program)."],
+  [/^(NAVSTAR|GPS)/, "A GPS navigation satellite, run by the US military. The first GPS satellite launched in 1978; "
+    + "the system opened to civilian use through the 1980s and 90s and now quietly underpins everything from phones to farm equipment."],
+  [/^COSMOS 2\d{3} \(GLONASS|^GLONASS/, "A GLONASS navigation satellite, from Russia -- the Soviet Union's Cold War-era answer to GPS, first launched in 1982 and rebuilt after nearly collapsing in the 1990s."],
+  [/^BEIDOU/, "A BeiDou navigation satellite, from China -- China's own global navigation system, completed in 2020 after two decades of buildup, freeing the country from reliance on GPS."],
+  [/^GSAT0\d{3}|^GALILEO/, "A Galileo navigation satellite, from the European Union -- Europe's independent alternative to GPS and GLONASS, offering the most precise civilian positioning signal of any system."],
+  [/^METEOR/, "A Meteor weather satellite, from Russia, descended from a weather-satellite program running since the Soviet era."],
+  [/^NOAA \d/, "A NOAA weather satellite, from the United States, one of a decades-long series whose imagery and instruments are the backbone of US weather forecasting."],
+  [/^GOES/, "A GOES weather satellite, from the United States -- parked in a fixed spot over the Americas, producing the looping satellite imagery familiar from TV weather forecasts."],
+  [/^(FENGYUN|FY-)/, "A Fengyun weather satellite, from China, part of a national weather-satellite program running since the 1980s."],
+  [/^(METOP|METEOSAT)/, "A European weather satellite (EUMETSAT), part of Europe's polar-orbiting and geostationary weather fleet, run jointly with the European Space Agency."],
+  [/^JILIN/, "A Jilin Earth-imaging satellite, from China, part of a fast-growing commercial constellation that sells high-resolution imagery and even short video clips from orbit."],
+  [/^(FLOCK|DOVE|SKYSAT)/, "A Planet Earth-imaging satellite, from the United States -- one of a fleet of shoebox-sized \"Dove\" satellites (or a larger SkySat) that photographs nearly all of Earth's land every day."],
+  [/^LANDSAT/, "A Landsat Earth-observing satellite (NASA and USGS), part of the longest continuous record of Earth's surface from space, running since 1972."],
+  [/^SENTINEL/, "A Sentinel Earth-observing satellite (European Copernicus program), part of Europe's free, open-data Earth-monitoring fleet, flying since 2014."],
 ];
+
+/** A little more history for the handful of individually famous objects, appended to their factual description. */
+const OBJECT_STORIES: Record<number, string> = {
+  // Hubble Space Telescope.
+  20580: "Launched by the Space Shuttle in 1990 and serviced five times by astronauts, it revolutionized astronomy with images like the Hubble Deep Field -- "
+    + "and nearly failed at launch, saved by a 1993 shuttle mission that fixed a flawed mirror.",
+};
 
 const miles = (km: number) => Math.round(km * 0.621371);
 const mph = (kms: number) => Math.round((kms * 2236.94) / 100) * 100;
@@ -257,8 +272,10 @@ export function describeSatellite(opts: {
   const family = FAMILIES.find(([re]) => re.test(opts.name.trim()));
   if (kind === "iss") {
     sentences.push("A crewed laboratory, home to astronauts since 2000, run by NASA, Roscosmos, ESA, JAXA and the Canadian Space Agency.");
+    sentences.push("Assembled piece by piece from 1998 on, it's the largest human-made structure ever put in space -- big enough to see with the naked eye as it crosses overhead.");
   } else if (kind === "station") {
     sentences.push("China's crewed space station, home to taikonauts, run by the China Manned Space Agency.");
+    sentences.push("Completed in 2022, it made China only the third country to build and staff its own space station.");
   } else if (u && (u[1] || u[3])) {
     const users = usersWords(u[2]);
     const operator = operatorWords(u[1]);
@@ -273,6 +290,7 @@ export function describeSatellite(opts: {
     const guess = guessPurpose(c);
     if (guess) sentences.push(guess);
   }
+  if (OBJECT_STORIES[id]) sentences.push(OBJECT_STORIES[id]);
 
   // Launch.
   if (c?.LAUNCH_DATE) {

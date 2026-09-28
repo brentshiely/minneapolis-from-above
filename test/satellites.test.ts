@@ -97,7 +97,7 @@ test("a Chinese Earth-imaging satellite and a Russian weather satellite", () => 
   assert.match(describe(43159).detail!, /^Operated by Chang Guang Satellite Technology Co\. Ltd\. for commercial Earth observation, from China\./);
   assert.match(describe(43159).detail!, /from Jiuquan, China on a Long March 11\./);
   const meteor = describe(57166);
-  assert.match(meteor.detail!, /^A Meteor weather satellite, from Russia\./);
+  assert.match(meteor.detail!, /^A Meteor weather satellite, from Russia,/);
   assert.match(meteor.detail!, /from Vostochny, Russia\./);
 });
 
@@ -105,8 +105,23 @@ test("Tiangong and a Starlink", () => {
   const css = describe(48274);
   assert.equal(css.title, "Tiangong space station.");
   assert.match(css.detail!, /^China's crewed space station/);
+  assert.match(css.detail!, /third country to build and staff its own space station/);
   assert.match(css.detail!, /from Wenchang, China\./);
-  assert.match(describe(68149).detail!, /^A SpaceX Starlink internet satellite, from the United States\. Launched March 13, 2026 from Vandenberg, California\./);
+  assert.match(describe(68149).detail!, /^A SpaceX Starlink internet satellite, from the United States\./);
+  assert.match(describe(68149).detail!, /largest satellite constellation ever built/);
+  assert.match(describe(68149).detail!, /Launched March 13, 2026 from Vandenberg, California\./);
+});
+
+test("the ISS's extra history, and Hubble's own story appended after the facts", () => {
+  assert.match(describe(25544).detail!, /largest human-made structure ever put in space/);
+
+  const hst = describeSatellite({
+    id: 20580, name: "HST", kind: "satellite", sunElevation: 10, live: livePos(),
+    catalog: { OWNER: "US" },
+  });
+  assert.match(hst.detail!, /^A satellite from the United States\./);
+  assert.match(hst.detail!, /Space Shuttle in 1990/);
+  assert.match(hst.detail!, /flawed mirror/);
 });
 
 test("whether you could see it", () => {
