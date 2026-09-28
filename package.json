@@ -18,7 +18,8 @@
     "build:sats": "node scripts/build-satellites.mjs",
     "build:ucs": "node scripts/build-ucs.mjs",
     "build:debris": "node scripts/build-debris.mjs",
-    "build:snow": "node scripts/build-snow.mjs"
+    "build:snow": "node scripts/build-snow.mjs",
+    "build:stpaul-districts": "node scripts/build-stpaul-districts.mjs"
   },
   "author": "",
   "license": "UNLICENSED",

@@ -5,7 +5,7 @@
  */
 export type LayerKey =
   | "transit" | "planes" | "satellites" | "traffic" | "cameras" | "incidents"
-  | "river" | "warnings" | "games" | "beaches" | "airport" | "wildlife" | "snow";
+  | "river" | "warnings" | "games" | "beaches" | "airport" | "wildlife" | "snow" | "crime";
 
 export interface ToggleGroup {
   key: LayerKey;
@@ -28,6 +28,7 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
   { key: "airport", label: "MSP status", glyph: '<path d="M12 2c.7 0 1.1 1 1.1 2v5.3l7.4 4v1.7l-7.4-2v4.6l2.3 1.8v1.3L12 21.4l-3.4 1.3v-1.3l2.3-1.8v-4.6l-7.4 2v-1.7l7.4-4V4c0-1 .4-2 1.1-2z"/>' },
   { key: "wildlife", label: "Wildlife sightings", glyph: '<path d="M12 6C9 6 7 9 7 12c0 3 2 6 5 6s5-3 5-6c0-3-2-6-5-6zm-6 2a2 2 0 100 4 2 2 0 000-4zm12 0a2 2 0 100 4 2 2 0 000-4zM8 3a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4z"/>' },
   { key: "snow", label: "Snow emergencies", glyph: '<path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M12 2v20M4 6l16 12M20 6 4 18M6 4l1 3-3 1M18 4l-1 3 3 1M6 20l1-3-3-1M18 20l-1-3 3-1"/>' },
+  { key: "crime", label: "Crime events", glyph: '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 2.5 20 6v6c0 5-3.4 8.2-8 9.5-4.6-1.3-8-4.5-8-9.5V6z"/>' },
 ];
 
 const STORAGE_KEY = "fromabove.layers";
