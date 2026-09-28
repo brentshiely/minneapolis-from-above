@@ -20,7 +20,7 @@ test("trims adsb.lol aircraft to compact rows over the metro", () => {
   assert.equal(delta[10], 1984);      // climbing ft/min
   const ground = body.a.filter((r) => r[4] === 0);
   assert.ok(ground.length > 0, "ground aircraft kept, at altitude 0");
-  for (const r of body.a) assert.ok(r[2] > 44.3 && r[2] < 45.8 && r[3] > -94.6 && r[3] < -92.2);
+  for (const r of body.a) assert.ok(r[2] > 43.8 && r[2] < 47.0 && r[3] > -94.4 && r[3] < -91.8);
 });
 
 test("drops positions over a minute old and aircraft outside the area", () => {

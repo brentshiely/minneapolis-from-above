@@ -19,8 +19,8 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CACHE = join(ROOT, ".cache", "mndot", "config.xml.gz");
 const OUT = join(ROOT, "public", "data", "freeways.json");
 
-/** Same bounds as the map, a little wider so corridors run off the edge. */
-const BOX = { minLon: -94.3, maxLon: -92.4, minLat: 44.45, maxLat: 45.45 };
+/** The metro plus St. Cloud, Rochester and Duluth, a little wider so corridors run off the edge. */
+const BOX = { minLon: -94.4, maxLon: -91.8, minLat: 43.8, maxLat: 47.0 };
 /** A stretch further than this from any station has no reading to show. */
 const MAX_STATION_M = 1600;
 /** Each direction drawn this far to its right, so opposite directions separate. */

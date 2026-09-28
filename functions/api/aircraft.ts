@@ -7,9 +7,9 @@
  * fallback.
  */
 
-/** Center of the map's bounds and a radius (nautical miles) that covers them. */
+/** Center of the map's bounds and a radius (nautical miles) that covers them, out to Duluth. */
 const CENTER = { lat: 44.95, lon: -93.35 };
-const RADIUS_NM = 45;
+const RADIUS_NM = 130;
 export const AIRCRAFT_SOURCES = [
   `https://api.adsb.lol/v2/point/${CENTER.lat}/${CENTER.lon}/${RADIUS_NM}`,
   `https://opendata.adsb.fi/api/v2/lat/${CENTER.lat}/lon/${CENTER.lon}/dist/${RADIUS_NM}`,
@@ -50,9 +50,9 @@ interface AdsbAircraft {
   geom_rate?: number;
 }
 
-/** Same generous box as the transit feed. */
+/** The metro plus St. Cloud, Rochester and Duluth, with margin. */
 function inArea(lat: number, lon: number) {
-  return lat > 44.3 && lat < 45.8 && lon > -94.6 && lon < -92.2;
+  return lat > 43.8 && lat < 47.0 && lon > -94.4 && lon < -91.8;
 }
 
 const r5 = (n: number) => Math.round(n * 1e5) / 1e5;
@@ -80,8 +80,8 @@ export function toAircraftResponse(body: { now?: number; ac?: AdsbAircraft[]; ai
 
 // --- OpenSky -----------------------------------------------------------------
 
-/** The map's bounds: about 1.3 square degrees, one OpenSky credit per request. */
-const BOX = { lamin: 44.55, lomin: -94.15, lamax: 45.35, lomax: -92.55 };
+/** The metro plus St. Cloud, Rochester and Duluth: one OpenSky credit per request. */
+const BOX = { lamin: 43.8, lomin: -94.4, lamax: 47.0, lomax: -91.8 };
 const OPENSKY_STATES = `https://opensky-network.org/api/states/all?lamin=${BOX.lamin}&lomin=${BOX.lomin}&lamax=${BOX.lamax}&lomax=${BOX.lomax}`;
 const OPENSKY_TOKEN = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token";
 /** A free account allows ~4,000 requests a day: at most one every 30 s. */

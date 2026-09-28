@@ -22,8 +22,11 @@ const UA = "minneapolis-from-above (+https://minneapolis-from-above.pages.dev)";
 const METRO_ZONE_IDS = new Set([
   "MNZ060", "MNZ062", "MNZ070", "MNZ061", "MNZ063", "MNZ069", "MNZ068", // Hennepin, Ramsey, Dakota, Anoka, Washington, Scott, Carver
   "MNZ059", "MNZ051", "MNZ052", "MNZ053", // Wright, Sherburne, Isanti, Chisago
+  "MNZ049", // Stearns (St. Cloud)
+  "MNZ087", // Olmsted (Rochester)
+  "MNZ011", "MNZ019", "MNZ037", // North, Central and Carlton/South St. Louis (Duluth)
 ]);
-const METRO_BBOX = { minLon: -94.15, minLat: 44.55, maxLon: -92.55, maxLat: 45.35 };
+const METRO_BBOX = { minLon: -94.4, minLat: 43.8, maxLon: -91.8, maxLat: 47.0 };
 
 export type Geometry = GeoJSON.Polygon | GeoJSON.MultiPolygon;
 

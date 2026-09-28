@@ -3,14 +3,15 @@
  *
  * MnDOT's live freeway incident feed (crashes, stalls, hazards, road
  * work), the same IRIS export host as /api/traffic, trimmed to the
- * metro and to what's still active.
+ * metro plus St. Cloud, Rochester and Duluth, and to what's still active.
  */
 import { parseStamp } from "../../src/traffic/traffic.ts";
 import { gunzipText } from "./traffic.ts";
 
 const URL = "https://data.dot.state.mn.us/iris_xml/incident.xml.gz";
 const TTL_S = 30;
-const METRO_BBOX = { minLon: -94.15, minLat: 44.55, maxLon: -92.55, maxLat: 45.35 };
+/** The metro plus St. Cloud, Rochester and Duluth, with margin. */
+const METRO_BBOX = { minLon: -94.4, minLat: 43.8, maxLon: -91.8, maxLat: 47.0 };
 
 export interface Incident {
   id: string;

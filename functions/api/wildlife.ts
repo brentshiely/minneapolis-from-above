@@ -2,14 +2,15 @@
  * Cloudflare Pages Function: GET /api/wildlife
  *
  * Recent, identification-verified iNaturalist observations in the
- * metro: free, no key, already CORS-open, proxied for the same
- * edge-cache and resilience reasons every other feed here is. A photo
- * is only included when its own license permits reuse (iNaturalist
- * marks each photo's license separately from the observation itself;
- * plenty are "all rights reserved" by default).
+ * metro plus St. Cloud, Rochester and Duluth: free, no key, already
+ * CORS-open, proxied for the same edge-cache and resilience reasons
+ * every other feed here is. A photo is only included when its own
+ * license permits reuse (iNaturalist marks each photo's license
+ * separately from the observation itself; plenty are "all rights
+ * reserved" by default).
  */
 const TTL_S = 900;
-const METRO_BBOX = { swlat: 44.55, swlng: -94.15, nelat: 45.35, nelng: -92.55 };
+const METRO_BBOX = { swlat: 43.8, swlng: -94.4, nelat: 47.0, nelng: -91.8 };
 /** Sightings fade out over this many days; no point asking further back. */
 const LOOKBACK_DAYS = 4;
 

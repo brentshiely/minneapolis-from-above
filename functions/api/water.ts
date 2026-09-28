@@ -1,14 +1,14 @@
 /**
  * Cloudflare Pages Function: GET /api/water, and /api/water?lid=STPM5
  *
- * River and lake gauges around the metro from the National Weather
- * Service's water prediction service; with `lid`, one gauge's flood stages,
- * last-day change and forecast crest.
+ * River and lake gauges around the metro plus St. Cloud, Rochester and
+ * Duluth, from the National Weather Service's water prediction service;
+ * with `lid`, one gauge's flood stages, last-day change and forecast crest.
  */
 import { parseDetail, parseGauges } from "../../src/water/gauges.ts";
 
 const NWPS = "https://api.water.noaa.gov/nwps/v1";
-const LIST = `${NWPS}/gauges?bbox.xmin=-94.2&bbox.ymin=44.5&bbox.xmax=-92.5&bbox.ymax=45.4&srid=EPSG_4326`;
+const LIST = `${NWPS}/gauges?bbox.xmin=-94.4&bbox.ymin=43.8&bbox.xmax=-91.8&bbox.ymax=47.0&srid=EPSG_4326`;
 /** Gauges report every 15 minutes to an hour. */
 const LIST_TTL_S = 600;
 const DETAIL_TTL_S = 900;

@@ -28,8 +28,8 @@ const unescape = (s: string) => s.replace(/&amp;/g, "&").replace(/&apos;/g, "'")
  * rig like "(RTMC Test Camera 7)"). */
 const ON_A_HIGHWAY = /\b(I-\d+\w*|U\.S\.\d+\w*|T\.H\.\d+\w*)\b/;
 
-/** Metro area bounds, a little wider than the map so nothing clips at the edge. */
-const BOX = { minLon: -94.3, maxLon: -92.4, minLat: 44.45, maxLat: 45.45 };
+/** The metro plus St. Cloud, Rochester and Duluth, a little wider than the map so nothing clips at the edge. */
+const BOX = { minLon: -94.4, maxLon: -91.8, minLat: 43.8, maxLat: 47.0 };
 
 /**
  * Parse every `<camera name='...' description='...' lon='...' lat='...'/>`
