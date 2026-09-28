@@ -1,7 +1,7 @@
 /**
- * Recently reported crime incidents in Minneapolis and Saint Paul,
- * fading out over a couple of days as they age. Minneapolis publishes a
- * block-centroid point for each incident; Saint Paul publishes only a
+ * Recently reported crime incidents in Minneapolis, Saint Paul and
+ * Duluth, fading out as they age. Minneapolis and Duluth each publish a
+ * point for every incident directly; Saint Paul publishes only a
  * district number, so its incidents are placed at a deterministic
  * (never-jumping) random spot inside their real district instead of
  * stacking on one shared pin.
@@ -11,8 +11,13 @@ import type { Description } from "../describe.ts";
 
 export type { CrimeIncident, CrimeResponse, City };
 
-/** Days after which an incident is fully faded and no longer shown. */
-export const FADE_DAYS = 2;
+/**
+ * Days after which an incident is fully faded and no longer shown.
+ * Minneapolis and Saint Paul update roughly daily; Duluth's own source
+ * says weekly and often lags further, so it needs a much longer tail or
+ * it would never show anything at all.
+ */
+export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12 };
 
 export interface StPaulDistrict {
   name: string;
@@ -30,7 +35,7 @@ export async function loadStPaulDistricts(url = "/data/stpaul-districts.json"): 
 /** 1 (just reported) fading to 0 (fully aged out); never negative. */
 export function crimeStrength(c: CrimeIncident, nowS: number): number {
   const ageDays = (nowS - c.reportedAt) / 86_400;
-  return Math.max(0, Math.min(1, 1 - ageDays / FADE_DAYS));
+  return Math.max(0, Math.min(1, 1 - ageDays / FADE_DAYS[c.city]));
 }
 
 /** A tiny seeded PRNG so a Saint Paul incident's jittered spot never moves between polls. */
@@ -71,10 +76,13 @@ function ago(seconds: number): string {
   return d === 1 ? "a day ago" : `${d} days ago`;
 }
 
-/** "1234 Main St" reads better than the source's "0012XX MAIN ST" masking. */
+/** "1234 Main St" reads better than the source's "0012XX MAIN ST" (Minneapolis/Saint Paul) or "300 BLK Main St" (Duluth) masking. */
 function place(block: string | undefined): string {
   if (!block) return "";
-  return block.replace(/^0*(\d*)XX\b/i, (_, n) => (n ? `${n}00 block` : "block")).trim();
+  return block
+    .replace(/^0*(\d*)XX\b/i, (_, n) => (n ? `${n}00 block` : "block"))
+    .replace(/\bBLK\b/i, "block")
+    .trim();
 }
 
 export function describeCrime(c: CrimeIncident, nowS: number): Description {
@@ -83,14 +91,21 @@ export function describeCrime(c: CrimeIncident, nowS: number): Description {
   return { title, detail: `Reported ${ago(nowS - c.reportedAt)} in ${c.city}.`, meta: c.city };
 }
 
-const PREVIEW: CrimeIncident = {
-  id: "preview-1", city: "Minneapolis", category: "Automobile Theft",
-  reportedAt: 0, neighborhood: "Downtown West", block: "0012XX HENNEPIN AVE", position: [-93.273, 44.978],
+const PREVIEW: Record<string, CrimeIncident> = {
+  preview: {
+    id: "preview-1", city: "Minneapolis", category: "Automobile Theft",
+    reportedAt: 0, neighborhood: "Downtown West", block: "0012XX HENNEPIN AVE", position: [-93.273, 44.978],
+  },
+  "preview-duluth": {
+    id: "preview-duluth-1", city: "Duluth", category: "Trespass of Real Property",
+    reportedAt: 0, block: "300 BLK W Superior St", position: [-92.1023, 46.7834],
+  },
 };
 
-/** `?crime=preview` shows one recent incident, without waiting on the real feed. */
+/** `?crime=preview` (or `preview-duluth`) shows one recent incident, without waiting on the real feed. */
 export function previewCrime(spec: string): CrimeResponse | undefined {
-  if (spec.trim().toLowerCase() !== "preview") return undefined;
+  const preset = PREVIEW[spec.trim().toLowerCase()];
+  if (!preset) return undefined;
   const t = Math.floor(Date.now() / 1000);
-  return { t, incidents: [{ ...PREVIEW, reportedAt: t - 3 * 3600 }] };
+  return { t, incidents: [{ ...preset, reportedAt: t - 3 * 3600 }] };
 }

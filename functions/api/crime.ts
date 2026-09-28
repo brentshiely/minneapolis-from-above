@@ -1,23 +1,28 @@
 /**
  * Cloudflare Pages Function: GET /api/crime
  *
- * Recent reported crime incidents from Minneapolis's and Saint Paul's own
- * open-data services (both Esri FeatureServers, free, no key, CORS-open,
- * public domain). Researched (Sept 2026): no inner-ring suburb publishes
- * an equivalent open feed -- several use LexisNexis Community Crime Map
- * or CrimeReports.com, both display-only with no public API and terms
- * that prohibit redistribution, matching the same "not authorized for
- * reuse" problem that ruled out 511mn.org's plow data and Blitzortung's
- * lightning feed. Scoped to the two cities that do have a real feed.
+ * Recent reported crime incidents from Minneapolis's, Saint Paul's and
+ * Duluth's own open-data services (all Esri FeatureServers, free, no
+ * key, CORS-open). Researched (Sept 2026): no inner-ring suburb of the
+ * Twin Cities publishes an equivalent open feed -- several use LexisNexis
+ * Community Crime Map or CrimeReports.com, both display-only with no
+ * public API and terms that prohibit redistribution, matching the same
+ * "not authorized for reuse" problem that ruled out 511mn.org's plow
+ * data and Blitzortung's lightning feed. Scoped to the cities that do
+ * have a real feed.
  *
- * Both cities already truncate location to a block or a police district
- * before publishing -- neither exposes exact addresses.
+ * All three already truncate location to a block or a police district
+ * before publishing -- none exposes an exact address. Minneapolis and
+ * Saint Paul update roughly daily; Duluth's own dashboard says weekly,
+ * and its freshest record is often a week old -- so Duluth uses a much
+ * longer lookback and fade than the Twin Cities (see LOOKBACK_DAYS and
+ * src/crime/crime.ts's FADE_DAYS).
  */
 const TTL_S = 1800;
-/** Fades out client-side over roughly this long; no point asking further back. */
-const LOOKBACK_DAYS = 3;
+/** Fades out client-side over roughly this long; no point asking further back. Duluth updates weekly, so it gets a longer window. */
+const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14 };
 
-export type City = "Minneapolis" | "Saint Paul";
+export type City = "Minneapolis" | "Saint Paul" | "Duluth";
 
 export interface CrimeIncident {
   id: string;
@@ -41,37 +46,55 @@ export interface CrimeResponse {
 }
 
 const MPLS_URL = "https://services.arcgis.com/afSMGVsC7QlRK1kZ/arcgis/rest/services/Police_Incidents_Last_7_Days/FeatureServer/0/query"
-  + "?where=1%3D1&outFields=caseNumber,offense,description,reportedDateTime,centerLat,centerLong,neighborhood,publicaddress"
+  + "?where=1%3D1&outFields=OBJECTID,caseNumber,offense,description,reportedDateTime,centerLat,centerLong,neighborhood,publicaddress"
   + "&orderByFields=reportedDateTime+DESC&resultRecordCount=500&f=json";
 
 /** Esri's query API rejects a bare epoch-ms comparison against a Date field (400); it wants this literal form. */
-const stPaulUrl = (sinceMs: number) => {
+const timestampWhere = (field: string, sinceMs: number) => {
   const stamp = new Date(sinceMs).toISOString().slice(0, 19).replace("T", " ");
-  const where = encodeURIComponent(`DATE >= TIMESTAMP '${stamp}'`);
-  return "https://services1.arcgis.com/9meaaHE3uiba0zr8/arcgis/rest/services/Crime_Incident_Report_-_Dataset/FeatureServer/0/query"
-    + `?where=${where}&outFields=CASE_NUMBER,INCIDENT_TYPE,INCIDENT,DATE,NEIGHBORHOOD_NUMBER,NEIGHBORHOOD_NAME,BLOCK`
-    + "&orderByFields=DATE+DESC&resultRecordCount=1000&f=json";
+  return encodeURIComponent(`${field} >= TIMESTAMP '${stamp}'`);
 };
+
+const stPaulUrl = (sinceMs: number) =>
+  "https://services1.arcgis.com/9meaaHE3uiba0zr8/arcgis/rest/services/Crime_Incident_Report_-_Dataset/FeatureServer/0/query"
+    + `?where=${timestampWhere("DATE", sinceMs)}&outFields=ObjectId,CASE_NUMBER,INCIDENT_TYPE,INCIDENT,DATE,NEIGHBORHOOD_NUMBER,NEIGHBORHOOD_NAME,BLOCK`
+    + "&orderByFields=DATE+DESC&resultRecordCount=1000&f=json";
+
+const duluthUrl = (sinceMs: number) =>
+  "https://services.arcgis.com/DgKyOSWnVuXUe0Jp/arcgis/rest/services/Mapped_Crimes_view/FeatureServer/0/query"
+    + `?where=${timestampWhere("Reported_DateTime", sinceMs)}&outFields=OBJECTID,Case_Number,Crime_Description,Reported_DateTime,Latitude,Longitude,BlockAddress`
+    + "&orderByFields=Reported_DateTime+DESC&resultRecordCount=1000&f=json";
 
 interface MplsFeature {
   attributes: {
-    caseNumber?: string; offense?: string; description?: string; reportedDateTime?: number;
+    OBJECTID?: number; caseNumber?: string; offense?: string; description?: string; reportedDateTime?: number;
     centerLat?: number; centerLong?: number; neighborhood?: string; publicaddress?: string;
   };
 }
 interface StPaulFeature {
   attributes: {
-    CASE_NUMBER?: number | string; INCIDENT_TYPE?: string; INCIDENT?: string; DATE?: number;
+    ObjectId?: number; CASE_NUMBER?: number | string; INCIDENT_TYPE?: string; INCIDENT?: string; DATE?: number;
     NEIGHBORHOOD_NUMBER?: number; NEIGHBORHOOD_NAME?: string; BLOCK?: string;
   };
 }
+interface DuluthFeature {
+  attributes: {
+    OBJECTID?: number; Case_Number?: string; Crime_Description?: string; Reported_DateTime?: number;
+    Latitude?: number; Longitude?: number; BlockAddress?: string;
+  };
+}
+
+// A case number alone isn't a unique id: one case can carry several offense
+// rows (one per charge), so every id below also carries the row's own
+// OBJECTID -- otherwise two different offenses on the same case would
+// collide and hovering one could show the other's details.
 
 export function mplsIncidents(features: MplsFeature[]): CrimeIncident[] {
   const out: CrimeIncident[] = [];
   for (const { attributes: a } of features) {
-    if (!a.caseNumber || a.reportedDateTime == null || a.centerLat == null || a.centerLong == null) continue;
+    if (a.OBJECTID == null || !a.caseNumber || a.reportedDateTime == null || a.centerLat == null || a.centerLong == null) continue;
     out.push({
-      id: `mpls-${a.caseNumber}`,
+      id: `mpls-${a.caseNumber}-${a.OBJECTID}`,
       city: "Minneapolis",
       category: a.description || a.offense || "Incident",
       reportedAt: Math.floor(a.reportedDateTime / 1000),
@@ -86,9 +109,9 @@ export function mplsIncidents(features: MplsFeature[]): CrimeIncident[] {
 export function stPaulIncidents(features: StPaulFeature[]): CrimeIncident[] {
   const out: CrimeIncident[] = [];
   for (const { attributes: a } of features) {
-    if (!a.CASE_NUMBER || a.DATE == null || a.NEIGHBORHOOD_NUMBER == null) continue;
+    if (a.ObjectId == null || !a.CASE_NUMBER || a.DATE == null || a.NEIGHBORHOOD_NUMBER == null) continue;
     out.push({
-      id: `stp-${a.CASE_NUMBER}`,
+      id: `stp-${a.CASE_NUMBER}-${a.ObjectId}`,
       city: "Saint Paul",
       category: a.INCIDENT_TYPE || a.INCIDENT || "Incident",
       reportedAt: Math.floor(a.DATE / 1000),
@@ -96,6 +119,22 @@ export function stPaulIncidents(features: StPaulFeature[]): CrimeIncident[] {
       neighborhood: a.NEIGHBORHOOD_NAME?.replace(/^\d+\s*-\s*/, "") || undefined,
       block: a.BLOCK || undefined,
       stpaulDistrict: a.NEIGHBORHOOD_NUMBER,
+    });
+  }
+  return out;
+}
+
+export function duluthIncidents(features: DuluthFeature[]): CrimeIncident[] {
+  const out: CrimeIncident[] = [];
+  for (const { attributes: a } of features) {
+    if (a.OBJECTID == null || !a.Case_Number || a.Reported_DateTime == null || a.Latitude == null || a.Longitude == null) continue;
+    out.push({
+      id: `duluth-${a.Case_Number}-${a.OBJECTID}`,
+      city: "Duluth",
+      category: a.Crime_Description || "Incident",
+      reportedAt: Math.floor(a.Reported_DateTime / 1000),
+      block: a.BlockAddress || undefined,
+      position: [a.Longitude, a.Latitude],
     });
   }
   return out;
@@ -111,20 +150,22 @@ async function fetchJson(url: string): Promise<unknown> {
 }
 
 export const onRequestGet = async (): Promise<Response> => {
-  const since = Date.now() - LOOKBACK_DAYS * 86_400_000;
-  const [mpls, stp] = await Promise.allSettled([
+  const now = Date.now();
+  const [mpls, stp, duluth] = await Promise.allSettled([
     fetchJson(MPLS_URL) as Promise<{ features?: MplsFeature[] }>,
-    fetchJson(stPaulUrl(since)) as Promise<{ features?: StPaulFeature[] }>,
+    fetchJson(stPaulUrl(now - LOOKBACK_DAYS["Saint Paul"] * 86_400_000)) as Promise<{ features?: StPaulFeature[] }>,
+    fetchJson(duluthUrl(now - LOOKBACK_DAYS.Duluth * 86_400_000)) as Promise<{ features?: DuluthFeature[] }>,
   ]);
 
   const incidents: CrimeIncident[] = [];
   if (mpls.status === "fulfilled") incidents.push(...mplsIncidents(mpls.value.features ?? []));
   if (stp.status === "fulfilled") incidents.push(...stPaulIncidents(stp.value.features ?? []));
+  if (duluth.status === "fulfilled") incidents.push(...duluthIncidents(duluth.value.features ?? []));
 
-  if (mpls.status === "rejected" && stp.status === "rejected") {
-    return json({ error: "Both cities' crime feeds are unreachable." }, 502);
+  if (mpls.status === "rejected" && stp.status === "rejected" && duluth.status === "rejected") {
+    return json({ error: "Every city's crime feed is unreachable." }, 502);
   }
-  return json({ t: Math.floor(Date.now() / 1000), incidents }, 200, `public, max-age=${TTL_S}`);
+  return json({ t: Math.floor(now / 1000), incidents }, 200, `public, max-age=${TTL_S}`);
 };
 
 function json(body: unknown, status: number, cache = "no-store"): Response {
