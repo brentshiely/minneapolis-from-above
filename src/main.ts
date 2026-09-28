@@ -62,6 +62,7 @@ import { previewWildlife } from "./wildlife/sightings.ts";
 import type { WildlifeResponse } from "../functions/api/wildlife.ts";
 import { fallColorPhrase, FallColorHaze, previewFallColor } from "./seasons/fallcolor.ts";
 import type { FallColorResponse } from "../functions/api/fallcolor.ts";
+import { TogglePanel } from "./togglepanel.ts";
 import type { WarningsResponse } from "../functions/api/warnings.ts";
 import { FALLS_GAUGE_LID, flowLevel } from "./water/falls.ts";
 import type { Gauge } from "./water/gauges.ts";
@@ -108,6 +109,9 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const fleet = new Fleet(transit);
   const trails = new Trails<Vehicle>();
   const anchor = labelsAnchor();
+  // Which data layers the viewer wants to see; collapsed button, sticks
+  // across visits.
+  const layersPanel = new TogglePanel(document.body);
   // Real aerial photography, up close and by day: sits above the drawn
   // land/water/building fills but below roads, rail and labels, so those
   // stay legible on top of the photo.
@@ -436,24 +440,23 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
-        ...warningLayers(warningsFrame, anchor),
-        ...gamesLayers(gamesFrame),
-        ...(freeways ? [trafficLayer(freeways, tf, anchor)] : []),
-        ...incidentsLayers(incidentsFrame, anchor),
-        ...beachesLayers(beachesFrame, anchor),
-        ...airportLayers(airportFrame),
-        ...wildlifeLayers(wildlifeFrame),
-        ...cameraLayers(cameras, anchor),
-        ...routes,
-        ...alertLayers,
-        ...snowLayers(snowFrame, anchor),
-        ...(still ? [] : trailLayers(transit, f)),
-        ...vehicleLayers(transit, f),
-        ...riverLayers(rf),
-        ...fallsLayers(fallsFrame),
-        ...aircraftLayers(a),
+        ...(layersPanel.shown("warnings") ? warningLayers(warningsFrame, anchor) : []),
+        ...(layersPanel.shown("games") ? gamesLayers(gamesFrame) : []),
+        ...(layersPanel.shown("traffic") && freeways ? [trafficLayer(freeways, tf, anchor)] : []),
+        ...(layersPanel.shown("incidents") ? incidentsLayers(incidentsFrame, anchor) : []),
+        ...(layersPanel.shown("beaches") ? beachesLayers(beachesFrame, anchor) : []),
+        ...(layersPanel.shown("airport") ? airportLayers(airportFrame) : []),
+        ...(layersPanel.shown("wildlife") ? wildlifeLayers(wildlifeFrame) : []),
+        ...(layersPanel.shown("cameras") ? cameraLayers(cameras, anchor) : []),
+        ...(layersPanel.shown("transit") ? [...routes, ...alertLayers] : []),
+        ...(layersPanel.shown("snow") ? snowLayers(snowFrame, anchor) : []),
+        ...(layersPanel.shown("transit") && !still ? trailLayers(transit, f) : []),
+        ...(layersPanel.shown("transit") ? vehicleLayers(transit, f) : []),
+        ...(layersPanel.shown("river") ? riverLayers(rf) : []),
+        ...(layersPanel.shown("river") ? fallsLayers(fallsFrame) : []),
+        ...(layersPanel.shown("planes") ? aircraftLayers(a) : []),
         // Satellites fly highest of all.
-        ...satelliteLayers(sf),
+        ...(layersPanel.shown("satellites") ? satelliteLayers(sf) : []),
         ...pickLayers(fleet.list().filter((v) => v.alpha > 0.3), a.planes, f.version, sf.sats),
         ...hover.frame(now, f.version),
       ],
@@ -496,6 +499,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     airport: { frame: airportFrame, feed: airportFeed },
     wildlife: { frame: wildlifeFrame, feed: wildlifeFeed },
     fallColor: { body: () => fallColorBody, feed: fallColorFeed },
+    layersPanel,
     aurora: { strength: () => auroraKp, feed: auroraFeed },
     imagery: { opacity: () => map.getPaintProperty(IMAGERY_LAYER_ID, "raster-opacity") as number },
   };
