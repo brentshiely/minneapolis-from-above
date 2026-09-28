@@ -342,7 +342,7 @@ export class Hover {
         ageS: this.fleet.feedTime - v.fixTime,
       });
       position = v.position;
-      layers = vehicleHighlight(this.transit, v, version, this.daylight());
+      layers = vehicleHighlight(this.transit, v, shape, version, this.daylight());
     } else if (this.target.kind === "satellite") {
       const id = this.target.id;
       const sat = this.sats().find((x) => x.id === id);

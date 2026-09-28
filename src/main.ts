@@ -6,7 +6,7 @@ import { addRadarLayer, refreshRadarTile } from "./weather/radar.ts";
 import { skyAt, skyClock } from "./sky.ts";
 import { mixColor } from "./color.ts";
 import { loadTransit } from "./transit/data.ts";
-import { alertRouteLayers, routeLayers } from "./layers/routes.ts";
+import { alertRouteLayers } from "./layers/routes.ts";
 import { AlertsWatch, previewAlert, startAlertsFeed } from "./transit/alerts.ts";
 import { trailLayers, vehicleLayers, type VehicleFrame } from "./layers/vehicles.ts";
 import { Fleet, type Vehicle } from "./live/fleet.ts";
@@ -133,10 +133,8 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // greenline-detour) previews one.
   const alertsPreview = previewAlert(new URLSearchParams(location.search).get("alert") ?? "");
   const alerts = new AlertsWatch(document.getElementById("alerts")!, transit.routes);
-  let routes = routeLayers(transit, sky.daylight, anchor, alerts.affected);
   let alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
   alerts.onChange = () => {
-    routes = routeLayers(transit, sky.daylight, anchor, alerts.affected);
     alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
   };
   if (alertsPreview) alerts.update(alertsPreview);
@@ -241,7 +239,6 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     haze.setDaylight(sky.daylight);
     aurora.setDaylight(sky.daylight);
     setImageryOpacity(map, sky.daylight, map.getZoom());
-    routes = routeLayers(transit, sky.daylight, anchor, alerts.affected);
     alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
     markSky(sky.daylight);
   };
@@ -458,7 +455,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(layersPanel.shown("airport") ? airportLayers(airportFrame) : []),
         ...(layersPanel.shown("wildlife") ? wildlifeLayers(wildlifeFrame) : []),
         ...(layersPanel.shown("cameras") ? cameraLayers(cameras, anchor) : []),
-        ...(layersPanel.shown("transit") ? [...routes, ...alertLayers] : []),
+        ...(layersPanel.shown("transit") ? alertLayers : []),
         ...(layersPanel.shown("snow") ? snowLayers(snowFrame, anchor) : []),
         ...(layersPanel.shown("transit") && !still ? trailLayers(transit, f) : []),
         ...(layersPanel.shown("transit") ? vehicleLayers(transit, f) : []),

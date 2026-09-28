@@ -1,10 +1,10 @@
 import { IconLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Vehicle } from "../live/fleet.ts";
 import type { Plane } from "../live/aircraft.ts";
-import type { Transit } from "../transit/data.ts";
+import type { Mode, RouteInfo, Shape, Transit } from "../transit/data.ts";
 import type { Gauge } from "../water/gauges.ts";
 import type { Sat } from "../sky/satellites.ts";
-import { planeColor, vehicleColor } from "../palette.ts";
+import { ROUTE_STYLE, planeColor, routeColor, vehicleColor } from "../palette.ts";
 import { mixRgb } from "../color.ts";
 import { BUS_ICON, TRAIN_ICON } from "../icons.ts";
 
@@ -75,13 +75,33 @@ export function pickLayers(vehicles: Vehicle[], planes: Plane[], version: number
   ];
 }
 
-/** The hovered vehicle, drawn as a bus or train icon on a dark disc. */
-export function vehicleHighlight(transit: Transit, v: Vehicle, version: number, d = 0) {
+/** The route isn't shown by default; hovering a vehicle traces the one it's on. */
+function routeHighlight(shape: Shape, mode: Mode, route: RouteInfo | undefined, d: number) {
+  const style = ROUTE_STYLE[mode];
+  return new PathLayer<Shape>({
+    id: "hover-route",
+    data: [shape],
+    getPath: (s) => s.path,
+    getColor: [...routeColor(route, d), 235],
+    getWidth: style.widthM,
+    widthUnits: "meters",
+    widthMinPixels: style.minPx + 0.6,
+    widthMaxPixels: style.maxPx + 1,
+    jointRounded: true,
+    capRounded: true,
+    parameters: { depthCompare: "always" },
+    updateTriggers: { getColor: d },
+  });
+}
+
+/** The hovered vehicle, drawn as a bus or train icon on a dark disc, with the route it's on traced beneath it. */
+export function vehicleHighlight(transit: Transit, v: Vehicle, shape: Shape | undefined, version: number, d = 0) {
   const color = vehicleColor(transit.routes[v.routeId], d);
   // A dark disc at night, a white one by day.
   const disc = mixRgb([7, 11, 16], [255, 255, 255], d);
   const data = [v];
   return [
+    ...(shape ? [routeHighlight(shape, transit.routes[v.routeId]?.mode ?? "bus", transit.routes[v.routeId], d)] : []),
     new ScatterplotLayer<Vehicle>({
       id: "hover-disc",
       data,
