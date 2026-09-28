@@ -31,6 +31,11 @@ import { describeSighting, type Sighting } from "./wildlife/sightings.ts";
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
 
+/** The layers whose picked objects can sit almost on top of one another (a plane on approach over a bus). */
+const MOVING_LAYER_IDS = ["pick-vehicles", "pick-planes"];
+/** How far around the cursor to look for the real closest one, in screen pixels. */
+const MOVING_PICK_RADIUS_PX = 8;
+
 type Target =
   | { kind: "vehicle"; id: string }
   | { kind: "plane"; id: string }
@@ -153,6 +158,7 @@ export class Hover {
   private cameras = new Map<string, CameraInfo>();
   setCameras(cameras: CameraInfo[]) { this.cameras = new Map(cameras.map((c) => [c.name, c])); }
   private map: MapLibreMap;
+  private overlay: MapboxOverlay;
   private fleet: Fleet;
   private air: AirFleet;
   private transit: Transit;
@@ -160,7 +166,7 @@ export class Hover {
   private daylight: () => number;
 
   constructor(map: MapLibreMap, overlay: MapboxOverlay, fleet: Fleet, air: AirFleet, transit: Transit, daylight: () => number = () => 0) {
-    this.map = map; this.fleet = fleet; this.air = air; this.transit = transit; this.daylight = daylight;
+    this.map = map; this.overlay = overlay; this.fleet = fleet; this.air = air; this.transit = transit; this.daylight = daylight;
     this.tip = document.getElementById("tip")!;
     overlay.setProps({
       onHover: (info: PickingInfo) => { if (!this.pinned) this.pick(info); },
@@ -193,11 +199,41 @@ export class Hover {
     map.getCanvas().addEventListener("mouseleave", () => { if (!this.pinned) this.clear(); });
   }
 
+  /**
+   * Planes fly low right over the freeways and streets they're landing
+   * near, so a plane's marker and a bus's can land within a pixel of each
+   * other on screen. Exact-pixel picking then just returns whichever was
+   * drawn last, which can flicker between the two as they drift past one
+   * another. Re-resolve by the real, currently closer marker instead.
+   */
+  private nearestMovingTarget(info: PickingInfo): { kind: "vehicle"; id: string } | { kind: "plane"; id: string } | null {
+    if (info.x === undefined || info.y === undefined) return null;
+    const candidates = this.overlay.pickMultipleObjects({
+      x: info.x, y: info.y, radius: MOVING_PICK_RADIUS_PX, layerIds: MOVING_LAYER_IDS,
+    });
+    let best: ({ kind: "vehicle"; id: string } | { kind: "plane"; id: string }) & { d: number } | null = null;
+    for (const c of candidates) {
+      if (!c.object) continue;
+      const isPlane = c.layer?.id === "pick-planes";
+      const pos = (isPlane ? (c.object as Plane).position : (c.object as Vehicle).position) as [number, number];
+      const screen = this.map.project(pos);
+      const d = Math.hypot(screen.x - info.x, screen.y - info.y);
+      if (!best || d < best.d) {
+        best = isPlane
+          ? { kind: "plane", id: (c.object as Plane).id, d }
+          : { kind: "vehicle", id: (c.object as Vehicle).id, d };
+      }
+    }
+    return best;
+  }
+
   private pick(info: PickingInfo) {
     const obj = info.object as (Vehicle | Plane | undefined);
     let next: Target | null = null;
-    if (obj && info.layer?.id === "pick-vehicles") next = { kind: "vehicle", id: (obj as Vehicle).id };
-    else if (obj && info.layer?.id === "pick-planes") next = { kind: "plane", id: (obj as Plane).id };
+    if (obj && (info.layer?.id === "pick-vehicles" || info.layer?.id === "pick-planes")) {
+      next = this.nearestMovingTarget(info)
+        ?? (info.layer!.id === "pick-vehicles" ? { kind: "vehicle", id: (obj as Vehicle).id } : { kind: "plane", id: (obj as Plane).id });
+    }
     else if (obj && (info.layer?.id === "pick-sats" || info.layer?.id === "pick-sat-tracks")) next = { kind: "satellite", id: (obj as unknown as Sat).id };
     else if (obj && info.layer?.id === "pick-boats") next = { kind: "boat", key: (obj as unknown as Boat).key };
     else if (obj && info.layer?.id === "pick-locks") next = { kind: "lock", no: (obj as unknown as Lock).no };
