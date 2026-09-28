@@ -25,6 +25,8 @@ import { learnedLakes } from "./water/match.ts";
 import { loadFreeways, type Freeways } from "./traffic/freeways.ts";
 import type { TrafficResponse } from "./traffic/traffic.ts";
 import { trafficLayer, type TrafficFrame } from "./layers/traffic.ts";
+import { CarFlow } from "./traffic/cars.ts";
+import { carsLayer } from "./layers/cars.ts";
 import type { CameraInfo, CamerasFile } from "./traffic/cameras.ts";
 import { cameraLayers } from "./layers/cameras.ts";
 import { Satellites } from "./sky/satellites.ts";
@@ -247,7 +249,13 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Freeway speeds from MnDOT's road sensors, every 30 seconds.
   let freeways: Freeways | undefined;
   const tf: TrafficFrame = { readings: {}, version: 0, daylight: sky.daylight };
-  loadFreeways().then((fw) => { freeways = fw; hover.setFreeways(fw, () => tf.readings, () => trafficAge); }).catch((e) => console.warn(e));
+  // Sparse synthetic dots standing in for real traffic, paced from the same readings.
+  let cars: CarFlow | undefined;
+  loadFreeways().then((fw) => {
+    freeways = fw;
+    cars = new CarFlow(fw);
+    hover.setFreeways(fw, () => tf.readings, () => trafficAge);
+  }).catch((e) => console.warn(e));
   let trafficAge = 0;
   const trafficFeed = startPoller<TrafficResponse>("/api/traffic", 30_000, (body) => {
     tf.readings = body.s;
@@ -413,6 +421,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     aurora.frame(map.getBearing());
     air.advance(dt, now);
     if (!still) {
+      cars?.advance(dt, tf.readings);
       trails.record(fleet.vehicles, now);
       airTrails.record(air.planes, now);
       if (now - lastTrailBuild >= TRAIL_REBUILD_S) {
@@ -443,6 +452,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(layersPanel.shown("warnings") ? warningLayers(warningsFrame, anchor) : []),
         ...(layersPanel.shown("games") ? gamesLayers(gamesFrame) : []),
         ...(layersPanel.shown("traffic") && freeways ? [trafficLayer(freeways, tf, anchor)] : []),
+        ...(layersPanel.shown("traffic") && cars && !still ? carsLayer(cars.list(), tf.daylight, f.version) : []),
         ...(layersPanel.shown("incidents") ? incidentsLayers(incidentsFrame, anchor) : []),
         ...(layersPanel.shown("beaches") ? beachesLayers(beachesFrame, anchor) : []),
         ...(layersPanel.shown("airport") ? airportLayers(airportFrame) : []),
