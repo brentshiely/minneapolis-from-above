@@ -13,7 +13,15 @@ export const METRO_CENTER: [number, number] = [-93.18, 44.96];
 export const CORE_BOUNDS: [[number, number], [number, number]] = [[-93.38, 44.86], [-93.03, 45.02]];
 /** Sharper than 2x costs a phone a lot of GPU for detail nobody can see. */
 export const MAX_PIXEL_RATIO = 2;
-export const METRO_BOUNDS: [[number, number], [number, number]] = [[-94.15, 44.55], [-92.55, 45.35]];
+/**
+ * How far the map can pan and zoom out: a box roughly 300 miles from
+ * downtown Minneapolis in every direction (St. Cloud, Rochester and
+ * Duluth all sit well inside it; Chicago and Winnipeg don't). The data
+ * layers stay metro-scoped, so panning out here just shows more of the
+ * quiet base map -- widening this is a separate step from bringing any
+ * layer's coverage along with it.
+ */
+export const PAN_BOUNDS: [[number, number], [number, number]] = [[-99.31, 40.62], [-87.05, 49.30]];
 
 const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 
@@ -95,9 +103,10 @@ export function createBaseMap(container: HTMLElement, initialDaylight = 0): Map 
     bounds: CORE_BOUNDS,
     fitBoundsOptions: { padding: 24, maxZoom: 10.3 },
     pixelRatio: Math.min(devicePixelRatio || 1, MAX_PIXEL_RATIO),
-    minZoom: 8.5,
+    // Low enough to fit the whole 300-mile pan area even on a tall phone.
+    minZoom: 4,
     maxZoom: 18.5,
-    maxBounds: METRO_BOUNDS,
+    maxBounds: PAN_BOUNDS,
     maxPitch: 60,
     attributionControl: { compact: true },
     fadeDuration: 0,
