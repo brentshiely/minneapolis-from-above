@@ -90,8 +90,39 @@ export function parseTransit(file: TransitFile): Transit {
   };
 }
 
-export async function loadTransit(url = "/data/transit.json"): Promise<Transit> {
+/**
+ * Combines a second agency's baked file into the first's -- every route,
+ * shape and trip id in `b` must already be namespaced (e.g. "dta-...") so
+ * nothing can collide with `a`'s own. `b`'s trip -> shape indices are
+ * offset to point into the combined shapes array.
+ */
+export function mergeTransitFiles(a: TransitFile, b: TransitFile): TransitFile {
+  const offset = a.shapes.length;
+  const trips: Record<string, number> = { ...a.trips };
+  for (const [tripId, idx] of Object.entries(b.trips)) trips[tripId] = idx + offset;
+  return {
+    generated: a.generated,
+    feed: a.feed,
+    routes: { ...a.routes, ...b.routes },
+    shapes: [...a.shapes, ...b.shapes],
+    trips,
+  };
+}
+
+/** A second agency's route file is optional: the map still works, just without those routes, if it can't be loaded. */
+async function tryLoadTransitFile(url: string): Promise<TransitFile | undefined> {
+  try {
+    const res = await fetch(url);
+    return res.ok ? await res.json() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function loadTransit(url = "/data/transit.json", extraUrl = "/data/dta-transit.json"): Promise<Transit> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Couldn't load route data (${res.status}). Run: node scripts/build-gtfs.mjs`);
-  return parseTransit(await res.json());
+  const primary: TransitFile = await res.json();
+  const extra = await tryLoadTransitFile(extraUrl);
+  return parseTransit(extra ? mergeTransitFiles(primary, extra) : primary);
 }

@@ -10,6 +10,7 @@
     "preview": "wrangler pages dev dist",
     "deploy": "node scripts/build-satellites.mjs && node scripts/build-debris.mjs && npm run build && wrangler pages deploy dist",
     "build:data": "node scripts/build-gtfs.mjs",
+    "build:dta-gtfs": "node scripts/build-dta-gtfs.mjs",
     "perf": "node scripts/perf.mjs",
     "shot": "node scripts/shot.mjs",
     "e2e": "node scripts/e2e.mjs",

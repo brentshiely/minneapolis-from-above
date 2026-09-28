@@ -81,3 +81,8 @@ export function startPoller<T extends { t: number }>(
 export function startFeed(onSnapshot: (feedTime: number, rows: VehicleRow[]) => void): Poller {
   return startPoller<VehiclesResponse>("/api/vehicles", POLL_MS, (b) => onSnapshot(b.t, b.v));
 }
+
+/** Duluth Transit Authority buses: the same feed shape, polled the same way, merged into the same Fleet. */
+export function startDtaFeed(onSnapshot: (feedTime: number, rows: VehicleRow[]) => void): Poller {
+  return startPoller<VehiclesResponse>("/api/dta-vehicles", POLL_MS, (b) => onSnapshot(b.t, b.v));
+}

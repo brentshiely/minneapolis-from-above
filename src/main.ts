@@ -11,7 +11,7 @@ import { AlertsWatch, previewAlert, startAlertsFeed } from "./transit/alerts.ts"
 import { trailLayers, vehicleLayers, type VehicleFrame } from "./layers/vehicles.ts";
 import { Fleet, type Vehicle } from "./live/fleet.ts";
 import type { Plane } from "./live/aircraft.ts";
-import { startFeed, startPoller } from "./live/feed.ts";
+import { startDtaFeed, startFeed, startPoller } from "./live/feed.ts";
 import { AirFleet } from "./live/aircraft.ts";
 import { aircraftLayers, type AircraftFrame } from "./layers/aircraft.ts";
 import type { AircraftResponse } from "../functions/api/aircraft.ts";
@@ -500,6 +500,11 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     fleet.update(feedTime, rows, performance.now() / 1000);
     fleet.prune(feedTime);
   });
+  // Duluth's own buses, merged into the same Fleet as Metro Transit's.
+  const dtaFeed = startDtaFeed((feedTime, rows) => {
+    fleet.update(feedTime, rows, performance.now() / 1000);
+    fleet.prune(feedTime);
+  });
 
   // Aircraft feeds can refuse the live site's servers entirely; back off
   // to one check every 5 minutes rather than asking every 5 seconds.
@@ -512,13 +517,13 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed, fallColorFeed, crimeFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, dtaFeed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed, fallColorFeed, crimeFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000)), airportPhrase(airportFrame.status), fallColorPhrase(fallColorBody)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
   (window as unknown as { fromAbove: unknown }).fromAbove = {
-    map, overlay, transit, fleet, feed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
+    map, overlay, transit, fleet, feed, dtaFeed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
     freeways: () => freeways, cameras: () => cameras, sats, sky: () => sky, moon, planets, snow,
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },
