@@ -42,7 +42,9 @@ export function startPoller<T extends { t: number }>(
     clearTimeout(timer);
     const wait = backoff && status.failures > 1
       ? Math.min(backoff.maxMs, intervalMs * 2 ** (status.failures - 1))
-      : intervalMs;
+      // Up to 15% early, so visitors who opened together drift apart
+      // instead of all hitting the server on the same beat.
+      : intervalMs * (0.85 + Math.random() * 0.15);
     if (!status.paused) timer = setTimeout(tick, wait);
   }
 

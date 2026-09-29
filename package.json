@@ -12,6 +12,7 @@
     "build:data": "node scripts/build-gtfs.mjs",
     "build:dta-gtfs": "node scripts/build-dta-gtfs.mjs",
     "perf": "node scripts/perf.mjs",
+    "profile": "node scripts/profile.mjs",
     "shot": "node scripts/shot.mjs",
     "e2e": "node scripts/e2e.mjs",
     "build:freeways": "node scripts/build-mndot.mjs",

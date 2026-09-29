@@ -17,6 +17,7 @@ import { aircraftLayers, type AircraftFrame } from "./layers/aircraft.ts";
 import type { AircraftResponse } from "../functions/api/aircraft.ts";
 import { Trails } from "./live/trails.ts";
 import { startStatus } from "./status.ts";
+import { FrameGovernor } from "./perf/governor.ts";
 import { Hover } from "./hover.ts";
 import { pickLayers } from "./layers/hover.ts";
 import { Drift, IDLE_S, LANDMARKS, type Scene } from "./drift.ts";
@@ -224,6 +225,9 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     lastPointer = p;
   }, { passive: true });
   for (const type of ["pointerdown", "wheel", "keydown", "touchstart"]) addEventListener(type, wake, { passive: true });
+  // While someone is using the map it runs at full rate; idle, at half.
+  const governor = new FrameGovernor();
+  for (const type of ["pointerdown", "pointermove", "wheel", "keydown", "touchstart", "touchmove"]) addEventListener(type, () => governor.poke(performance.now()), { passive: true });
 
   // Follow the sun: check once a second and repaint when daylight shifts.
   // Dawn and dusk each take about an hour, so steps of 0.01 are invisible.
@@ -424,6 +428,9 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Each frame glides every vehicle along its route and redraws.
   let last = performance.now();
   const frame = (nowMs: number) => {
+    requestAnimationFrame(frame);
+    if (!governor.shouldRun(nowMs)) return;
+    governor.ran(nowMs);
     // Clamp so a long pause (backgrounded tab) doesn't lurch everything at once.
     const dt = Math.min(0.25, (nowMs - last) / 1000);
     last = nowMs;
@@ -492,7 +499,6 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...hover.frame(now, f.version),
       ],
     });
-    requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
 
@@ -523,7 +529,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000)), airportPhrase(airportFrame.status), fallColorPhrase(fallColorBody)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
 
   (window as unknown as { fromAbove: unknown }).fromAbove = {
-    map, overlay, transit, fleet, feed, dtaFeed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
+    map, overlay, governor, transit, fleet, feed, dtaFeed, trails, air, airFeed, hover, drift, fx, haze, learnedLakes, tf,
     freeways: () => freeways, cameras: () => cameras, sats, sky: () => sky, moon, planets, snow,
     river: { rf, passages: () => passages, setPassages: (p: Passage[]) => { passages = p; placeBoats(); } },
     falls: { frame: fallsFrame, gauge: () => fallsGauge, setGauge: (g: Gauge) => { fallsGauge = g; fallsFrame.level = g.flowKcfs !== null ? flowLevel(g.flowKcfs * 1000) : "dry"; } },

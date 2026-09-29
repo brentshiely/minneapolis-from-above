@@ -35,5 +35,22 @@ export default defineConfig({
   server: { watch: { ignored: ["**/.claude/**", "**/.cache/**"] } },
   // The satellite worker (and satellite.js inside it) needs ES module output.
   worker: { format: "es" },
-  build: { target: "es2022", chunkSizeWarningLimit: 2000 },
+  build: {
+    target: "es2022",
+    chunkSizeWarningLimit: 2000,
+    rolldownOptions: {
+      output: {
+        // Libraries change far less often than the app: split them out so a
+        // deploy only invalidates the app chunk, and the browser downloads
+        // the three in parallel.
+        advancedChunks: {
+          groups: [
+            { name: "maplibre", test: /node_modules[\\/]maplibre-gl/ },
+            { name: "deckgl", test: /node_modules[\\/](@deck\.gl|@luma\.gl|@math\.gl|@loaders\.gl|@probe\.gl|mjolnir\.js)/ },
+            { name: "satellite", test: /node_modules[\\/]satellite\.js/ },
+          ],
+        },
+      },
+    },
+  },
 });
