@@ -11,7 +11,7 @@ import { AlertsWatch, previewAlert, startAlertsFeed } from "./transit/alerts.ts"
 import { trailLayers, vehicleLayers, type VehicleFrame } from "./layers/vehicles.ts";
 import { Fleet, type Vehicle } from "./live/fleet.ts";
 import type { Plane } from "./live/aircraft.ts";
-import { startDtaFeed, startFeed, startPoller } from "./live/feed.ts";
+import { isDown, startDtaFeed, startFeed, startPoller } from "./live/feed.ts";
 import { AirFleet } from "./live/aircraft.ts";
 import { aircraftLayers, type AircraftFrame } from "./layers/aircraft.ts";
 import type { AircraftResponse } from "../functions/api/aircraft.ts";
@@ -69,6 +69,8 @@ import type { CrimeResponse } from "../functions/api/crime.ts";
 import { fallColorPhrase, FallColorHaze, previewFallColor } from "./seasons/fallcolor.ts";
 import type { FallColorResponse } from "../functions/api/fallcolor.ts";
 import { TogglePanel } from "./togglepanel.ts";
+import type { LayerKey } from "./toggles.ts";
+import type { FeedStatus } from "./live/feed.ts";
 import type { WarningsResponse } from "../functions/api/warnings.ts";
 import { FALLS_GAUGE_LID, flowLevel } from "./water/falls.ts";
 import type { Gauge } from "./water/gauges.ts";
@@ -519,6 +521,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     air.update(body.a, now);
     air.prune(now);
   }, { maxMs: 5 * 60_000 });
+
+  // Flag layers whose live data is failing, in the layers panel.
+  const layerFeeds: [LayerKey, { status: FeedStatus } | undefined][] = [
+    ["transit", feed], ["planes", airFeed], ["traffic", trafficFeed], ["incidents", incidentsFeed], ["river", riverFeed],
+    ["warnings", warningsFeed], ["games", gamesFeed], ["beaches", beachesFeed], ["airport", airportFeed],
+    ["wildlife", wildlifeFeed], ["snow", snowFeed], ["crime", crimeFeed],
+  ];
+  setInterval(() => layersPanel.setFailing(new Set(layerFeeds.filter(([, f]) => isDown(f?.status)).map(([k]) => k))), 2000);
 
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {

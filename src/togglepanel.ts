@@ -11,6 +11,7 @@ export class TogglePanel {
   private button: HTMLButtonElement;
   private list: HTMLElement;
   private open = false;
+  private rows = new Map<LayerKey, HTMLElement>();
 
   constructor(parent: HTMLElement) {
     this.toggles = loadToggles();
@@ -44,7 +45,16 @@ export class TogglePanel {
       icon.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">${g.glyph}</svg>`;
       const text = document.createElement("span");
       text.textContent = g.label;
-      row.replaceChildren(box, icon, text);
+      // Shown only while the layer's live feed is failing.
+      const warn = document.createElement("span");
+      warn.className = "layers-warn";
+      warn.hidden = true;
+      warn.title = "Not updating right now. Retrying.";
+      warn.setAttribute("role", "img");
+      warn.setAttribute("aria-label", `${g.label}: not updating right now`);
+      warn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2 22 20H2z"/><rect x="10.7" y="9" width="2.6" height="5.6" rx="1.1" fill="#0d141c"/><circle cx="12" cy="17" r="1.3" fill="#0d141c"/></svg>`;
+      row.replaceChildren(box, icon, text, warn);
+      this.rows.set(g.key, row);
       this.list.appendChild(row);
     }
 
@@ -59,6 +69,15 @@ export class TogglePanel {
     this.open = next;
     this.list.hidden = !this.open;
     this.button.classList.toggle("open", this.open);
+  }
+
+  /**
+   * Marks which layers' live data is failing: a warning beside each, and a
+   * dot on the collapsed button so it's noticeable without opening the list.
+   */
+  setFailing(failing: ReadonlySet<LayerKey>) {
+    for (const [key, row] of this.rows) row.querySelector<HTMLElement>(".layers-warn")!.hidden = !failing.has(key);
+    this.button.classList.toggle("has-warning", [...failing].some((k) => this.toggles[k]));
   }
 
   /** Whether a given layer should currently draw. */

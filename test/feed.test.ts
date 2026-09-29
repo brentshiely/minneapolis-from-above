@@ -76,3 +76,11 @@ test("with back-off, a failing feed is asked less and less often", async (t) => 
   assert.equal(warnings, 1, "one warning per outage");
   feed.pause();
 });
+
+test("a feed counts as down after repeated failures, not one blip or a pause", async () => {
+  const { isDown } = await import("../src/live/feed.ts");
+  assert.equal(isDown(undefined), false);
+  assert.equal(isDown({ lastOk: 0, failures: 1, paused: false }), false);
+  assert.equal(isDown({ lastOk: 0, failures: 2, paused: false }), true);
+  assert.equal(isDown({ lastOk: 5, failures: 9, paused: true }), false);
+});

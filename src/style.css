@@ -281,3 +281,22 @@ html[data-sky="day"] .layers-row:hover { background: rgba(30, 40, 55, 0.08); }
   #alerts { top: calc(max(14px, env(safe-area-inset-top)) + 90px); bottom: auto; right: 16px; font-size: 12px; }
   #tip { font-size: 12.5px; }
 }
+
+/* A layer whose live data is failing: an amber triangle beside its row,
+   and a small dot on the collapsed button. */
+.layers-warn { display: inline-flex; flex: none; margin-left: auto; padding-left: 10px; color: #e6a23c; }
+.layers-warn[hidden] { display: none; }
+#layers-button { position: relative; }
+#layers-button.has-warning::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e6a23c;
+  border: 1.5px solid rgba(10, 15, 21, 0.9);
+}
+html[data-sky="day"] .layers-warn { color: #c47f14; }
+html[data-sky="day"] #layers-button.has-warning::after { background: #c47f14; border-color: #fff; }

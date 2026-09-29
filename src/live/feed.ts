@@ -88,3 +88,11 @@ export function startFeed(onSnapshot: (feedTime: number, rows: VehicleRow[]) => 
 export function startDtaFeed(onSnapshot: (feedTime: number, rows: VehicleRow[]) => void): Poller {
   return startPoller<VehiclesResponse>("/api/dta-vehicles", POLL_MS, (b) => onSnapshot(b.t, b.v));
 }
+
+/** Consecutive failed fetches before a feed counts as down (one blip is normal). */
+export const DOWN_AFTER_FAILURES = 2;
+
+/** Whether a feed is currently failing: down, not merely paused or between polls. */
+export function isDown(status: FeedStatus | undefined): boolean {
+  return !!status && !status.paused && status.failures >= DOWN_AFTER_FAILURES;
+}
