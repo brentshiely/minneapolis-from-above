@@ -43,6 +43,52 @@ The map follows the real sun over Minneapolis. To preview another time of day, a
 
 `e2e`, `perf` and `shot` drive your installed Google Chrome (set `CHROME` to use another path) and expect `npm run dev` to be running.
 
+## License
+
+The code in this repository is released under the [MIT License](LICENSE). The data it displays belongs to the sources below and is used under their own terms; the license does not cover it.
+
+## Credits and data sources
+
+Everything on the map comes from someone else's work. Thank you to:
+
+**Base map and imagery**
+- [OpenFreeMap](https://openfreemap.org/) vector tiles, built from [OpenStreetMap](https://www.openstreetmap.org/copyright) data (© OpenStreetMap contributors, ODbL)
+- Aerial photography: [USGS National Agriculture Imagery Program](https://www.usgs.gov/centers/eros/science/usgs-eros-archive-aerial-photography-national-agriculture-imagery-program-naip), via The National Map
+- Weather radar: [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) (NEXRAD mosaic)
+
+**Transit and roads**
+- [Metro Transit](https://www.metrotransit.org/) GTFS and GTFS-realtime feeds
+- [Duluth Transit Authority](https://duluthtransit.com/) GTFS and GTFS-realtime feeds
+- [MnDOT](https://www.dot.state.mn.us/) freeway sensors and incidents (IRIS) and freeway cameras (via [CARS](https://public.carsprogram.org/))
+
+**Sky and space**
+- [CelesTrak](https://celestrak.org/) satellite orbits and catalog
+- [Union of Concerned Scientists Satellite Database](https://www.ucsusa.org/resources/satellite-database) for satellite operators and purposes
+- Aircraft positions from the community networks [adsb.lol](https://adsb.lol/) and [adsb.fi](https://adsb.fi/), and [The OpenSky Network](https://opensky-network.org/); flight routes from [adsbdb](https://www.adsbdb.com/)
+- [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov/) geomagnetic forecast
+
+**Weather and water**
+- [National Weather Service](https://www.weather.gov/) observations, watches and warnings, and the [National Water Prediction Service](https://water.noaa.gov/) river gauges
+- [Open-Meteo](https://open-meteo.com/) air quality
+- [U.S. Army Corps of Engineers](https://ndc.ops.usace.army.mil/) lock logs for river traffic
+- [Minnesota DNR](https://www.dnr.state.mn.us/) fall color report
+
+**City and civic data**
+- Recent crime: the City of Minneapolis, the City of Saint Paul and the City of Duluth open-data services
+- Snow emergencies: the cities of Minneapolis and Saint Paul
+- Beach status: Minneapolis Park Board
+- Airport status: [FAA National Airspace System Status](https://nasstatus.faa.gov/)
+- Live scores: MLB Stats API, NHL, and ESPN scoreboards
+
+**Wildlife**
+- Observations and photos from [iNaturalist](https://www.inaturalist.org/); each photo is shown only when its own license allows reuse, and remains the work of its observer
+
+**Libraries**
+- [MapLibre GL JS](https://maplibre.org/) (BSD-3-Clause), [deck.gl](https://deck.gl/) (MIT), [satellite.js](https://github.com/shashwatak/satellite-js) (MIT), and [Vite](https://vite.dev/) (MIT)
+- Hosted on [Cloudflare Pages](https://pages.cloudflare.com/)
+
+This is an independent hobby project. It is not affiliated with or endorsed by any of the organizations above.
+
 ## Backlog
 
 Work is tracked story by story in the backlog artifact, with one commit per completed story. A copy of the backlog page lives in `backlog/`.

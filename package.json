@@ -23,8 +23,8 @@
     "build:snow": "node scripts/build-snow.mjs",
     "build:stpaul-districts": "node scripts/build-stpaul-districts.mjs"
   },
-  "author": "",
-  "license": "UNLICENSED",
+  "author": "Brent Shiely",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "@deck.gl/core": "^9.4.0",
