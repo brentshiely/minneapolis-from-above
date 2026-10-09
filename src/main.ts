@@ -255,7 +255,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Freeway speeds from MnDOT's road sensors, every 30 seconds.
   let freeways: Freeways | undefined;
   const tf: TrafficFrame = { readings: {}, version: 0, daylight: sky.daylight };
-  // Sparse synthetic dots standing in for real traffic, paced from the same readings.
+  // Synthetic cars at the real volume (flow x lanes), moving at the real speed, from the same readings.
   let cars: CarFlow | undefined;
   loadFreeways().then((fw) => {
     freeways = fw;
@@ -481,7 +481,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(layersPanel.shown("warnings") ? warningLayers(warningsFrame, anchor) : []),
         ...(layersPanel.shown("games") ? gamesLayers(gamesFrame) : []),
         ...(layersPanel.shown("traffic") && freeways ? [trafficLayer(freeways, tf, anchor)] : []),
-        ...(layersPanel.shown("traffic") && cars && !still ? carsLayer(cars.list(), tf.daylight, f.version) : []),
+        ...(layersPanel.shown("traffic") && cars && !still ? carsLayer(cars, tf.daylight, map.getZoom()) : []),
         ...(layersPanel.shown("incidents") ? incidentsLayers(incidentsFrame, anchor) : []),
         ...(layersPanel.shown("beaches") ? beachesLayers(beachesFrame, anchor) : []),
         ...(layersPanel.shown("airport") ? airportLayers(airportFrame) : []),

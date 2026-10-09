@@ -112,7 +112,7 @@ function buildRun(route, dir, run) {
   const at = run.map((n, i) => ({ n, d: cum[i] })).filter(({ n }) => n.station_id);
   if (!at.length) return;
   for (const { n } of at) {
-    stations[n.station_id] = { label: unescape(n.label ?? ""), limit: Number(n.s_limit ?? 55) || 55, route, dir };
+    stations[n.station_id] = { label: unescape(n.label ?? ""), limit: Number(n.s_limit ?? 55) || 55, lanes: Number(n.lanes ?? 0) || 0, route, dir };
   }
   // Each segment takes the station nearest its midpoint, if close enough.
   const seg = [];

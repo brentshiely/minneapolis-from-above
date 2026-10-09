@@ -15,6 +15,8 @@ export interface TrafficResponse {
 export interface StationInfo {
   label: string;
   limit: number;
+  /** Mainline lanes in this direction; MnDOT's flow is per lane. 0 when unknown. */
+  lanes: number;
   route: string;
   dir: string;
 }
@@ -97,7 +99,7 @@ export function describeStation(info: StationInfo, reading: [number | null, numb
   if (speed === null) detail = "No speed reading right now.";
   else {
     detail = `${Math.round(speed)} mph, ${LEVEL_WORDS[level(speed, info.limit)]}. The limit is ${info.limit}.`;
-    if (flow !== null && flow > 0) detail += ` About ${(Math.round(flow / 60) * 60).toLocaleString("en-US")} vehicles an hour.`;
+    if (flow !== null && flow > 0) detail += ` About ${(Math.round((flow * (info.lanes || 1)) / 60) * 60).toLocaleString("en-US")} vehicles an hour.`;
   }
   return { title, detail, meta: `MnDOT sensor · updated ${ago(ageS)}` };
 }

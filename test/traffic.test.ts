@@ -49,14 +49,14 @@ test("route names in plain words", () => {
 });
 
 test("describes a stretch of freeway", () => {
-  const d = describeStation({ label: "Lyndale Ave", limit: 55, route: "I-94", dir: "EB" }, [23, 1380], 40);
+  const d = describeStation({ label: "Lyndale Ave", limit: 55, lanes: 3, route: "I-94", dir: "EB" }, [23, 460], 40);
   assert.equal(d.title, "I-94 eastbound at Lyndale Ave.");
   assert.equal(d.detail, "23 mph, heavy traffic. The limit is 55. About 1,380 vehicles an hour.");
   assert.equal(d.meta, "MnDOT sensor · updated 40 seconds ago");
-  const n = describeStation({ label: "N of Co Rd 70", limit: 70, route: "I-35", dir: "NB" }, [68, 420], 5);
+  const n = describeStation({ label: "N of Co Rd 70", limit: 70, lanes: 2, route: "I-35", dir: "NB" }, [68, 210], 5);
   assert.equal(n.title, "I-35 northbound north of County Road 70.");
   assert.equal(n.detail, "68 mph, moving freely. The limit is 70. About 420 vehicles an hour.");
-  assert.equal(describeStation({ label: "T.H.62", limit: 60, route: "U.S.169", dir: "SB" }, undefined, 0).detail, "No speed reading right now.");
+  assert.equal(describeStation({ label: "T.H.62", limit: 60, lanes: 2, route: "U.S.169", dir: "SB" }, undefined, 0).detail, "No speed reading right now.");
 });
 
 test("consecutive segments sharing a station merge into one stretch", () => {
