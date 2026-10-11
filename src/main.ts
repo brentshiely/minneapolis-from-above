@@ -66,6 +66,8 @@ import type { WildlifeResponse } from "../functions/api/wildlife.ts";
 import { crimeLayers, type CrimeFrame, type ResolvedCrime } from "./layers/crime.ts";
 import { crimePosition, loadStPaulDistricts, previewCrime, type CrimeIncident, type StPaulDistricts } from "./crime/crime.ts";
 import type { CrimeResponse } from "../functions/api/crime.ts";
+import { gunfireLayers, type GunfireFrame } from "./layers/gunfire.ts";
+import type { GunfireResponse } from "./gunfire/gunfire.ts";
 import { fallColorPhrase, FallColorHaze, previewFallColor } from "./seasons/fallcolor.ts";
 import type { FallColorResponse } from "../functions/api/fallcolor.ts";
 import { TogglePanel } from "./togglepanel.ts";
@@ -238,7 +240,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     planets.update(t, sky.daylight);
     if (Math.abs(sky.daylight - painted) < 0.01 && !(sky.daylight !== painted && (sky.daylight === 0 || sky.daylight === 1))) return;
     painted = sky.daylight;
-    f.daylight = a.daylight = tf.daylight = rf.daylight = snowFrame.daylight = crimeFrame.daylight = sky.daylight;
+    f.daylight = a.daylight = tf.daylight = rf.daylight = snowFrame.daylight = crimeFrame.daylight = gunfireFrame.daylight = sky.daylight;
     paintSky(map, sky.daylight);
     fx.setDaylight(sky.daylight);
     haze.setDaylight(sky.daylight);
@@ -407,6 +409,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const crimeFeed = crimePreview ? undefined
     : startPoller<CrimeResponse>("/api/crime", 30 * 60_000, (body) => { crimeIncidents = body.incidents; resolveCrime(); }, { maxMs: 2 * 60 * 60_000 });
 
+  // Gunfire calls in Minneapolis (shots fired, ShotSpotter, shootings),
+  // fading out over a couple of days.
+  const gunfireFrame: GunfireFrame = { recent: [], now: 0, daylight: sky.daylight };
+  hover.setGunfire(() => gunfireFrame.recent);
+  const gunfireFeed = startPoller<GunfireResponse>("/api/gunfire", 30 * 60_000, (body) => { gunfireFrame.recent = body.events; }, { maxMs: 2 * 60 * 60_000 });
+
   // MN DNR's fall color report, as a slow warm wash; quiet outside the
   // season. ?fallcolor=peak (or starting, changing, past) previews a level.
   const fallColorPreview = previewFallColor(new URLSearchParams(location.search).get("fallcolor") ?? "");
@@ -479,6 +487,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     airportFrame.now = now;
     wildlifeFrame.now = now;
     crimeFrame.now = now;
+    gunfireFrame.now = now;
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
@@ -491,6 +500,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(layersPanel.shown("airport") ? airportLayers(airportFrame) : []),
         ...(layersPanel.shown("wildlife") ? wildlifeLayers(wildlifeFrame) : []),
         ...(layersPanel.shown("crime") ? crimeLayers(crimeFrame) : []),
+        ...(layersPanel.shown("gunfire") ? gunfireLayers(gunfireFrame) : []),
         ...(layersPanel.shown("cameras") ? cameraLayers(cameras, anchor) : []),
         ...(layersPanel.shown("snow") ? snowLayers(snowFrame, anchor) : []),
         ...(layersPanel.shown("transit") && !still ? trailLayers(transit, f) : []),
@@ -529,14 +539,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const layerFeeds: [LayerKey, { status: FeedStatus } | undefined][] = [
     ["transit", feed], ["planes", airFeed], ["traffic", trafficFeed], ["incidents", incidentsFeed], ["river", riverFeed],
     ["warnings", warningsFeed], ["games", gamesFeed], ["beaches", beachesFeed], ["airport", airportFeed],
-    ["wildlife", wildlifeFeed], ["snow", snowFeed], ["crime", crimeFeed],
+    ["wildlife", wildlifeFeed], ["snow", snowFeed], ["crime", crimeFeed], ["gunfire", gunfireFeed],
   ];
   setInterval(() => layersPanel.setFailing(new Set(layerFeeds.filter(([, f]) => isDown(f?.status)).map(([k]) => k))), 2000);
 
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, dtaFeed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed, fallColorFeed, crimeFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, dtaFeed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed, fallColorFeed, crimeFeed, gunfireFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000)), airportPhrase(airportFrame.status), fallColorPhrase(fallColorBody)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
@@ -554,6 +564,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     airport: { frame: airportFrame, feed: airportFeed },
     wildlife: { frame: wildlifeFrame, feed: wildlifeFeed },
     crime: { frame: crimeFrame, feed: crimeFeed, districts: () => stPaulDistricts },
+    gunfire: { frame: gunfireFrame, feed: gunfireFeed },
     fallColor: { body: () => fallColorBody, feed: fallColorFeed },
     layersPanel,
     aurora: { strength: () => auroraKp, feed: auroraFeed },

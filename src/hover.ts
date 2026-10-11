@@ -28,6 +28,7 @@ import { describeBeach, type Beach } from "./water/beaches.ts";
 import { describeAirport, MSP_POSITION, type MspStatus } from "./airport.ts";
 import { describeSighting, type Sighting } from "./wildlife/sightings.ts";
 import { describeCrime } from "./crime/crime.ts";
+import { describeGunfire, type GunfireEvent } from "./gunfire/gunfire.ts";
 import type { ResolvedCrime } from "./layers/crime.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
@@ -71,7 +72,9 @@ type Target =
   /** A recent wildlife sighting. */
   | { kind: "wildlife"; id: number }
   /** A recently reported crime incident. */
-  | { kind: "crime"; id: string };
+  | { kind: "crime"; id: string }
+  /** A recent gunfire call. */
+  | { kind: "gunfire"; id: string };
 
 /** The moon, as the hover sees it: a spot on screen that can describe itself. */
 export interface MoonSpot {
@@ -140,6 +143,8 @@ export class Hover {
   setWildlife(list: () => Sighting[]) { this.sightings = list; }
   private crimes: () => ResolvedCrime[] = () => [];
   setCrime(list: () => ResolvedCrime[]) { this.crimes = list; }
+  private gunfire: () => GunfireEvent[] = () => [];
+  setGunfire(list: () => GunfireEvent[]) { this.gunfire = list; }
 
   private satInfo(id: number): { catalog?: SatcatRecord; ucs?: UcsRow } {
     const c = this.satcat.get(id);
@@ -257,6 +262,7 @@ export class Hover {
     else if (obj && info.layer?.id === "pick-airport") next = { kind: "airport" };
     else if (obj && info.layer?.id === "pick-wildlife") next = { kind: "wildlife", id: (obj as unknown as { s: Sighting }).s.id };
     else if (obj && info.layer?.id === "pick-crime") next = { kind: "crime", id: (obj as unknown as ResolvedCrime).c.id };
+    else if (obj && info.layer?.id === "pick-gunfire") next = { kind: "gunfire", id: (obj as unknown as GunfireEvent).id };
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
     }
@@ -422,6 +428,13 @@ export class Hover {
       if (!r) { this.clear(); return []; }
       desc = describeCrime(r.c, nowS_wall());
       position = r.position;
+      layers = [];
+    } else if (this.target.kind === "gunfire") {
+      const id = this.target.id;
+      const e = this.gunfire().find((x) => x.id === id);
+      if (!e) { this.clear(); return []; }
+      desc = describeGunfire(e, nowS_wall());
+      position = e.position;
       layers = [];
     } else if (this.target.kind === "traffic") {
       const info = this.freeways?.stations[this.target.station];
