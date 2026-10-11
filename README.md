@@ -35,6 +35,7 @@ The map follows the real sun over Minneapolis. To preview another time of day, a
 | `npm run shot -- <dir> <warmup> name:lon,lat,zoom` | Screenshots of the running app |
 | `npm run build:data` | Re-bake route data from Metro Transit's latest GTFS feed |
 | `npm run build:freeways` | Re-bake the freeway sensor layout from MnDOT |
+| `npm run build:rail` | Re-bake the railroad lines and trains-a-day from MnDOT |
 | `npm run build:sats` | Snapshot every active satellite's orbit from CelesTrak (also runs on every deploy) |
 | `npm run build:debris` | Snapshot the tracked space debris clouds from CelesTrak (also runs on every deploy) |
 | `npm run build:ucs` | Re-bake satellite operators and purposes from the UCS database |
@@ -77,6 +78,7 @@ Everything on the map comes from someone else's work. Thank you to:
 - Recent crime: the open-data services of the cities of Minneapolis, Saint Paul, Duluth, Brooklyn Center, Maple Grove, Eagan, Bloomington, Brooklyn Park and Rosemount
 - Gunfire calls (shots fired, ShotSpotter, shootings): the City of Minneapolis open-data service
 - Police drone flights: the public drone-as-first-responder flight logs of the St. Paul, Brooklyn Park, Minnetonka, Duluth, St. Cloud and Rochester police departments (flight paths only, delayed and offset for privacy)
+- Freight trains: [MnDOT](https://www.dot.state.mn.us/)'s Minnesota rail network (railroad lines and the trains a day each operator reported to the Federal Railroad Administration). The trains themselves are synthetic: real frequency, made-up positions
 - Snow emergencies: the cities of Minneapolis and Saint Paul
 - Beach status: Minneapolis Park Board
 - Airport status: [FAA National Airspace System Status](https://nasstatus.faa.gov/)

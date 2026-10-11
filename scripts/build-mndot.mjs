@@ -17,6 +17,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync, gzipSync } from "node:zlib";
+import { encodePolyline } from "./lib/polyline.mjs";
 import { buildGraph, dist, offsetRight, refTokens, simplify, snappable, snapRun } from "./lib/roadsnap.mjs";
 
 const CONFIG_URL = "https://data.dot.state.mn.us/iris_xml/metro_config.xml.gz";
@@ -54,23 +55,6 @@ const unescape = (s) => s.replace(/&amp;/g, "&").replace(/&apos;/g, "'").replace
 
 /** Freeways and highways only: I-94, U.S.169, T.H.62 (not county roads or streets). */
 const isHighway = (route) => /^(I-\d|U\.S\.\d|T\.H\.\d)/.test(route);
-
-/** Google encoded polyline, 5-digit precision, [lon, lat] input. */
-function encodePolyline(points) {
-  let out = "", pLat = 0, pLon = 0;
-  const enc = (v) => {
-    v = v < 0 ? ~(v << 1) : v << 1;
-    let s = "";
-    while (v >= 0x20) { s += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; }
-    return s + String.fromCharCode(v + 63);
-  };
-  for (const [lon, lat] of points) {
-    const la = Math.round(lat * 1e5), lo = Math.round(lon * 1e5);
-    out += enc(la - pLat) + enc(lo - pLon);
-    pLat = la; pLon = lo;
-  }
-  return out;
-}
 
 const xml = await loadConfig();
 const stations = {};

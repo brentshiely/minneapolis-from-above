@@ -28,6 +28,8 @@ import { trafficLayer, type TrafficFrame } from "./layers/traffic.ts";
 import { CarFlow } from "./traffic/cars.ts";
 import { fillGaps } from "./traffic/gaps.ts";
 import { carsLayer } from "./layers/cars.ts";
+import { loadRail, TrainFlow } from "./rail/rail.ts";
+import { trainLayers } from "./layers/trains.ts";
 import type { CameraInfo, CamerasFile } from "./traffic/cameras.ts";
 import { cameraLayers } from "./layers/cameras.ts";
 import { Satellites } from "./sky/satellites.ts";
@@ -280,6 +282,9 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     refill();
   }).catch((e) => console.warn(e));
   let trafficAge = 0;
+  // Synthetic freight trains at the reported trains-a-day on each line.
+  let trains: TrainFlow | undefined;
+  loadRail().then((lines) => { trains = new TrainFlow(lines); }).catch((e) => console.warn(e));
   // The sensors' own readings, with holes in coverage filled from neighboring stretches.
   let rawReadings: Readings = {};
   const refill = () => {
@@ -487,6 +492,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     air.advance(dt, now);
     if (!still) {
       cars?.advance(dt, tf.readings);
+      trains?.advance(dt);
       trails.record(fleet.vehicles, now);
       airTrails.record(air.planes, now);
       if (now - lastTrailBuild >= TRAIL_REBUILD_S) {
@@ -523,6 +529,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(layersPanel.shown("games") ? gamesLayers(gamesFrame) : []),
         ...(layersPanel.shown("traffic") && freeways ? [trafficLayer(freeways, tf, anchor)] : []),
         ...(layersPanel.shown("traffic") && cars && !still ? carsLayer(cars, tf.daylight, map.getZoom()) : []),
+        ...(layersPanel.shown("freight") && trains && !still ? trainLayers(trains.lines, trains.shapes, tf.daylight) : []),
         ...(layersPanel.shown("incidents") ? incidentsLayers(incidentsFrame, anchor) : []),
         ...(layersPanel.shown("beaches") ? beachesLayers(beachesFrame, anchor) : []),
         ...(layersPanel.shown("airport") ? airportLayers(airportFrame) : []),
