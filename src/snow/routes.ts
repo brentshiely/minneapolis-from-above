@@ -1,5 +1,6 @@
 import { decodePolyline } from "../transit/data.ts";
 import type { City } from "./rules.ts";
+import { dataUrl } from "../dataurl.ts";
 
 /** Baked by scripts/build-snow.mjs into public/data/snow-routes.json. */
 interface SnowRoutesFile {
@@ -22,7 +23,7 @@ export function parseSnowRoutes(file: SnowRoutesFile): SnowRoutes {
   return { mpls: read("mpls"), stp: read("stp") };
 }
 
-export async function loadSnowRoutes(url = "/data/snow-routes.json"): Promise<SnowRoutes> {
+export async function loadSnowRoutes(url = dataUrl("snow-routes.json")): Promise<SnowRoutes> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Couldn't load snow emergency routes (${res.status}). Run: node scripts/build-snow.mjs`);
   return parseSnowRoutes(await res.json());

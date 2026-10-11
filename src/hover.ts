@@ -30,6 +30,7 @@ import { describeSighting, type Sighting } from "./wildlife/sightings.ts";
 import { describeCrime } from "./crime/crime.ts";
 import { describeGunfire, type GunfireEvent } from "./gunfire/gunfire.ts";
 import type { ResolvedCrime } from "./layers/crime.ts";
+import { dataUrl } from "./dataurl.ts";
 
 /** Wall-clock seconds (gauge readings carry real timestamps). */
 const nowS_wall = () => Date.now() / 1000;
@@ -156,7 +157,7 @@ export class Hover {
     }
     if (this.ucs === undefined) {
       this.ucs = "pending";
-      fetch("/data/ucs.json").then((r) => (r.ok ? r.json() : {})).then((j: Record<string, UcsRow>) => { this.ucs = j; }).catch(() => { this.ucs = {}; });
+      fetch(dataUrl("ucs.json")).then((r) => (r.ok ? r.json() : {})).then((j: Record<string, UcsRow>) => { this.ucs = j; }).catch(() => { this.ucs = {}; });
     }
     return {
       catalog: c && c !== "pending" ? c : undefined,

@@ -81,6 +81,7 @@ import type { Gauge } from "./water/gauges.ts";
 import { SnowWatch } from "./snow/watch.ts";
 import { previewSnow, type SnowResponse } from "./snow/rules.ts";
 import { snowLayers, type SnowFrame } from "./layers/snow.ts";
+import { dataUrl } from "./dataurl.ts";
 
 const clock = skyClock();
 let sky = skyAt(clock());
@@ -293,7 +294,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
 
   // MnDOT's freeway cameras: baked once, they never move.
   let cameras: CameraInfo[] = [];
-  fetch("/data/cameras.json").then((r) => (r.ok ? (r.json() as Promise<CamerasFile>) : undefined)).then((body) => {
+  fetch(dataUrl("cameras.json")).then((r) => (r.ok ? (r.json() as Promise<CamerasFile>) : undefined)).then((body) => {
     if (!body) return;
     cameras = body.cameras;
     hover.setCameras(cameras);

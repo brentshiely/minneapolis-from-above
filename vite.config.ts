@@ -1,4 +1,5 @@
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { defineConfig, type Plugin } from "vite";
 
 /**
@@ -28,8 +29,21 @@ function pagesFunctions(): Plugin {
   };
 }
 
+/**
+ * A short hash of each baked file in public/data, so the app can address a
+ * file by its contents (see src/dataurl.ts): a re-baked file is fetched at
+ * once instead of waiting out the browser's cached copy.
+ */
+function dataVersions(): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!existsSync("public/data")) return out;
+  for (const f of readdirSync("public/data")) out[f] = createHash("sha1").update(readFileSync(`public/data/${f}`)).digest("hex").slice(0, 10);
+  return out;
+}
+
 export default defineConfig({
   plugins: [pagesFunctions()],
+  define: { __DATA_VERSIONS__: JSON.stringify(dataVersions()) },
   // Agents' worktrees and scratch output live inside the project folder;
   // changes there must not reload the running app.
   server: { watch: { ignored: ["**/.claude/**", "**/.cache/**"] } },

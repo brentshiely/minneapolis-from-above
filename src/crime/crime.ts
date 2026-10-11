@@ -8,6 +8,7 @@
  */
 import type { CrimeIncident, CrimeResponse, City } from "../../functions/api/crime.ts";
 import type { Description } from "../describe.ts";
+import { dataUrl } from "../dataurl.ts";
 
 export type { CrimeIncident, CrimeResponse, City };
 
@@ -28,7 +29,7 @@ export interface StPaulDistrict {
 }
 export type StPaulDistricts = Record<number, StPaulDistrict>;
 
-export async function loadStPaulDistricts(url = "/data/stpaul-districts.json"): Promise<StPaulDistricts> {
+export async function loadStPaulDistricts(url = dataUrl("stpaul-districts.json")): Promise<StPaulDistricts> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Couldn't load Saint Paul's district boundaries (${res.status}).`);
   return res.json();

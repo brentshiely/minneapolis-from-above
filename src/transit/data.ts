@@ -1,3 +1,4 @@
+import { dataUrl } from "../dataurl.ts";
 /** Baked by scripts/build-gtfs.mjs into public/data/transit.json. */
 export type Mode = "rail" | "brt" | "bus";
 
@@ -119,7 +120,7 @@ async function tryLoadTransitFile(url: string): Promise<TransitFile | undefined>
   }
 }
 
-export async function loadTransit(url = "/data/transit.json", extraUrl = "/data/dta-transit.json"): Promise<Transit> {
+export async function loadTransit(url = dataUrl("transit.json"), extraUrl = dataUrl("dta-transit.json")): Promise<Transit> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Couldn't load route data (${res.status}). Run: node scripts/build-gtfs.mjs`);
   const primary: TransitFile = await res.json();

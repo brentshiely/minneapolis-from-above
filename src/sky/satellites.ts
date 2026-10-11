@@ -1,6 +1,7 @@
 import { kindOf, positionAt, satrecOf, type Kind, type SatPosition, type Tle } from "./orbits.ts";
 import type { FromWorker, ToWorker } from "./satWorker.ts";
 import type { SatRec } from "satellite.js";
+import { dataUrl } from "../dataurl.ts";
 
 /** Rescan all satellites this often, looking this far ahead. */
 const SCAN_S = 10;
@@ -63,9 +64,9 @@ export class Satellites {
    * batch: fresh from the live endpoint, or the deploy's snapshot.
    */
   private async load() {
-    const active = await fetchTle(["/api/satellites", "/data/satellites.tle"]);
+    const active = await fetchTle(["/api/satellites", dataUrl("satellites.tle")]);
     if (active) this.post({ type: "init", tle: active });
-    const debris = await fetchTle(["/api/debris", "/data/debris.tle"]);
+    const debris = await fetchTle(["/api/debris", dataUrl("debris.tle")]);
     if (debris) this.post({ type: active ? "add" : "init", tle: debris });
   }
 

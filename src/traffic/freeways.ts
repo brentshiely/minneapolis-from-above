@@ -1,5 +1,6 @@
 import { decodePolyline } from "../transit/data.ts";
 import type { StationInfo } from "./traffic.ts";
+import { dataUrl } from "../dataurl.ts";
 
 /**
  * Baked by scripts/build-mndot.mjs into public/data/freeways.json. A corridor
@@ -45,7 +46,7 @@ export function parseFreeways(file: FreewaysFile): Freeways {
   return { stations: file.stations, stretches };
 }
 
-export async function loadFreeways(url = "/data/freeways.json"): Promise<Freeways> {
+export async function loadFreeways(url = dataUrl("freeways.json")): Promise<Freeways> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Couldn't load freeway layout (${res.status}). Run: node scripts/build-mndot.mjs`);
   return parseFreeways(await res.json());
