@@ -1,7 +1,10 @@
 /**
  * Ambient camera: when nobody has touched the map for a while, tour the
  * metro slowly, landmark to landmark, sometimes riding along with a train
- * or a plane coming in to MSP. Any input hands control straight back.
+ * or a plane coming in to MSP. A click, drag, zoom or key hands control
+ * straight back, and it carries on a little while after the last one. Just
+ * moving the pointer over the map doesn't: hovering to read a tooltip
+ * shouldn't end the tour.
  */
 
 export type LonLat = [number, number];
@@ -49,8 +52,8 @@ export const LANDMARKS: Landmark[] = [
   { kind: "landmark", name: "Down Lake Street", center: [-93.24, 44.948], zoom: 13.4, bearing: 90, pitch: 25 },
 ];
 
-/** Seconds of stillness before the tour starts. */
-export const IDLE_S = 90;
+/** Seconds since the last deliberate input (a click, drag, zoom or key) before the tour starts, or resumes. */
+export const IDLE_S = 20;
 /** How long the camera takes to glide between views. */
 export const TRAVEL_S = 40;
 /** How long it lingers on each view. */
@@ -74,6 +77,8 @@ export class Drift {
   onCaption?: (text: string | undefined) => void;
   /** When true, never drift (reduced motion, a pinned tooltip). */
   holdStill: () => boolean = () => false;
+  /** Called when the tour starts or resumes after being idle. */
+  onResume?: () => void;
 
   constructor(map: DriftMap, scenes: Scene[], now: number, idleS = IDLE_S) {
     this.map = map;
@@ -104,6 +109,7 @@ export class Drift {
     if (!this.active) {
       if (now - this.lastInput >= this.idleS) {
         this.active = true;
+        this.onResume?.();
         this.next(now);
       }
       return;

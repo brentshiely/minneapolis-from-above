@@ -113,6 +113,8 @@ function labelsAnchor(): string | undefined {
 }
 
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+/** How long a tooltip pinned by a tap holds the ambient tour still. */
+const PIN_HOLD_S = 30;
 
 const transitReady = loadTransit();
 const mapReady = new Promise<void>((resolve) => map.once("load", () => resolve()));
@@ -226,20 +228,18 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const [overview, mpls, uofm, stpaul, univ, lakes, approach, lake] = LANDMARKS;
   const drift = new Drift(map, [overview, mpls, trainScene, uofm, stpaul, landingScene, lakes, univ, approach, trainScene, lake],
     performance.now() / 1000, idleParam > 0 ? idleParam : IDLE_S);
-  drift.holdStill = () => reducedMotion.matches || hover.pinnedOpen || performance.now() < searchHoldUntil;
+  // A tooltip pinned by a tap holds the camera still for a while, then lets the tour go on.
+  drift.holdStill = () => reducedMotion.matches || (hover.pinnedOpen && hover.pinnedForS < PIN_HOLD_S) || performance.now() < searchHoldUntil;
+  // The camera is about to move away from whatever a tooltip was describing.
+  drift.onResume = () => hover.clear();
   const caption = document.getElementById("caption")!;
   drift.onCaption = (text) => {
     caption.classList.toggle("shown", !!text);
     if (text) caption.textContent = text;
   };
-  // Any real input hands control back. Tiny pointer jitter doesn't count.
-  let lastPointer: [number, number] | undefined;
+  // A click, drag, zoom or key press hands control back. Moving the pointer
+  // doesn't: hovering over things to read them shouldn't end the tour.
   const wake = () => drift.wake(performance.now() / 1000);
-  addEventListener("pointermove", (e) => {
-    const p: [number, number] = [e.clientX, e.clientY];
-    if (lastPointer && Math.hypot(p[0] - lastPointer[0], p[1] - lastPointer[1]) > 3) wake();
-    lastPointer = p;
-  }, { passive: true });
   for (const type of ["pointerdown", "wheel", "keydown", "touchstart"]) addEventListener(type, wake, { passive: true });
   // While someone is using the map it runs at full rate; idle, at half.
   const governor = new FrameGovernor();

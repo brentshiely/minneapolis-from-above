@@ -96,6 +96,8 @@ const GAUGE_REFRESH_MS = 10 * 60_000;
 export class Hover {
   private target: Target | null = null;
   private pinned = false;
+  /** Page-clock ms when the tooltip was pinned open, or 0. */
+  private pinnedAt = 0;
   private tip: HTMLElement;
   private lastText = "";
   private flights = new Map<string, FlightInfo | "pending">();
@@ -183,6 +185,7 @@ export class Hover {
       onClick: (info: PickingInfo) => {
         this.pick(info);
         this.pinned = this.target !== null;
+        this.pinnedAt = this.pinned ? performance.now() : 0;
       },
     });
     addEventListener("keydown", (e) => { if (e.key === "Escape") this.clear(); });
@@ -283,9 +286,13 @@ export class Hover {
   /** True while a tooltip is pinned open by a tap. */
   get pinnedOpen() { return this.pinned && this.target !== null; }
 
+  /** Seconds the pinned tooltip has been open, or 0 when none is. */
+  get pinnedForS() { return this.pinnedOpen && this.pinnedAt ? (performance.now() - this.pinnedAt) / 1000 : 0; }
+
   clear() {
     this.target = null;
     this.pinned = false;
+    this.pinnedAt = 0;
     this.map.getCanvas().style.cursor = "";
     this.hideTip();
   }

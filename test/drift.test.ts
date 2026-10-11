@@ -103,3 +103,35 @@ test("follows a moving subject, and skips the scene when there's nothing to foll
   d2.tick(21);
   assert.equal(captions.at(-1), "Over A", "moved on");
 });
+
+test("onResume fires when the tour starts, and again after an input restarts the idle clock", () => {
+  const map = fakeMap();
+  const d = new Drift(map, [A, B], 0, 10);
+  let resumed = 0;
+  d.onResume = () => resumed++;
+  d.tick(9);
+  assert.equal(resumed, 0);
+  d.tick(10);
+  assert.equal(resumed, 1);
+  d.tick(11);
+  assert.equal(resumed, 1, "not again while it's already touring");
+  d.wake(20);
+  d.tick(29);
+  assert.equal(resumed, 1, "the idle clock restarted at the input");
+  d.tick(30);
+  assert.equal(resumed, 2);
+});
+
+test("a hold that ends lets the tour start on its own", () => {
+  const map = fakeMap();
+  const d = new Drift(map, [A, B], 0, 10);
+  let held = true;
+  d.holdStill = () => held;
+  d.tick(100);
+  assert.equal(d.drifting, false, "held still, however long");
+  held = false;
+  d.tick(100);
+  assert.equal(d.drifting, false, "the idle clock ran while held, so it restarts from release");
+  d.tick(110);
+  assert.equal(d.drifting, true);
+});
