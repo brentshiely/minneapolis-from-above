@@ -1,28 +1,35 @@
 /**
  * Cloudflare Pages Function: GET /api/crime
  *
- * Recent reported crime incidents from Minneapolis's, Saint Paul's and
- * Duluth's own open-data services (all Esri FeatureServers, free, no
- * key, CORS-open). Researched (Sept 2026): no inner-ring suburb of the
- * Twin Cities publishes an equivalent open feed -- several use LexisNexis
- * Community Crime Map or CrimeReports.com, both display-only with no
- * public API and terms that prohibit redistribution, matching the same
- * "not authorized for reuse" problem that ruled out 511mn.org's plow
- * data and Blitzortung's lightning feed. Scoped to the cities that do
- * have a real feed.
+ * Recent reported crime incidents from Minneapolis's, Saint Paul's,
+ * Duluth's, Brooklyn Center's, Maple Grove's and Eagan's own open-data
+ * services (all Esri FeatureServers/MapServers, free, no key, CORS-open).
+ * Brooklyn Center and Maple Grove are served from LOGIS, the shared
+ * records-system host for several suburban departments.
  *
- * All three already truncate location to a block or a police district
- * before publishing -- none exposes an exact address. Minneapolis and
- * Saint Paul update roughly daily; Duluth's own dashboard says weekly,
- * and its freshest record is often a week old -- so Duluth uses a much
- * longer lookback and fade than the Twin Cities (see LOOKBACK_DAYS and
- * src/crime/crime.ts's FADE_DAYS).
+ * Researched (Oct 2026): the other inner suburbs and every county sheriff
+ * publish no open incident feed. Many (St. Louis Park, Burnsville, Brooklyn
+ * Park) use LexisNexis Community Crime Map or Socrata Connect pages, which
+ * are display-only with terms that prohibit redistribution -- the same
+ * "not authorized for reuse" problem that ruled out 511mn.org's plow data
+ * and Blitzortung's lightning feed. Minnetonka has a LOGIS feed too, but it
+ * stopped updating in May 2026; add it back if it resumes. The state BCA
+ * Crime Data Explorer has only monthly aggregates, not incidents.
+ *
+ * Every source already truncates location to a block or a police district
+ * before publishing, except Eagan, which publishes exact addresses and
+ * points: those are masked to the block here (see eaganIncidents).
+ * Minneapolis and Saint Paul update roughly daily; Duluth's own dashboard
+ * says weekly, and its freshest record is often a week old -- so Duluth
+ * uses a much longer lookback and fade than the Twin Cities (see
+ * LOOKBACK_DAYS and src/crime/crime.ts's FADE_DAYS). The smaller suburbs
+ * report only a few incidents a day and lag a few days, so they get a week.
  */
 const TTL_S = 1800;
 /** Fades out client-side over roughly this long; no point asking further back. Duluth updates weekly, so it gets a longer window. */
-const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14 };
+const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14, "Brooklyn Center": 8, "Maple Grove": 8, Eagan: 8 };
 
-export type City = "Minneapolis" | "Saint Paul" | "Duluth";
+export type City = "Minneapolis" | "Saint Paul" | "Duluth" | "Brooklyn Center" | "Maple Grove" | "Eagan";
 
 export interface CrimeIncident {
   id: string;
@@ -72,6 +79,36 @@ const duluthUrl = (sinceMs: number) =>
   "https://services.arcgis.com/DgKyOSWnVuXUe0Jp/arcgis/rest/services/Mapped_Crimes_view/FeatureServer/0/query"
     + `?where=${timestampWhere("Reported_DateTime", sinceMs)}&outFields=OBJECTID,Case_Number,Crime_Description,Reported_DateTime,Latitude,Longitude,BlockAddress`
     + "&orderByFields=Reported_DateTime+DESC&resultRecordCount=1000&f=json";
+
+const LOGIS = "https://maps.logis.org/arcgis/rest/services";
+const EAGAN_URL = "https://services1.arcgis.com/6KEQnrFDevRaxA3V/arcgis/rest/services/Crimes_39555559678e4bd0a6fadab24001d1a2/FeatureServer/0/query";
+
+/** The same query against any of the three layers, asking for lon/lat (Eagan's native projection is Web Mercator). */
+const sinceUrl = (base: string, outFields: string, dateField: string, sinceMs: number, extraWhere = "") =>
+  `${base}/query?where=${timestampWhere(dateField, sinceMs)}${extraWhere ? encodeURIComponent(` AND ${extraWhere}`) : ""}`
+    + `&outFields=${outFields}&outSR=4326&orderByFields=${dateField}+DESC&resultRecordCount=1000&f=json`;
+
+const brooklynCenterUrl = (sinceMs: number) =>
+  sinceUrl(`${LOGIS}/BrooklynCenter/BC_Dept_Police_CrimeMappingCASE/MapServer/0`, "CaseNumber,DateReported,Address,Description,CategoryDecription,Neighborhoods,ViolationDecription", "DateReported", sinceMs);
+const mapleGroveUrl = (sinceMs: number) =>
+  sinceUrl(`${LOGIS}/MapleGrove/MG_Dept_Police_CrimeMappingCASE/MapServer/0`, "CaseNumber,DateReported,Address,Description,CategoryDescription,ViolationDecription", "DateReported", sinceMs);
+// Rows with no NIBRS description are administrative records, not offenses.
+const eaganUrl = (sinceMs: number) =>
+  `${EAGAN_URL}?where=${timestampWhere("reportdate", sinceMs)}${encodeURIComponent(" AND nibrsdesc IS NOT NULL")}`
+    + "&outFields=OBJECTID,offenseid,nibrsdesc,fulladdr,AddressMask,reportdate&outSR=4326&orderByFields=reportdate+DESC&resultRecordCount=1000&f=json";
+
+/** A LOGIS suburb's row. Brooklyn Center spells its category field "CategoryDecription". */
+interface LogisFeature {
+  attributes: {
+    CaseNumber?: string; DateReported?: number; Address?: string; Description?: string;
+    CategoryDecription?: string; CategoryDescription?: string; Neighborhoods?: string; ViolationDecription?: string;
+  };
+  geometry?: { x?: number; y?: number };
+}
+interface EaganFeature {
+  attributes: { OBJECTID?: number; offenseid?: string; nibrsdesc?: string; fulladdr?: string; AddressMask?: string; reportdate?: number };
+  geometry?: { x?: number; y?: number };
+}
 
 interface MplsFeature {
   attributes: {
@@ -151,6 +188,68 @@ export function duluthIncidents(features: DuluthFeature[]): CrimeIncident[] {
   return out;
 }
 
+/**
+ * Brooklyn Center's and Maple Grove's rows, one per offense. Brooklyn Center
+ * publishes a block-masked address ("64XX JAMES CIR N") and block point;
+ * Maple Grove's addresses and points are exact, so it passes `maskExact`.
+ */
+export function logisIncidents(city: "Brooklyn Center" | "Maple Grove", prefix: string, features: LogisFeature[], maskExact = false): CrimeIncident[] {
+  const out: CrimeIncident[] = [];
+  features.forEach(({ attributes: a, geometry: g }, i) => {
+    if (!a.CaseNumber || a.DateReported == null || g?.x == null || g?.y == null) return;
+    const category = a.CategoryDecription || a.CategoryDescription || a.Description || a.ViolationDecription || "Incident";
+    if (!isCrime(category, a.Description)) return;
+    out.push({
+      // One case can carry several offense rows; the row index keeps their ids apart.
+      id: `${prefix}-${a.CaseNumber}-${a.DateReported}-${i}`,
+      city,
+      category,
+      reportedAt: Math.floor(a.DateReported / 1000),
+      neighborhood: a.Neighborhoods || undefined,
+      block: maskExact ? toBlock(a.Address) : a.Address || undefined,
+      position: maskExact ? snapToBlock(g.x, g.y) : [g.x, g.y],
+    });
+  });
+  return out;
+}
+
+/** Roughly a city block: 0.001 degrees is about 110 m north-south and 80 m east-west here. */
+const BLOCK_DEG = 0.001;
+
+/** "3035 POPPLER LN" -> "3000 BLK POPPLER LN"; an intersection or an already-masked block passes through. */
+export function toBlock(addr: string | undefined, isIntersection = false): string | undefined {
+  const a = addr?.trim();
+  if (!a || isIntersection) return a || undefined;
+  const m = /^(\d+)\s+(.*)$/.exec(a);
+  return m ? `${Math.floor(Number(m[1]) / 100) * 100} BLK ${m[2]}` : a;
+}
+
+/** The middle of the ~block-sized cell holding this point, so it can't be traced to one door. */
+export const snapToBlock = (x: number, y: number): [number, number] =>
+  [(Math.floor(x / BLOCK_DEG) + 0.5) * BLOCK_DEG, (Math.floor(y / BLOCK_DEG) + 0.5) * BLOCK_DEG];
+
+/**
+ * Eagan publishes the exact address and point of each offense, which most
+ * other sources don't. To match them it shows only the hundred-block, with
+ * the point snapped to a block-sized cell.
+ */
+export function eaganIncidents(features: EaganFeature[]): CrimeIncident[] {
+  const out: CrimeIncident[] = [];
+  for (const { attributes: a, geometry: g } of features) {
+    if (a.OBJECTID == null || !a.offenseid || a.reportdate == null || !a.nibrsdesc || g?.x == null || g?.y == null) continue;
+    if (!isCrime(a.nibrsdesc)) continue;
+    out.push({
+      id: `eagan-${a.offenseid}-${a.OBJECTID}`,
+      city: "Eagan",
+      category: a.nibrsdesc,
+      reportedAt: Math.floor(a.reportdate / 1000),
+      block: toBlock(a.fulladdr, a.AddressMask === "Intersection"),
+      position: snapToBlock(g.x, g.y),
+    });
+  }
+  return out;
+}
+
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url, {
     headers: { "user-agent": "minneapolis-from-above (+https://minneapolis-from-above.pages.dev)" },
@@ -162,18 +261,24 @@ async function fetchJson(url: string): Promise<unknown> {
 
 export const onRequestGet = async (): Promise<Response> => {
   const now = Date.now();
-  const [mpls, stp, duluth] = await Promise.allSettled([
+  const [mpls, stp, duluth, bc, mg, eagan] = await Promise.allSettled([
     fetchJson(MPLS_URL) as Promise<{ features?: MplsFeature[] }>,
     fetchJson(stPaulUrl(now - LOOKBACK_DAYS["Saint Paul"] * 86_400_000)) as Promise<{ features?: StPaulFeature[] }>,
     fetchJson(duluthUrl(now - LOOKBACK_DAYS.Duluth * 86_400_000)) as Promise<{ features?: DuluthFeature[] }>,
+    fetchJson(brooklynCenterUrl(now - LOOKBACK_DAYS["Brooklyn Center"] * 86_400_000)) as Promise<{ features?: LogisFeature[] }>,
+    fetchJson(mapleGroveUrl(now - LOOKBACK_DAYS["Maple Grove"] * 86_400_000)) as Promise<{ features?: LogisFeature[] }>,
+    fetchJson(eaganUrl(now - LOOKBACK_DAYS.Eagan * 86_400_000)) as Promise<{ features?: EaganFeature[] }>,
   ]);
 
   const incidents: CrimeIncident[] = [];
   if (mpls.status === "fulfilled") incidents.push(...mplsIncidents(mpls.value.features ?? []));
   if (stp.status === "fulfilled") incidents.push(...stPaulIncidents(stp.value.features ?? []));
   if (duluth.status === "fulfilled") incidents.push(...duluthIncidents(duluth.value.features ?? []));
+  if (bc.status === "fulfilled") incidents.push(...logisIncidents("Brooklyn Center", "bc", bc.value.features ?? []));
+  if (mg.status === "fulfilled") incidents.push(...logisIncidents("Maple Grove", "mg", mg.value.features ?? [], true));
+  if (eagan.status === "fulfilled") incidents.push(...eaganIncidents(eagan.value.features ?? []));
 
-  if (mpls.status === "rejected" && stp.status === "rejected" && duluth.status === "rejected") {
+  if ([mpls, stp, duluth, bc, mg, eagan].every((r) => r.status === "rejected")) {
     return json({ error: "Every city's crime feed is unreachable." }, 502);
   }
   return json({ t: Math.floor(now / 1000), incidents }, 200, `public, max-age=${TTL_S}`);

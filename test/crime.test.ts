@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { duluthIncidents, mplsIncidents, onRequestGet, stPaulIncidents } from "../functions/api/crime.ts";
+import { duluthIncidents, eaganIncidents, logisIncidents, mplsIncidents, onRequestGet, stPaulIncidents } from "../functions/api/crime.ts";
 import { crimePosition, crimeStrength, describeCrime, FADE_DAYS, previewCrime, type StPaulDistricts } from "../src/crime/crime.ts";
 
 // --- functions/api/crime.ts: normalizing each city's raw rows ---------------------
@@ -174,4 +174,48 @@ test("crimePosition gives nothing for a Saint Paul incident whose district never
   const stp = { id: "stp-1", city: "Saint Paul" as const, category: "x", reportedAt: 0, stpaulDistrict: 99 };
   assert.equal(crimePosition(stp, DISTRICTS), undefined);
   assert.equal(crimePosition(stp, {}), undefined);
+});
+
+test("logisIncidents keeps rows with a case, date and point, and reads either spelling of the category field", () => {
+  const out = logisIncidents("Brooklyn Center", "bc", [
+    { attributes: { CaseNumber: "22003146", DateReported: 1_700_000_000_000, Address: "64XX JAMES CIR N", CategoryDecription: "Theft From Building", Neighborhoods: "Shingle Creek" }, geometry: { x: -93.3, y: 45.07 } },
+    { attributes: { CaseNumber: "22003147", DateReported: 1_700_000_000_000 } }, // no point
+    { attributes: { DateReported: 1_700_000_000_000 }, geometry: { x: -93.3, y: 45.07 } }, // no case number
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].city, "Brooklyn Center");
+  assert.equal(out[0].category, "Theft From Building");
+  assert.equal(out[0].neighborhood, "Shingle Creek");
+  assert.deepEqual(out[0].position, [-93.3, 45.07]);
+  const mg = logisIncidents("Maple Grove", "mg", [{ attributes: { CaseNumber: "C1", DateReported: 0, CategoryDescription: "Shoplifting" }, geometry: { x: -93.47, y: 45.13 } }]);
+  assert.equal(mg[0].category, "Shoplifting");
+});
+
+test("logisIncidents with maskExact reduces Maple Grove's exact address and point to the block", () => {
+  const [i] = logisIncidents("Maple Grove", "mg", [{ attributes: { CaseNumber: "C1", DateReported: 0, Address: "9875 HOSPITAL DR N", CategoryDescription: "Shoplifting" }, geometry: { x: -93.47961, y: 45.13364 } }], true);
+  assert.equal(i.block, "9800 BLK HOSPITAL DR N");
+  assert.notDeepEqual(i.position, [-93.47961, 45.13364]);
+});
+
+test("two offense rows on one LOGIS case get different ids", () => {
+  const row = { attributes: { CaseNumber: "C1", DateReported: 5, CategoryDescription: "Shoplifting" }, geometry: { x: -93.47, y: 45.13 } };
+  const out = logisIncidents("Maple Grove", "mg", [row, row]);
+  assert.notEqual(out[0].id, out[1].id);
+});
+
+test("eaganIncidents masks the exact address to its hundred-block and snaps the point to a block-sized cell", () => {
+  const exact = { x: -93.12345, y: 44.80123 };
+  const [i] = eaganIncidents([{ attributes: { OBJECTID: 1, offenseid: "EA21000592", nibrsdesc: "Shoplifting", fulladdr: "3035 POPPLER LN", reportdate: 1_700_000_000_000 }, geometry: exact }]);
+  assert.equal(i.block, "3000 BLK POPPLER LN");
+  assert.notDeepEqual(i.position, [exact.x, exact.y]);
+  assert.ok(Math.abs(i.position![0] - exact.x) <= 0.001 && Math.abs(i.position![1] - exact.y) <= 0.001);
+});
+
+test("eaganIncidents leaves an intersection alone and drops rows with no offense description", () => {
+  const out = eaganIncidents([
+    { attributes: { OBJECTID: 1, offenseid: "EA1", nibrsdesc: "Simple Assault", fulladdr: "INTERSTATE 494 EB / 35E", AddressMask: "Intersection", reportdate: 0 }, geometry: { x: -93.09, y: 44.86 } },
+    { attributes: { OBJECTID: 2, offenseid: "EA2", fulladdr: "1 MAIN ST", reportdate: 0 }, geometry: { x: -93.09, y: 44.86 } },
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].block, "INTERSTATE 494 EB / 35E");
 });

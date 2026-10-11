@@ -1,7 +1,7 @@
 /**
- * Recently reported crime incidents in Minneapolis, Saint Paul and
- * Duluth, fading out as they age. Minneapolis and Duluth each publish a
- * point for every incident directly; Saint Paul publishes only a
+ * Recently reported crime incidents in Minneapolis, Saint Paul, Duluth,
+ * Brooklyn Center, Maple Grove and Eagan, fading out as they age. All but
+ * Saint Paul publish a point for every incident directly; Saint Paul publishes only a
  * district number, so its incidents are placed at a deterministic
  * (never-jumping) random spot inside their real district instead of
  * stacking on one shared pin.
@@ -15,9 +15,10 @@ export type { CrimeIncident, CrimeResponse, City };
  * Days after which an incident is fully faded and no longer shown.
  * Minneapolis and Saint Paul update roughly daily; Duluth's own source
  * says weekly and often lags further, so it needs a much longer tail or
- * it would never show anything at all.
+ * it would never show anything at all. The suburbs report only a few
+ * incidents a day and lag a few days behind, so they get a week.
  */
-export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12 };
+export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12, "Brooklyn Center": 7, "Maple Grove": 7, Eagan: 7 };
 
 export interface StPaulDistrict {
   name: string;
