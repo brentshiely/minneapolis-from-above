@@ -1,6 +1,6 @@
 /**
  * Recently reported crime incidents in Minneapolis, Saint Paul, Duluth,
- * Brooklyn Center, Maple Grove, Eagan, Bloomington and Brooklyn Park, fading out as they age. All but
+ * Brooklyn Center, Maple Grove, Eagan, Bloomington, Brooklyn Park and Rosemount, fading out as they age. All but
  * Saint Paul publish a point for every incident directly; Saint Paul publishes only a
  * district number, so its incidents are placed at a deterministic
  * (never-jumping) random spot inside their real district instead of
@@ -20,7 +20,7 @@ export type { CrimeIncident, CrimeResponse, City };
  * incidents a day and lag a few days behind, so they get a week. Brooklyn
  * Park refreshes about weekly, so like Duluth it needs a longer tail.
  */
-export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12, "Brooklyn Center": 7, "Maple Grove": 7, Eagan: 7, Bloomington: 7, "Brooklyn Park": 16 };
+export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12, "Brooklyn Center": 7, "Maple Grove": 7, Eagan: 7, Bloomington: 7, "Brooklyn Park": 16, Rosemount: 7 };
 
 export interface StPaulDistrict {
   name: string;

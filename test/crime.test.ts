@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseCensus, parseCsvLine, parseEsri } from "../functions/_lib/geocode.ts";
-import { bloomingtonIncidents, brooklynParkIncidents, duluthIncidents, eaganIncidents, logisIncidents, mplsIncidents, onRequestGet, stPaulIncidents, stPaulStreet } from "../functions/api/crime.ts";
+import { bloomingtonIncidents, brooklynParkIncidents, rosemountBlock, rosemountCategory, rosemountIncidents, duluthIncidents, eaganIncidents, logisIncidents, mplsIncidents, onRequestGet, stPaulIncidents, stPaulStreet } from "../functions/api/crime.ts";
 import { crimePosition, crimeStrength, describeCrime, FADE_DAYS, previewCrime, type StPaulDistricts } from "../src/crime/crime.ts";
 
 // --- functions/api/crime.ts: normalizing each city's raw rows ---------------------
@@ -285,4 +285,39 @@ test("brooklynParkIncidents snaps the point to a block, keeps the neighborhood, 
   assert.equal(out[0].neighborhood, "Village Creek");
   assert.notDeepEqual(out[0].position, [-93.35306596, 45.08802972]);
   assert.ok(Math.abs(out[0].position![0] + 93.35306596) <= 0.001 && Math.abs(out[0].position![1] - 45.08802972) <= 0.001);
+});
+
+test("rosemountBlock reads the city's block wording and drops an unknown address", () => {
+  assert.equal(rosemountBlock("13200-Block Clayton Ave"), "13200 BLK Clayton Ave");
+  assert.equal(rosemountBlock("Pine Bend Trl / Courthouse Blvd Wb"), "Pine Bend Trl / Courthouse Blvd Wb");
+  assert.equal(rosemountBlock("Street Info Not Available"), undefined);
+  assert.equal(rosemountBlock(undefined), undefined);
+});
+
+test("rosemountCategory tidies dispatch wording", () => {
+  assert.equal(rosemountCategory("Theft RPT", "Theft"), "Theft");
+  assert.equal(rosemountCategory("Fraud Activity RPT ", "Fraud"), "Fraud Activity");
+  assert.equal(rosemountCategory("Vandalism/Property Damage", "Vandalism"), "Vandalism/Property Damage");
+  assert.equal(rosemountCategory(undefined, "Theft"), "Theft");
+});
+
+test("rosemountIncidents keeps real offenses and drops traffic, animal and non-criminal calls, sensitive rows and other cities", () => {
+  const row = (id: number, o: Partial<{ problem: string; cat: string; sensitive: string; city: string }> = {}) => ({
+    attributes: { OBJECTID: id, masterincnum: `RS26-${id}`, responsedate: 1_700_000_000_000, fulladdress: "13200-Block Clayton Ave", problem: o.problem ?? "Theft RPT", problem_category: o.cat ?? "Theft", sensitive: o.sensitive ?? "No", city: o.city ?? "ROSEMOUNT" },
+    geometry: { x: -93.0288, y: 44.7507 },
+  });
+  const out = rosemountIncidents([
+    row(1),
+    row(2, { problem: "Traffic Stop", cat: "Traffic Incident" }),
+    row(3, { problem: "Suspicious Activity", cat: "Other - Non Criminal" }),
+    row(4, { problem: "Animal Calls", cat: "Animal Calls" }),
+    row(5, { problem: "Domestic/Disputes RPT", cat: "Domestic Assault", sensitive: "Yes" }),
+    row(6, { city: "APPLE VALLEY" }),
+    row(7, { problem: "Vandalism/Property Damage", cat: "Vandalism" }),
+    { attributes: { OBJECTID: 8, masterincnum: "x", responsedate: 0, problem: "Theft RPT", problem_category: "Theft", sensitive: "No", city: "ROSEMOUNT" } }, // no point
+  ]);
+  assert.deepEqual(out.map((i) => i.category), ["Theft", "Vandalism/Property Damage"]);
+  assert.equal(out[0].city, "Rosemount");
+  assert.equal(out[0].block, "13200 BLK Clayton Ave");
+  assert.deepEqual(out[0].position, [-93.0288, 44.7507]);
 });

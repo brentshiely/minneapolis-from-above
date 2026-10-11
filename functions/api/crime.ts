@@ -2,8 +2,8 @@
  * Cloudflare Pages Function: GET /api/crime
  *
  * Recent reported crime incidents from Minneapolis's, Saint Paul's,
- * Duluth's, Brooklyn Center's, Maple Grove's, Eagan's, Bloomington's and
- * Brooklyn Park's own open-data services (all Esri FeatureServers/MapServers, free, no key, CORS-open).
+ * Duluth's, Brooklyn Center's, Maple Grove's, Eagan's, Bloomington's,
+ * Brooklyn Park's and Rosemount's own open-data services (all Esri FeatureServers/MapServers, free, no key, CORS-open).
  * Brooklyn Center and Maple Grove are served from LOGIS, the shared
  * records-system host for several suburban departments.
  *
@@ -33,9 +33,9 @@ const TTL_S = 1800;
 /** When any city's feed failed, how long the partial answer is kept before trying again. */
 const RETRY_TTL_S = 90;
 /** Fades out client-side over roughly this long; no point asking further back. Duluth updates weekly, so it gets a longer window. */
-const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14, "Brooklyn Center": 8, "Maple Grove": 8, Eagan: 8, Bloomington: 8, "Brooklyn Park": 18 };
+const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14, "Brooklyn Center": 8, "Maple Grove": 8, Eagan: 8, Bloomington: 8, "Brooklyn Park": 18, Rosemount: 8 };
 
-export type City = "Minneapolis" | "Saint Paul" | "Duluth" | "Brooklyn Center" | "Maple Grove" | "Eagan" | "Bloomington" | "Brooklyn Park";
+export type City = "Minneapolis" | "Saint Paul" | "Duluth" | "Brooklyn Center" | "Maple Grove" | "Eagan" | "Bloomington" | "Brooklyn Park" | "Rosemount";
 
 export interface CrimeIncident {
   id: string;
@@ -104,6 +104,26 @@ const brooklynParkUrl = (sinceMs: number) =>
 
 interface BrooklynParkFeature {
   attributes: { OBJECTID?: number; CASE_NUM?: string; DATETIME_RPT?: number; CRIME_CODE_DESCRIPTION?: string; CrimeGroup?: string; Neighborhood?: string };
+  geometry?: { x?: number; y?: number };
+}
+
+const ROSEMOUNT_URL = "https://services2.arcgis.com/g9tzqCz1E9uQq6Yy/arcgis/rest/services/PD_Incidents_Public_Portal/FeatureServer/0/query";
+/**
+ * Rosemount's layer is its dispatch log, every call. Its crime column isn't
+ * usable: it marks traffic stops, accidents and animal calls "Yes", and it's
+ * filled in weeks after the fact, so recent calls all read "No". The offense
+ * category decides instead, and the city's own "sensitive" flag (domestic
+ * disputes, protection-order violations) is honored.
+ */
+const ROSEMOUNT_NOT_CRIME = ["Traffic Incident", "Other - Non Criminal", "Other", "Animal Calls"];
+const rosemountUrl = (sinceMs: number) =>
+  `${ROSEMOUNT_URL}?where=${timestampWhere("responsedate", sinceMs)}`
+  + encodeURIComponent(` AND city = 'ROSEMOUNT' AND (sensitive IS NULL OR sensitive <> 'Yes') AND problem_category NOT IN (${ROSEMOUNT_NOT_CRIME.map((c) => `'${c}'`).join(",")})`)
+  + "&outFields=OBJECTID,masterincnum,responsedate,fulladdress,problem,problem_category,sensitive,city"
+  + "&outSR=4326&orderByFields=responsedate+DESC&resultRecordCount=1000&f=json";
+
+interface RosemountFeature {
+  attributes: { OBJECTID?: number; masterincnum?: string; responsedate?: number; fulladdress?: string; problem?: string; problem_category?: string; sensitive?: string; city?: string };
   geometry?: { x?: number; y?: number };
 }
 
@@ -348,6 +368,37 @@ export function brooklynParkIncidents(features: BrooklynParkFeature[]): CrimeInc
   return out;
 }
 
+/** "13200-Block Clayton Ave" reads as "13200 BLK Clayton Ave" for the client's block wording; an intersection passes through; no address, none. */
+export function rosemountBlock(addr: string | undefined): string | undefined {
+  const a = addr?.trim();
+  if (!a || /not available/i.test(a)) return undefined;
+  return a.replace(/^(\d+)-Block\b/i, "$1 BLK");
+}
+
+/** Dispatch wording to a plain category: "Theft RPT" is "Theft", "Fraud Activity RPT" is "Fraud Activity". */
+export const rosemountCategory = (problem: string | undefined, category: string | undefined) =>
+  (problem ?? "").replace(/\s+RPT\s*$/i, "").replace(/\s+/g, " ").trim() || category?.trim() || "Incident";
+
+export function rosemountIncidents(features: RosemountFeature[]): CrimeIncident[] {
+  const out: CrimeIncident[] = [];
+  for (const { attributes: a, geometry: g } of features) {
+    if (a.OBJECTID == null || !a.masterincnum || a.responsedate == null || g?.x == null || g?.y == null) continue;
+    if (a.sensitive === "Yes" || (a.city && a.city.toUpperCase() !== "ROSEMOUNT")) continue;
+    if (ROSEMOUNT_NOT_CRIME.includes(a.problem_category ?? "")) continue;
+    const category = rosemountCategory(a.problem, a.problem_category);
+    if (!isCrime(category)) continue;
+    out.push({
+      id: `rm-${a.masterincnum}-${a.OBJECTID}`,
+      city: "Rosemount",
+      category,
+      reportedAt: Math.floor(a.responsedate / 1000),
+      block: rosemountBlock(a.fulladdress),
+      position: [g.x, g.y],
+    });
+  }
+  return out;
+}
+
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url, {
     headers: { "user-agent": "minneapolis-from-above (+https://minneapolis-from-above.pages.dev)" },
@@ -376,6 +427,7 @@ export const onRequestGet = async (): Promise<Response> => {
     ["Maple Grove", feed<LogisFeature>(mapleGroveUrl(since("Maple Grove"))).then((d) => logisIncidents("Maple Grove", "mg", d.features ?? [], true))],
     ["Eagan", feed<EaganFeature>(eaganUrl(since("Eagan"))).then((d) => eaganIncidents(d.features ?? []))],
     ["Brooklyn Park", feed<BrooklynParkFeature>(brooklynParkUrl(since("Brooklyn Park"))).then((d) => brooklynParkIncidents(d.features ?? []))],
+    ["Rosemount", feed<RosemountFeature>(rosemountUrl(since("Rosemount"))).then((d) => rosemountIncidents(d.features ?? []))],
     ["Bloomington", feed<BloomingtonFeature>(bloomingtonUrl(since("Bloomington"))).then(async (d) => {
       const features = (d.features ?? []).filter((f) => STATUTE.test(f.attributes.ViolationCodeReference_Desc ?? ""));
       const addresses = unique(features.map((f) => f.attributes.IncidentAddress)).filter((a) => !isIntersection(a.street));
