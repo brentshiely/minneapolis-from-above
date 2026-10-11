@@ -82,23 +82,26 @@ function fixtureFor(url: string) {
   return { attributes: { OBJECTID: 1, Case_Number: "D1", Crime_Description: "Theft", Reported_DateTime: 0, Latitude: 46.78, Longitude: -92.1 } };
 }
 
-test("handler combines all three cities, and rides out any of them being down", async () => {
+test("handler combines every city, and rides out any of them being down", async () => {
   const realFetch = globalThis.fetch;
   try {
     globalThis.fetch = (async (url: string) => new Response(JSON.stringify({ features: [fixtureFor(url)] }))) as typeof fetch;
     const all = await onRequestGet();
     assert.equal(all.status, 200);
     assert.match(all.headers.get("cache-control")!, /max-age=1800/);
-    const allBody = await all.json() as { incidents: unknown[] };
+    const allBody = await all.json() as { incidents: unknown[]; failed?: unknown };
     assert.equal(allBody.incidents.length, 3);
+    assert.equal(allBody.failed, undefined, "nothing failed, nothing reported");
 
     globalThis.fetch = (async (url: string) => String(url).includes("afSMGVsC7QlRK1kZ")
       ? new Response("down", { status: 503 })
       : new Response(JSON.stringify({ features: [fixtureFor(url)] }))) as typeof fetch;
     const oneDown = await onRequestGet();
     assert.equal(oneDown.status, 200, "one city down still answers with the others' data");
-    const oneDownBody = await oneDown.json() as { incidents: unknown[] };
+    const oneDownBody = await oneDown.json() as { incidents: unknown[]; failed?: { city: string }[] };
     assert.equal(oneDownBody.incidents.length, 2);
+    assert.deepEqual(oneDownBody.failed?.map((f) => f.city), ["Minneapolis"], "the response names the city that failed");
+    assert.match(oneDown.headers.get("cache-control")!, /max-age=90\b/, "a partial answer is retried soon, not kept for half an hour");
 
     globalThis.fetch = (async () => new Response("down", { status: 503 })) as typeof fetch;
     assert.equal((await onRequestGet()).status, 502, "every city down is a clear failure");

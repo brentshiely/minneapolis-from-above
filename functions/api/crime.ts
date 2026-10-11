@@ -28,6 +28,8 @@
 import { censusBatch, esriBatch, type LonLat } from "../_lib/geocode.ts";
 
 const TTL_S = 1800;
+/** When any city's feed failed, how long the partial answer is kept before trying again. */
+const RETRY_TTL_S = 90;
 /** Fades out client-side over roughly this long; no point asking further back. Duluth updates weekly, so it gets a longer window. */
 const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14, "Brooklyn Center": 8, "Maple Grove": 8, Eagan: 8, Bloomington: 8 };
 
@@ -325,31 +327,38 @@ export const onRequestGet = async (): Promise<Response> => {
   const feed = <T>(url: string) => fetchJson(url) as Promise<{ features?: T[] }>;
   const unique = (xs: (string | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x))].map((street) => ({ id: street, street }));
 
-  const feeds: Promise<CrimeIncident[]>[] = [
-    feed<MplsFeature>(MPLS_URL).then((d) => mplsIncidents(d.features ?? [])),
-    feed<StPaulFeature>(stPaulUrl(since("Saint Paul"))).then(async (d) => {
+  const feeds: [City, Promise<CrimeIncident[]>][] = [
+    ["Minneapolis", feed<MplsFeature>(MPLS_URL).then((d) => mplsIncidents(d.features ?? []))],
+    ["Saint Paul", feed<StPaulFeature>(stPaulUrl(since("Saint Paul"))).then(async (d) => {
       const features = d.features ?? [];
       // A failed or partial geocode just leaves incidents on their district.
       const located = await censusBatch(unique(features.map((f) => f.attributes.BLOCK)).map((a) => ({ id: a.id, street: stPaulStreet(a.street) })), "Saint Paul", "MN").catch(() => new Map<string, LonLat>());
       return stPaulIncidents(features, located);
-    }),
-    feed<DuluthFeature>(duluthUrl(since("Duluth"))).then((d) => duluthIncidents(d.features ?? [])),
-    feed<LogisFeature>(brooklynCenterUrl(since("Brooklyn Center"))).then((d) => logisIncidents("Brooklyn Center", "bc", d.features ?? [])),
-    feed<LogisFeature>(mapleGroveUrl(since("Maple Grove"))).then((d) => logisIncidents("Maple Grove", "mg", d.features ?? [], true)),
-    feed<EaganFeature>(eaganUrl(since("Eagan"))).then((d) => eaganIncidents(d.features ?? [])),
-    feed<BloomingtonFeature>(bloomingtonUrl(since("Bloomington"))).then(async (d) => {
+    })],
+    ["Duluth", feed<DuluthFeature>(duluthUrl(since("Duluth"))).then((d) => duluthIncidents(d.features ?? []))],
+    ["Brooklyn Center", feed<LogisFeature>(brooklynCenterUrl(since("Brooklyn Center"))).then((d) => logisIncidents("Brooklyn Center", "bc", d.features ?? []))],
+    ["Maple Grove", feed<LogisFeature>(mapleGroveUrl(since("Maple Grove"))).then((d) => logisIncidents("Maple Grove", "mg", d.features ?? [], true))],
+    ["Eagan", feed<EaganFeature>(eaganUrl(since("Eagan"))).then((d) => eaganIncidents(d.features ?? []))],
+    ["Bloomington", feed<BloomingtonFeature>(bloomingtonUrl(since("Bloomington"))).then(async (d) => {
       const features = (d.features ?? []).filter((f) => STATUTE.test(f.attributes.ViolationCodeReference_Desc ?? ""));
       const addresses = unique(features.map((f) => f.attributes.IncidentAddress)).filter((a) => !isIntersection(a.street));
       return bloomingtonIncidents(features, await esriBatch(BLOOMINGTON_LOCATOR, addresses));
-    }),
+    })],
   ];
-  const results = await Promise.allSettled(feeds);
+  const results = await Promise.allSettled(feeds.map(([, p]) => p));
 
-  if (results.every((r) => r.status === "rejected")) {
+  const incidents: CrimeIncident[] = [];
+  const failed: { city: City; error: string }[] = [];
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") incidents.push(...r.value);
+    else failed.push({ city: feeds[i][0], error: String(r.reason) });
+  });
+
+  if (failed.length === feeds.length) {
     return json({ error: "Every city's crime feed is unreachable." }, 502);
   }
-  const incidents = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
-  return json({ t: Math.floor(now / 1000), incidents }, 200, `public, max-age=${TTL_S}`);
+  // A city that failed isn't missing for the next half hour: retry soon.
+  return json({ t: Math.floor(now / 1000), incidents, ...(failed.length && { failed }) }, 200, `public, max-age=${failed.length ? RETRY_TTL_S : TTL_S}`);
 };
 
 function json(body: unknown, status: number, cache = "no-store"): Response {
