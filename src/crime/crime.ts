@@ -18,7 +18,7 @@ export type { CrimeIncident, CrimeResponse, City };
  * it would never show anything at all. The suburbs report only a few
  * incidents a day and lag a few days behind, so they get a week.
  */
-export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12, "Brooklyn Center": 7, "Maple Grove": 7, Eagan: 7 };
+export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12, "Brooklyn Center": 7, "Maple Grove": 7, Eagan: 7, Bloomington: 7 };
 
 export interface StPaulDistrict {
   name: string;

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { duluthIncidents, eaganIncidents, logisIncidents, mplsIncidents, onRequestGet, stPaulIncidents } from "../functions/api/crime.ts";
+import { parseCensus, parseCsvLine, parseEsri } from "../functions/_lib/geocode.ts";
+import { bloomingtonIncidents, duluthIncidents, eaganIncidents, logisIncidents, mplsIncidents, onRequestGet, stPaulIncidents, stPaulStreet } from "../functions/api/crime.ts";
 import { crimePosition, crimeStrength, describeCrime, FADE_DAYS, previewCrime, type StPaulDistricts } from "../src/crime/crime.ts";
 
 // --- functions/api/crime.ts: normalizing each city's raw rows ---------------------
@@ -218,4 +219,54 @@ test("eaganIncidents leaves an intersection alone and drops rows with no offense
   ]);
   assert.equal(out.length, 1);
   assert.equal(out[0].block, "INTERSTATE 494 EB / 35E");
+});
+
+test("stPaulStreet turns a masked block into the middle of its hundred-block", () => {
+  assert.equal(stPaulStreet("10XX 4TH ST E"), "1050 4TH ST E");
+  assert.equal(stPaulStreet("XX EXCHANGE ST E"), "50 EXCHANGE ST E");
+  assert.equal(stPaulStreet("6XX 7TH ST W"), "650 7TH ST W");
+  assert.equal(stPaulStreet("1200 GRAND AVE"), "1200 GRAND AVE");
+});
+
+test("stPaulIncidents puts an incident on its geocoded block, and leaves the rest on their district", () => {
+  const row = (id: number, block: string) => ({ attributes: { ObjectId: id, CASE_NUMBER: id, DATE: 0, NEIGHBORHOOD_NUMBER: 5, INCIDENT_TYPE: "Theft", BLOCK: block } });
+  const out = stPaulIncidents([row(1, "6XX 7TH ST W"), row(2, "9XX NOWHERE ST")], new Map([["6XX 7TH ST W", [-93.1, 44.94] as [number, number]]]));
+  assert.deepEqual(out[0].position, [-93.1, 44.94]);
+  assert.equal(out[1].position, undefined);
+  assert.equal(out[1].stpaulDistrict, 5);
+});
+
+test("parseCsvLine keeps the quoted lon,lat pair together", () => {
+  assert.deepEqual(parseCsvLine('"1","9321 PENN AVE S, Bloomington, MN, ","Match","Exact","9321 PENN AVE S","-93.30,44.83","43595578","L"'),
+    ["1", "9321 PENN AVE S, Bloomington, MN, ", "Match", "Exact", "9321 PENN AVE S", "-93.30,44.83", "43595578", "L"]);
+});
+
+test("parseCensus keeps matches only", () => {
+  const out = parseCensus('"1","a","Match","Exact","A","-93.3,44.8","1","L"\n"2","b","No_Match"\n"3","c","Tie"');
+  assert.deepEqual([...out], [["1", [-93.3, 44.8]]]);
+});
+
+test("parseEsri maps ResultID back to the input id and drops low scores", () => {
+  const out = parseEsri([
+    { attributes: { ResultID: 2, Score: 100 }, location: { x: -93.3, y: 44.8 } },
+    { attributes: { ResultID: 1, Score: 40 }, location: { x: -93.2, y: 44.9 } },
+    { attributes: { ResultID: 3, Score: 0 } },
+  ], ["a", "b", "c"]);
+  assert.deepEqual([...out], [["b", [-93.3, 44.8]]]);
+});
+
+test("bloomingtonIncidents keeps charged offenses, strips the statute, masks to the block, and drops what couldn't be placed", () => {
+  const row = (id: number, addr: string, desc: string) => ({ attributes: { OBJECTID: id, CaseNumber: `BP${id}`, dateReported: 0, IncidentAddress: addr, ViolationCodeReference_Desc: desc } });
+  const located = new Map<string, [number, number]>([["9321 PENN AVE S", [-93.30852, 44.83479]], ["1 MAIN ST", [-93.2, 44.8]]]);
+  const out = bloomingtonIncidents([
+    row(1, "9321 PENN AVE S", "609.595.1(4) Damage to Property - 1st Degree - Value Reduced Over $1000"),
+    row(2, "1 MAIN ST", "MISWA MISC OFCR WARRANT ARREST"), // not an offense
+    row(3, "1 MAIN ST", "ACPD ACC-MOTOR VEHICLE PROPERTY DAMAGE"), // a crash
+    row(4, "55 NOWHERE LN", "609.52.2(a)(1) Theft-Take/Use/Transfer Movable Prop-No Consent"), // not geocoded
+  ], located);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].city, "Bloomington");
+  assert.equal(out[0].category, "Damage to Property - 1st Degree - Value Reduced Over $1000");
+  assert.equal(out[0].block, "9300 BLK PENN AVE S");
+  assert.notDeepEqual(out[0].position, [-93.30852, 44.83479]);
 });

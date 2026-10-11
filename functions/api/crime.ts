@@ -25,11 +25,13 @@
  * LOOKBACK_DAYS and src/crime/crime.ts's FADE_DAYS). The smaller suburbs
  * report only a few incidents a day and lag a few days, so they get a week.
  */
+import { censusBatch, esriBatch, type LonLat } from "../_lib/geocode.ts";
+
 const TTL_S = 1800;
 /** Fades out client-side over roughly this long; no point asking further back. Duluth updates weekly, so it gets a longer window. */
-const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14, "Brooklyn Center": 8, "Maple Grove": 8, Eagan: 8 };
+const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14, "Brooklyn Center": 8, "Maple Grove": 8, Eagan: 8, Bloomington: 8 };
 
-export type City = "Minneapolis" | "Saint Paul" | "Duluth" | "Brooklyn Center" | "Maple Grove" | "Eagan";
+export type City = "Minneapolis" | "Saint Paul" | "Duluth" | "Brooklyn Center" | "Maple Grove" | "Eagan" | "Bloomington";
 
 export interface CrimeIncident {
   id: string;
@@ -79,6 +81,17 @@ const duluthUrl = (sinceMs: number) =>
   "https://services.arcgis.com/DgKyOSWnVuXUe0Jp/arcgis/rest/services/Mapped_Crimes_view/FeatureServer/0/query"
     + `?where=${timestampWhere("Reported_DateTime", sinceMs)}&outFields=OBJECTID,Case_Number,Crime_Description,Reported_DateTime,Latitude,Longitude,BlockAddress`
     + "&orderByFields=Reported_DateTime+DESC&resultRecordCount=1000&f=json";
+
+const BLOOMINGTON_URL = "https://gis.bloomingtonmn.gov/arcgis/rest/services/Police/Police_Data_PUBLIC/MapServer/3/query";
+/** The city's own address-point locator; it matches street addresses but not intersections. */
+const BLOOMINGTON_LOCATOR = "https://gis.bloomingtonmn.gov/arcgis/rest/services/Geocoding/COB_Composite_Pro_26/GeocodeServer";
+const bloomingtonUrl = (sinceMs: number) =>
+  `${BLOOMINGTON_URL}?where=${timestampWhere("dateReported", sinceMs)}&outFields=OBJECTID,CaseNumber,dateReported,IncidentAddress,ViolationCodeReference_Desc`
+  + "&returnGeometry=false&orderByFields=dateReported+DESC&resultRecordCount=1000&f=json";
+
+interface BloomingtonFeature {
+  attributes: { OBJECTID?: number; CaseNumber?: string; dateReported?: number; IncidentAddress?: string; ViolationCodeReference_Desc?: string };
+}
 
 const LOGIS = "https://maps.logis.org/arcgis/rest/services";
 const EAGAN_URL = "https://services1.arcgis.com/6KEQnrFDevRaxA3V/arcgis/rest/services/Crimes_39555559678e4bd0a6fadab24001d1a2/FeatureServer/0/query";
@@ -152,7 +165,22 @@ export function mplsIncidents(features: MplsFeature[]): CrimeIncident[] {
   return out;
 }
 
-export function stPaulIncidents(features: StPaulFeature[]): CrimeIncident[] {
+/**
+ * Saint Paul's masked block ("10XX 4TH ST E", "XX EXCHANGE ST E") as a street
+ * address a geocoder can place: the middle of that hundred-block ("1050 4TH ST E").
+ */
+export function stPaulStreet(block: string): string {
+  const m = /^(\d*)X+\s+(.*)$/i.exec(block.trim());
+  return m ? `${Number(m[1] || 0) * 100 + 50} ${m[2]}` : block.trim();
+}
+
+/**
+ * Saint Paul publishes a district number and a masked block, not a point.
+ * With `located` (block -> geocoded point) an incident draws on its own
+ * street; one that couldn't be placed keeps only its district, and the
+ * client scatters it inside that (see src/crime/crime.ts).
+ */
+export function stPaulIncidents(features: StPaulFeature[], located: ReadonlyMap<string, LonLat> = new Map()): CrimeIncident[] {
   const out: CrimeIncident[] = [];
   for (const { attributes: a } of features) {
     if (a.ObjectId == null || !a.CASE_NUMBER || a.DATE == null || a.NEIGHBORHOOD_NUMBER == null) continue;
@@ -165,6 +193,7 @@ export function stPaulIncidents(features: StPaulFeature[]): CrimeIncident[] {
       // "17 - Capitol River" -> "Capitol River", to match Minneapolis's plain neighborhood names.
       neighborhood: a.NEIGHBORHOOD_NAME?.replace(/^\d+\s*-\s*/, "") || undefined,
       block: a.BLOCK || undefined,
+      position: a.BLOCK ? located.get(a.BLOCK) : undefined,
       stpaulDistrict: a.NEIGHBORHOOD_NUMBER,
     });
   }
@@ -250,6 +279,37 @@ export function eaganIncidents(features: EaganFeature[]): CrimeIncident[] {
   return out;
 }
 
+/** Offenses are charged by statute ("609.52.2(a)(1) Theft..."); everything else Bloomington files (accidents, warrant arrests, lost property, welfare checks) isn't a crime report. */
+const STATUTE = /^\d{2,3}[A-Z]?\.\d/;
+const isIntersection = (a: string) => / [/&] /.test(a) || /^ramp /i.test(a);
+
+/**
+ * Bloomington's incident layer has an address and no point, so each address
+ * is looked up in `located` (see onRequestGet). Exact addresses are reduced
+ * to the block, like Eagan's. Intersections and misses are dropped.
+ */
+export function bloomingtonIncidents(features: BloomingtonFeature[], located: ReadonlyMap<string, LonLat>): CrimeIncident[] {
+  const out: CrimeIncident[] = [];
+  for (const { attributes: a } of features) {
+    if (a.OBJECTID == null || !a.CaseNumber || a.dateReported == null || !a.IncidentAddress) continue;
+    const desc = a.ViolationCodeReference_Desc ?? "";
+    if (!STATUTE.test(desc)) continue;
+    const category = desc.replace(/^\S+\s+/, "").trim();
+    if (!isCrime(category)) continue;
+    const at = located.get(a.IncidentAddress);
+    if (!at) continue;
+    out.push({
+      id: `blm-${a.CaseNumber}-${a.OBJECTID}`,
+      city: "Bloomington",
+      category: category || "Incident",
+      reportedAt: Math.floor(a.dateReported / 1000),
+      block: toBlock(a.IncidentAddress, isIntersection(a.IncidentAddress)),
+      position: snapToBlock(at[0], at[1]),
+    });
+  }
+  return out;
+}
+
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url, {
     headers: { "user-agent": "minneapolis-from-above (+https://minneapolis-from-above.pages.dev)" },
@@ -261,26 +321,34 @@ async function fetchJson(url: string): Promise<unknown> {
 
 export const onRequestGet = async (): Promise<Response> => {
   const now = Date.now();
-  const [mpls, stp, duluth, bc, mg, eagan] = await Promise.allSettled([
-    fetchJson(MPLS_URL) as Promise<{ features?: MplsFeature[] }>,
-    fetchJson(stPaulUrl(now - LOOKBACK_DAYS["Saint Paul"] * 86_400_000)) as Promise<{ features?: StPaulFeature[] }>,
-    fetchJson(duluthUrl(now - LOOKBACK_DAYS.Duluth * 86_400_000)) as Promise<{ features?: DuluthFeature[] }>,
-    fetchJson(brooklynCenterUrl(now - LOOKBACK_DAYS["Brooklyn Center"] * 86_400_000)) as Promise<{ features?: LogisFeature[] }>,
-    fetchJson(mapleGroveUrl(now - LOOKBACK_DAYS["Maple Grove"] * 86_400_000)) as Promise<{ features?: LogisFeature[] }>,
-    fetchJson(eaganUrl(now - LOOKBACK_DAYS.Eagan * 86_400_000)) as Promise<{ features?: EaganFeature[] }>,
-  ]);
+  const since = (city: City) => now - LOOKBACK_DAYS[city] * 86_400_000;
+  const feed = <T>(url: string) => fetchJson(url) as Promise<{ features?: T[] }>;
+  const unique = (xs: (string | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x))].map((street) => ({ id: street, street }));
 
-  const incidents: CrimeIncident[] = [];
-  if (mpls.status === "fulfilled") incidents.push(...mplsIncidents(mpls.value.features ?? []));
-  if (stp.status === "fulfilled") incidents.push(...stPaulIncidents(stp.value.features ?? []));
-  if (duluth.status === "fulfilled") incidents.push(...duluthIncidents(duluth.value.features ?? []));
-  if (bc.status === "fulfilled") incidents.push(...logisIncidents("Brooklyn Center", "bc", bc.value.features ?? []));
-  if (mg.status === "fulfilled") incidents.push(...logisIncidents("Maple Grove", "mg", mg.value.features ?? [], true));
-  if (eagan.status === "fulfilled") incidents.push(...eaganIncidents(eagan.value.features ?? []));
+  const feeds: Promise<CrimeIncident[]>[] = [
+    feed<MplsFeature>(MPLS_URL).then((d) => mplsIncidents(d.features ?? [])),
+    feed<StPaulFeature>(stPaulUrl(since("Saint Paul"))).then(async (d) => {
+      const features = d.features ?? [];
+      // A failed or partial geocode just leaves incidents on their district.
+      const located = await censusBatch(unique(features.map((f) => f.attributes.BLOCK)).map((a) => ({ id: a.id, street: stPaulStreet(a.street) })), "Saint Paul", "MN").catch(() => new Map<string, LonLat>());
+      return stPaulIncidents(features, located);
+    }),
+    feed<DuluthFeature>(duluthUrl(since("Duluth"))).then((d) => duluthIncidents(d.features ?? [])),
+    feed<LogisFeature>(brooklynCenterUrl(since("Brooklyn Center"))).then((d) => logisIncidents("Brooklyn Center", "bc", d.features ?? [])),
+    feed<LogisFeature>(mapleGroveUrl(since("Maple Grove"))).then((d) => logisIncidents("Maple Grove", "mg", d.features ?? [], true)),
+    feed<EaganFeature>(eaganUrl(since("Eagan"))).then((d) => eaganIncidents(d.features ?? [])),
+    feed<BloomingtonFeature>(bloomingtonUrl(since("Bloomington"))).then(async (d) => {
+      const features = (d.features ?? []).filter((f) => STATUTE.test(f.attributes.ViolationCodeReference_Desc ?? ""));
+      const addresses = unique(features.map((f) => f.attributes.IncidentAddress)).filter((a) => !isIntersection(a.street));
+      return bloomingtonIncidents(features, await esriBatch(BLOOMINGTON_LOCATOR, addresses));
+    }),
+  ];
+  const results = await Promise.allSettled(feeds);
 
-  if ([mpls, stp, duluth, bc, mg, eagan].every((r) => r.status === "rejected")) {
+  if (results.every((r) => r.status === "rejected")) {
     return json({ error: "Every city's crime feed is unreachable." }, 502);
   }
+  const incidents = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
   return json({ t: Math.floor(now / 1000), incidents }, 200, `public, max-age=${TTL_S}`);
 };
 
