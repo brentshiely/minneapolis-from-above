@@ -55,9 +55,17 @@ const timestampWhere = (field: string, sinceMs: number) => {
   return encodeURIComponent(`${field} >= TIMESTAMP '${stamp}'`);
 };
 
+/**
+ * Officers logging their own patrol stops ("Proactive Police Visit") are not
+ * crimes: nobody reported anything. Saint Paul files them in the same dataset,
+ * roughly half of its rows, so they're excluded at the source (or they'd eat
+ * the row limit) and again in `isCrime` for any feed.
+ */
+export const isCrime = (...labels: (string | undefined)[]) => !labels.some((l) => l && /proactive police visit/i.test(l));
+
 const stPaulUrl = (sinceMs: number) =>
   "https://services1.arcgis.com/9meaaHE3uiba0zr8/arcgis/rest/services/Crime_Incident_Report_-_Dataset/FeatureServer/0/query"
-    + `?where=${timestampWhere("DATE", sinceMs)}&outFields=ObjectId,CASE_NUMBER,INCIDENT_TYPE,INCIDENT,DATE,NEIGHBORHOOD_NUMBER,NEIGHBORHOOD_NAME,BLOCK`
+    + `?where=${timestampWhere("DATE", sinceMs)}${encodeURIComponent(" AND INCIDENT_TYPE <> 'POLICE VISIT-PROACTIVE POLICE VISIT'")}&outFields=ObjectId,CASE_NUMBER,INCIDENT_TYPE,INCIDENT,DATE,NEIGHBORHOOD_NUMBER,NEIGHBORHOOD_NAME,BLOCK`
     + "&orderByFields=DATE+DESC&resultRecordCount=1000&f=json";
 
 const duluthUrl = (sinceMs: number) =>
@@ -93,6 +101,7 @@ export function mplsIncidents(features: MplsFeature[]): CrimeIncident[] {
   const out: CrimeIncident[] = [];
   for (const { attributes: a } of features) {
     if (a.OBJECTID == null || !a.caseNumber || a.reportedDateTime == null || a.centerLat == null || a.centerLong == null) continue;
+    if (!isCrime(a.description, a.offense)) continue;
     out.push({
       id: `mpls-${a.caseNumber}-${a.OBJECTID}`,
       city: "Minneapolis",
@@ -110,6 +119,7 @@ export function stPaulIncidents(features: StPaulFeature[]): CrimeIncident[] {
   const out: CrimeIncident[] = [];
   for (const { attributes: a } of features) {
     if (a.ObjectId == null || !a.CASE_NUMBER || a.DATE == null || a.NEIGHBORHOOD_NUMBER == null) continue;
+    if (!isCrime(a.INCIDENT_TYPE, a.INCIDENT)) continue;
     out.push({
       id: `stp-${a.CASE_NUMBER}-${a.ObjectId}`,
       city: "Saint Paul",
@@ -128,6 +138,7 @@ export function duluthIncidents(features: DuluthFeature[]): CrimeIncident[] {
   const out: CrimeIncident[] = [];
   for (const { attributes: a } of features) {
     if (a.OBJECTID == null || !a.Case_Number || a.Reported_DateTime == null || a.Latitude == null || a.Longitude == null) continue;
+    if (!isCrime(a.Crime_Description)) continue;
     out.push({
       id: `duluth-${a.Case_Number}-${a.OBJECTID}`,
       city: "Duluth",

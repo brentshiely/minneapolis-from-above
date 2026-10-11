@@ -48,6 +48,15 @@ test("stPaulIncidents keeps rows with a case, date and district, drops the rest"
   assert.equal(out[0].position, undefined);
 });
 
+test("proactive police visits are officers' own patrol stops, not crimes, and are dropped", () => {
+  const out = stPaulIncidents([
+    { attributes: { ObjectId: 1, CASE_NUMBER: 1, DATE: 0, NEIGHBORHOOD_NUMBER: 5, INCIDENT_TYPE: "POLICE VISIT-PROACTIVE POLICE VISIT", INCIDENT: "Proactive Police Visit" } },
+    { attributes: { ObjectId: 2, CASE_NUMBER: 2, DATE: 0, NEIGHBORHOOD_NUMBER: 5, INCIDENT_TYPE: "Theft" } },
+  ]);
+  assert.deepEqual(out.map((i) => i.category), ["Theft"]);
+  assert.equal(mplsIncidents([{ attributes: { OBJECTID: 1, caseNumber: "MP1", description: "Proactive Police Visit", reportedDateTime: 0, centerLat: 44.9, centerLong: -93.3 } }]).length, 0);
+});
+
 test("stPaulIncidents strips the leading district number off the neighborhood name", () => {
   const out = stPaulIncidents([{ attributes: { ObjectId: 1, CASE_NUMBER: 1, DATE: 0, NEIGHBORHOOD_NUMBER: 17, NEIGHBORHOOD_NAME: "17 - Capitol River" } }]);
   assert.equal(out[0].neighborhood, "Capitol River");
