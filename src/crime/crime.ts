@@ -1,6 +1,6 @@
 /**
  * Recently reported crime incidents in Minneapolis, Saint Paul, Duluth,
- * Brooklyn Center, Maple Grove and Eagan, fading out as they age. All but
+ * Brooklyn Center, Maple Grove, Eagan, Bloomington and Brooklyn Park, fading out as they age. All but
  * Saint Paul publish a point for every incident directly; Saint Paul publishes only a
  * district number, so its incidents are placed at a deterministic
  * (never-jumping) random spot inside their real district instead of
@@ -16,9 +16,10 @@ export type { CrimeIncident, CrimeResponse, City };
  * Minneapolis and Saint Paul update roughly daily; Duluth's own source
  * says weekly and often lags further, so it needs a much longer tail or
  * it would never show anything at all. The suburbs report only a few
- * incidents a day and lag a few days behind, so they get a week.
+ * incidents a day and lag a few days behind, so they get a week. Brooklyn
+ * Park refreshes about weekly, so like Duluth it needs a longer tail.
  */
-export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12, "Brooklyn Center": 7, "Maple Grove": 7, Eagan: 7, Bloomington: 7 };
+export const FADE_DAYS: Record<City, number> = { Minneapolis: 2, "Saint Paul": 2, Duluth: 12, "Brooklyn Center": 7, "Maple Grove": 7, Eagan: 7, Bloomington: 7, "Brooklyn Park": 16 };
 
 export interface StPaulDistrict {
   name: string;
@@ -67,7 +68,8 @@ export function crimePosition(c: CrimeIncident, districts: StPaulDistricts): [nu
   return [d.center[0] + (Math.sin(angle) * radiusM) / kx, d.center[1] + (Math.cos(angle) * radiusM) / M_PER_DEG_LAT];
 }
 
-function ago(seconds: number): string {
+/** "3 hours ago", "a day ago": these reports are hours to days old. */
+export function ago(seconds: number): string {
   const m = Math.max(0, Math.round(seconds / 60));
   if (m < 1) return "just now";
   if (m < 60) return m === 1 ? "a minute ago" : `${m} minutes ago`;

@@ -2,8 +2,8 @@
  * Cloudflare Pages Function: GET /api/crime
  *
  * Recent reported crime incidents from Minneapolis's, Saint Paul's,
- * Duluth's, Brooklyn Center's, Maple Grove's and Eagan's own open-data
- * services (all Esri FeatureServers/MapServers, free, no key, CORS-open).
+ * Duluth's, Brooklyn Center's, Maple Grove's, Eagan's, Bloomington's and
+ * Brooklyn Park's own open-data services (all Esri FeatureServers/MapServers, free, no key, CORS-open).
  * Brooklyn Center and Maple Grove are served from LOGIS, the shared
  * records-system host for several suburban departments.
  *
@@ -24,6 +24,8 @@
  * uses a much longer lookback and fade than the Twin Cities (see
  * LOOKBACK_DAYS and src/crime/crime.ts's FADE_DAYS). The smaller suburbs
  * report only a few incidents a day and lag a few days, so they get a week.
+ * Brooklyn Park refreshes its hosted layer about weekly (records run a few
+ * days behind that, about 10 days old when it lands), so it gets a still longer window than Duluth's.
  */
 import { censusBatch, esriBatch, type LonLat } from "../_lib/geocode.ts";
 
@@ -31,9 +33,9 @@ const TTL_S = 1800;
 /** When any city's feed failed, how long the partial answer is kept before trying again. */
 const RETRY_TTL_S = 90;
 /** Fades out client-side over roughly this long; no point asking further back. Duluth updates weekly, so it gets a longer window. */
-const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14, "Brooklyn Center": 8, "Maple Grove": 8, Eagan: 8, Bloomington: 8 };
+const LOOKBACK_DAYS: Record<City, number> = { Minneapolis: 3, "Saint Paul": 3, Duluth: 14, "Brooklyn Center": 8, "Maple Grove": 8, Eagan: 8, Bloomington: 8, "Brooklyn Park": 18 };
 
-export type City = "Minneapolis" | "Saint Paul" | "Duluth" | "Brooklyn Center" | "Maple Grove" | "Eagan" | "Bloomington";
+export type City = "Minneapolis" | "Saint Paul" | "Duluth" | "Brooklyn Center" | "Maple Grove" | "Eagan" | "Bloomington" | "Brooklyn Park";
 
 export interface CrimeIncident {
   id: string;
@@ -93,6 +95,16 @@ const bloomingtonUrl = (sinceMs: number) =>
 
 interface BloomingtonFeature {
   attributes: { OBJECTID?: number; CaseNumber?: string; dateReported?: number; IncidentAddress?: string; ViolationCodeReference_Desc?: string };
+}
+
+const BROOKLYN_PARK_URL = "https://services1.arcgis.com/PNZiYeVBN73VJW7o/arcgis/rest/services/_Crimes/FeatureServer/1/query";
+const brooklynParkUrl = (sinceMs: number) =>
+  `${BROOKLYN_PARK_URL}?where=${timestampWhere("DATETIME_RPT", sinceMs)}&outFields=OBJECTID,CASE_NUM,DATETIME_RPT,CRIME_CODE_DESCRIPTION,CrimeGroup,Neighborhood`
+  + "&outSR=4326&orderByFields=DATETIME_RPT+DESC&resultRecordCount=1000&f=json";
+
+interface BrooklynParkFeature {
+  attributes: { OBJECTID?: number; CASE_NUM?: string; DATETIME_RPT?: number; CRIME_CODE_DESCRIPTION?: string; CrimeGroup?: string; Neighborhood?: string };
+  geometry?: { x?: number; y?: number };
 }
 
 const LOGIS = "https://maps.logis.org/arcgis/rest/services";
@@ -312,6 +324,30 @@ export function bloomingtonIncidents(features: BloomingtonFeature[], located: Re
   return out;
 }
 
+/**
+ * Brooklyn Park's layer carries a point at each report's address, with no
+ * address text, so only the point needs masking: it's snapped to a
+ * block-sized cell, like Eagan's. "Misc/Traffic/Other Violation" is where
+ * accidents and traffic matters land, which aren't crimes.
+ */
+export function brooklynParkIncidents(features: BrooklynParkFeature[]): CrimeIncident[] {
+  const out: CrimeIncident[] = [];
+  for (const { attributes: a, geometry: g } of features) {
+    if (a.OBJECTID == null || !a.CASE_NUM || a.DATETIME_RPT == null || g?.x == null || g?.y == null) continue;
+    const category = a.CRIME_CODE_DESCRIPTION || a.CrimeGroup || "Incident";
+    if (!isCrime(category) || /^misc\/traffic/i.test(category)) continue;
+    out.push({
+      id: `bp-${a.CASE_NUM}-${a.OBJECTID}`,
+      city: "Brooklyn Park",
+      category,
+      reportedAt: Math.floor(a.DATETIME_RPT / 1000),
+      neighborhood: a.Neighborhood || undefined,
+      position: snapToBlock(g.x, g.y),
+    });
+  }
+  return out;
+}
+
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url, {
     headers: { "user-agent": "minneapolis-from-above (+https://minneapolis-from-above.pages.dev)" },
@@ -339,6 +375,7 @@ export const onRequestGet = async (): Promise<Response> => {
     ["Brooklyn Center", feed<LogisFeature>(brooklynCenterUrl(since("Brooklyn Center"))).then((d) => logisIncidents("Brooklyn Center", "bc", d.features ?? []))],
     ["Maple Grove", feed<LogisFeature>(mapleGroveUrl(since("Maple Grove"))).then((d) => logisIncidents("Maple Grove", "mg", d.features ?? [], true))],
     ["Eagan", feed<EaganFeature>(eaganUrl(since("Eagan"))).then((d) => eaganIncidents(d.features ?? []))],
+    ["Brooklyn Park", feed<BrooklynParkFeature>(brooklynParkUrl(since("Brooklyn Park"))).then((d) => brooklynParkIncidents(d.features ?? []))],
     ["Bloomington", feed<BloomingtonFeature>(bloomingtonUrl(since("Bloomington"))).then(async (d) => {
       const features = (d.features ?? []).filter((f) => STATUTE.test(f.attributes.ViolationCodeReference_Desc ?? ""));
       const addresses = unique(features.map((f) => f.attributes.IncidentAddress)).filter((a) => !isIntersection(a.street));

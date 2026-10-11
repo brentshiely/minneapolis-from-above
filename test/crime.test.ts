@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseCensus, parseCsvLine, parseEsri } from "../functions/_lib/geocode.ts";
-import { bloomingtonIncidents, duluthIncidents, eaganIncidents, logisIncidents, mplsIncidents, onRequestGet, stPaulIncidents, stPaulStreet } from "../functions/api/crime.ts";
+import { bloomingtonIncidents, brooklynParkIncidents, duluthIncidents, eaganIncidents, logisIncidents, mplsIncidents, onRequestGet, stPaulIncidents, stPaulStreet } from "../functions/api/crime.ts";
 import { crimePosition, crimeStrength, describeCrime, FADE_DAYS, previewCrime, type StPaulDistricts } from "../src/crime/crime.ts";
 
 // --- functions/api/crime.ts: normalizing each city's raw rows ---------------------
@@ -272,4 +272,17 @@ test("bloomingtonIncidents keeps charged offenses, strips the statute, masks to 
   assert.equal(out[0].category, "Damage to Property - 1st Degree - Value Reduced Over $1000");
   assert.equal(out[0].block, "9300 BLK PENN AVE S");
   assert.notDeepEqual(out[0].position, [-93.30852, 44.83479]);
+});
+
+test("brooklynParkIncidents snaps the point to a block, keeps the neighborhood, and drops traffic and accident rows", () => {
+  const row = (id: number, desc: string) => ({
+    attributes: { OBJECTID: id, CASE_NUM: `2026-0000${id}`, DATETIME_RPT: 1_700_000_000_000, CRIME_CODE_DESCRIPTION: desc, Neighborhood: "Village Creek" },
+    geometry: { x: -93.35306596, y: 45.08802972 },
+  });
+  const out = brooklynParkIncidents([row(1, "Shoplifting"), row(2, "Misc/Traffic/Other Violation"), { attributes: { OBJECTID: 3, CASE_NUM: "x", DATETIME_RPT: 0, CRIME_CODE_DESCRIPTION: "Theft" } }]);
+  assert.equal(out.length, 1, "the traffic row and the one with no point are dropped");
+  assert.equal(out[0].city, "Brooklyn Park");
+  assert.equal(out[0].neighborhood, "Village Creek");
+  assert.notDeepEqual(out[0].position, [-93.35306596, 45.08802972]);
+  assert.ok(Math.abs(out[0].position![0] + 93.35306596) <= 0.001 && Math.abs(out[0].position![1] - 45.08802972) <= 0.001);
 });
