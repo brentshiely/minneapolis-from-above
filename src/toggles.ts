@@ -5,7 +5,7 @@
  */
 export type LayerKey =
   | "transit" | "planes" | "satellites" | "traffic" | "cameras" | "incidents"
-  | "river" | "warnings" | "games" | "beaches" | "airport" | "wildlife" | "snow" | "crime" | "gunfire";
+  | "river" | "warnings" | "games" | "beaches" | "airport" | "wildlife" | "snow" | "crime" | "gunfire" | "drones";
 
 export interface ToggleGroup {
   key: LayerKey;
@@ -29,6 +29,7 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
   { key: "wildlife", label: "Wildlife sightings", glyph: '<path d="M12 6C9 6 7 9 7 12c0 3 2 6 5 6s5-3 5-6c0-3-2-6-5-6zm-6 2a2 2 0 100 4 2 2 0 000-4zm12 0a2 2 0 100 4 2 2 0 000-4zM8 3a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4z"/>' },
   { key: "snow", label: "Snow emergencies", glyph: '<path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M12 2v20M4 6l16 12M20 6 4 18M6 4l1 3-3 1M18 4l-1 3 3 1M6 20l1-3-3-1M18 20l-1-3 3-1"/>' },
   { key: "gunfire", label: "Shots fired", glyph: '<circle cx="12" cy="12" r="2.6"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2.5v4.5M12 17v4.5M2.5 12H7M17 12h4.5"/>' },
+  { key: "drones", label: "Police drone flights", glyph: '<circle cx="12" cy="12" r="2.4"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M9.9 9.9 7 7M14.1 9.9 17 7M9.9 14.1 7 17M14.1 14.1 17 17"/><g fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.6" cy="5.6" r="2.2"/><circle cx="18.4" cy="5.6" r="2.2"/><circle cx="5.6" cy="18.4" r="2.2"/><circle cx="18.4" cy="18.4" r="2.2"/></g>' },
   { key: "crime", label: "Crime events", glyph: '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 2.5 20 6v6c0 5-3.4 8.2-8 9.5-4.6-1.3-8-4.5-8-9.5V6z"/>' },
 ];
 

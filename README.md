@@ -76,6 +76,7 @@ Everything on the map comes from someone else's work. Thank you to:
 **City and civic data**
 - Recent crime: the open-data services of the cities of Minneapolis, Saint Paul, Duluth, Brooklyn Center, Maple Grove, Eagan, Bloomington and Brooklyn Park
 - Gunfire calls (shots fired, ShotSpotter, shootings): the City of Minneapolis open-data service
+- Police drone flights: the public drone-as-first-responder flight logs of the St. Paul, Brooklyn Park, Minnetonka, Duluth, St. Cloud and Rochester police departments (flight paths only, delayed and offset for privacy)
 - Snow emergencies: the cities of Minneapolis and Saint Paul
 - Beach status: Minneapolis Park Board
 - Airport status: [FAA National Airspace System Status](https://nasstatus.faa.gov/)
