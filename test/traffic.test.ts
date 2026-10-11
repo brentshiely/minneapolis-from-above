@@ -65,7 +65,14 @@ test("describes a stretch of freeway", () => {
   assert.equal(describeStation({ label: "T.H.62", limit: 60, lanes: 2, route: "U.S.169", dir: "SB" }, undefined, 0).detail, "No speed reading right now.");
 });
 
-test("consecutive segments sharing a station merge into one stretch", () => {
+test("a corridor's parts become stretches, one per station, in order and on the same corridor", () => {
+  const a = "_p~iF~ps|U_ulLnnqC_mqNvxq`@"; // three points
+  const b = "_ulLnnqC_ulLnnqC"; // two points
+  const fw = parseFreeways({ stations: {}, corridors: [{ route: "I-94", dir: "EB", parts: [["S1", a], ["S2", b]] }, { route: "I-94", dir: "WB", parts: [["S3", b]] }] });
+  assert.deepEqual(fw.stretches.map((s) => [s.station, s.path.length, s.corridor]), [["S1", 3, 0], ["S2", 2, 0], ["S3", 2, 1]]);
+});
+
+test("the older one-line-per-corridor file still reads: consecutive segments sharing a station merge into one stretch", () => {
   // Three segments on one line: two share S1, then a gap, then S2.
   const line = "_p~iF~ps|U_ulLnnqC_mqNvxq`@_ulLnnqC_ulLnnqC"; // five points
   const fw = parseFreeways({ stations: {}, corridors: [{ route: "I-94", dir: "EB", line, seg: ["S1", "S1", "", "S2"] }] });

@@ -1,10 +1,16 @@
 import { decodePolyline } from "../transit/data.ts";
 import type { StationInfo } from "./traffic.ts";
 
-/** Baked by scripts/build-mndot.mjs into public/data/freeways.json. */
+/**
+ * Baked by scripts/build-mndot.mjs into public/data/freeways.json. A corridor
+ * is one road and direction, as `parts`: [station, encoded line] for each
+ * stretch that has a sensor, in order along the road. (Older files had one
+ * `line` per corridor and a `seg` station per segment of it; a browser can
+ * still hold one for an hour after a deploy, so both are read.)
+ */
 interface FreewaysFile {
   stations: Record<string, StationInfo>;
-  corridors: { route: string; dir: string; line: string; seg: string[] }[];
+  corridors: { route: string; dir: string; parts?: [string, string][]; line?: string; seg?: string[] }[];
 }
 
 /** A stretch of freeway whose speed comes from one sensor station. */
@@ -20,13 +26,17 @@ export interface Freeways {
   stretches: Stretch[];
 }
 
-/** Merge consecutive segments that share a station into one stretch. */
 export function parseFreeways(file: FreewaysFile): Freeways {
   const stretches: Stretch[] = [];
   file.corridors.forEach((c, corridor) => {
-    const pts = decodePolyline(c.line);
+    if (c.parts) {
+      for (const [station, line] of c.parts) stretches.push({ corridor, station, path: decodePolyline(line) });
+      return;
+    }
+    // Legacy: merge consecutive segments that share a station into one stretch.
+    const pts = decodePolyline(c.line ?? "");
     let cur: Stretch | undefined;
-    c.seg.forEach((station, i) => {
+    (c.seg ?? []).forEach((station, i) => {
       if (!station) { cur = undefined; return; }
       if (cur && cur.station === station) cur.path.push(pts[i + 1]);
       else { cur = { corridor, station, path: [pts[i], pts[i + 1]] }; stretches.push(cur); }
