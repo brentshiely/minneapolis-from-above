@@ -80,6 +80,7 @@ Everything on the map comes from someone else's work. Thank you to:
 - Beach status: Minneapolis Park Board
 - Airport status: [FAA National Airspace System Status](https://nasstatus.faa.gov/)
 - Live scores: MLB Stats API, NHL, and ESPN scoreboards
+- Address and place search: the Metropolitan Council's metro geocoders, and [Photon](https://photon.komoot.io/) with OpenStreetMap data (© OpenStreetMap contributors)
 
 **Wildlife**
 - Observations and photos from [iNaturalist](https://www.inaturalist.org/); each photo is shown only when its own license allows reuse, and remains the work of its observer

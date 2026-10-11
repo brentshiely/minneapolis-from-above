@@ -20,6 +20,7 @@ const PARAMS: Record<string, string[]> = {
   "/api/water": ["lid"],
   "/api/satinfo": ["id"],
   "/api/flight": ["callsign", "hex"],
+  "/api/geocode": ["q"],
   "/api/radar-tile": ["m", "z", "x", "y"],
 };
 

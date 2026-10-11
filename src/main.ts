@@ -70,6 +70,8 @@ import { gunfireLayers, type GunfireFrame } from "./layers/gunfire.ts";
 import type { GunfireResponse } from "./gunfire/gunfire.ts";
 import { fallColorPhrase, FallColorHaze, previewFallColor } from "./seasons/fallcolor.ts";
 import type { FallColorResponse } from "../functions/api/fallcolor.ts";
+import { SearchBox, type Place } from "./search.ts";
+import { Marker } from "maplibre-gl";
 import { TogglePanel } from "./togglepanel.ts";
 import type { LayerKey } from "./toggles.ts";
 import type { FeedStatus } from "./live/feed.ts";
@@ -122,6 +124,20 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // Which data layers the viewer wants to see; collapsed button, sticks
   // across visits.
   const layersPanel = new TogglePanel(document.body);
+  // Search for an address, intersection, street or place: fly there and ring it for a few seconds.
+  let searchHoldUntil = 0;
+  let pin: Marker | undefined;
+  new SearchBox(document.body, (place: Place) => {
+    pin?.remove();
+    const el = document.createElement("div");
+    el.className = "search-pin";
+    const marker = pin = new Marker({ element: el }).setLngLat([place.lon, place.lat]).addTo(map);
+    setTimeout(() => marker.remove(), 9_500); // its CSS animation fades it out by 8.8 s
+    const to = { center: [place.lon, place.lat] as [number, number], zoom: place.zoom };
+    if (reducedMotion.matches) map.jumpTo(to); else map.flyTo({ ...to, duration: 2200, essential: true });
+    // The ambient tour would carry the view away from where they just asked to look.
+    searchHoldUntil = performance.now() + 3 * 60_000;
+  });
   // Real aerial photography, up close and by day: sits above the drawn
   // land/water/building fills but below roads, rail and labels, so those
   // stay legible on top of the photo.
@@ -210,7 +226,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const [overview, mpls, uofm, stpaul, univ, lakes, approach, lake] = LANDMARKS;
   const drift = new Drift(map, [overview, mpls, trainScene, uofm, stpaul, landingScene, lakes, univ, approach, trainScene, lake],
     performance.now() / 1000, idleParam > 0 ? idleParam : IDLE_S);
-  drift.holdStill = () => reducedMotion.matches || hover.pinnedOpen;
+  drift.holdStill = () => reducedMotion.matches || hover.pinnedOpen || performance.now() < searchHoldUntil;
   const caption = document.getElementById("caption")!;
   drift.onCaption = (text) => {
     caption.classList.toggle("shown", !!text);
