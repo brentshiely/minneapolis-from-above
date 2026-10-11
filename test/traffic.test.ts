@@ -8,6 +8,12 @@ import { gunzipText } from "../functions/api/traffic.ts";
 
 const gz = readFileSync(new URL("./fixtures/mndot-stat.xml.gz", import.meta.url));
 
+test("describeStation says so when a speed is an estimate borrowed from nearby sensors", () => {
+  const d = describeStation({ label: "Shepard Rd", limit: 55, lanes: 3, route: "I-35E", dir: "SB" }, [52, 900], 30, true);
+  assert.match(d.detail!, /estimated from nearby sensors/);
+  assert.match(d.detail!, /52 mph/);
+});
+
 test("reads MnDOT's 30-second sample", () => {
   const r = parseSample(new TextDecoder().decode(gunzipSync(gz)));
   assert.ok(Object.keys(r.s).length > 1000, `${Object.keys(r.s).length} stations`);

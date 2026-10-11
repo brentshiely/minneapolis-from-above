@@ -9,6 +9,8 @@ interface FreewaysFile {
 
 /** A stretch of freeway whose speed comes from one sensor station. */
 export interface Stretch {
+  /** Which corridor (road and direction) this stretch is on; consecutive stretches with the same value are neighbors along it. */
+  corridor: number;
   station: string;
   path: [number, number][];
 }
@@ -21,15 +23,15 @@ export interface Freeways {
 /** Merge consecutive segments that share a station into one stretch. */
 export function parseFreeways(file: FreewaysFile): Freeways {
   const stretches: Stretch[] = [];
-  for (const c of file.corridors) {
+  file.corridors.forEach((c, corridor) => {
     const pts = decodePolyline(c.line);
     let cur: Stretch | undefined;
     c.seg.forEach((station, i) => {
       if (!station) { cur = undefined; return; }
       if (cur && cur.station === station) cur.path.push(pts[i + 1]);
-      else { cur = { station, path: [pts[i], pts[i + 1]] }; stretches.push(cur); }
+      else { cur = { corridor, station, path: [pts[i], pts[i + 1]] }; stretches.push(cur); }
     });
-  }
+  });
   return { stations: file.stations, stretches };
 }
 

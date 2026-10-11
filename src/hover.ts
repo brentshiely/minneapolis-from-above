@@ -100,6 +100,7 @@ export class Hover {
   private gaugeDetails = new Map<string, GaugeDetail | "pending">();
   private freeways?: Freeways;
   private readings: () => Readings = () => ({});
+  private estimated: (station: string) => boolean = () => false;
   private trafficTime: () => number = () => 0;
 
   private sats: () => Sat[] = () => [];
@@ -156,8 +157,8 @@ export class Hover {
     };
   }
 
-  setFreeways(fw: Freeways, readings: () => Readings, trafficTime: () => number) {
-    this.freeways = fw; this.readings = readings; this.trafficTime = trafficTime;
+  setFreeways(fw: Freeways, readings: () => Readings, trafficTime: () => number, estimated: (station: string) => boolean = () => false) {
+    this.freeways = fw; this.readings = readings; this.trafficTime = trafficTime; this.estimated = estimated;
   }
   private cameras = new Map<string, CameraInfo>();
   setCameras(cameras: CameraInfo[]) { this.cameras = new Map(cameras.map((c) => [c.name, c])); }
@@ -425,7 +426,7 @@ export class Hover {
     } else if (this.target.kind === "traffic") {
       const info = this.freeways?.stations[this.target.station];
       if (!info) { this.clear(); return []; }
-      desc = describeStation(info, this.readings()[this.target.station], nowS_wall() - this.trafficTime());
+      desc = describeStation(info, this.readings()[this.target.station], nowS_wall() - this.trafficTime(), this.estimated(this.target.station));
       position = this.target.at;
       layers = [];
     } else if (this.target.kind === "camera") {

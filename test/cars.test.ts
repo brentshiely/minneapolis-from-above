@@ -10,7 +10,7 @@ const M_PER_DEG_LON = 111_320 * Math.cos((44.9 * Math.PI) / 180);
 function oneStretchFreeways(lanes = 3, lengthM = 1000): Freeways {
   return {
     stations: { S1: { label: "", limit: 55, lanes, route: "I-94", dir: "EB" } },
-    stretches: [{ station: "S1", path: [[-93.3, 44.9], [-93.3 + lengthM / M_PER_DEG_LON, 44.9]] }],
+    stretches: [{ corridor: 0, station: "S1", path: [[-93.3, 44.9], [-93.3 + lengthM / M_PER_DEG_LON, 44.9]] }],
   };
 }
 

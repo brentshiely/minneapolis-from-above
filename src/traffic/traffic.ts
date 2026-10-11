@@ -90,7 +90,7 @@ function place(label: string): string {
     .replace(/\s*\([^)]*\)\s*/g, " ").trim();
 }
 
-export function describeStation(info: StationInfo, reading: [number | null, number | null] | undefined, ageS: number): Description {
+export function describeStation(info: StationInfo, reading: [number | null, number | null] | undefined, ageS: number, estimated = false): Description {
   const where = place(info.label);
   const at = where ? (/^(north|south|east|west) of /.test(where) ? ` ${where}` : ` at ${where}`) : "";
   const title = `${routeName(info.route)} ${DIRS[info.dir] ?? info.dir}${at}.`;
@@ -101,5 +101,6 @@ export function describeStation(info: StationInfo, reading: [number | null, numb
     detail = `${Math.round(speed)} mph, ${LEVEL_WORDS[level(speed, info.limit)]}. The limit is ${info.limit}.`;
     if (flow !== null && flow > 0) detail += ` About ${(Math.round((flow * (info.lanes || 1)) / 60) * 60).toLocaleString("en-US")} vehicles an hour.`;
   }
+  if (estimated) detail = `No sensor reading here right now; about ${detail.charAt(0).toLowerCase()}${detail.slice(1)}`.replace(/\.$/, " (estimated from nearby sensors).");
   return { title, detail, meta: `MnDOT sensor · updated ${ago(ageS)}` };
 }

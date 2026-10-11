@@ -23,9 +23,10 @@ import { Drift, IDLE_S, LANDMARKS, type Scene } from "./drift.ts";
 import { AIRLINES, kmBetween } from "./describe.ts";
 import { learnedLakes } from "./water/match.ts";
 import { loadFreeways, type Freeways } from "./traffic/freeways.ts";
-import type { TrafficResponse } from "./traffic/traffic.ts";
+import type { Readings, TrafficResponse } from "./traffic/traffic.ts";
 import { trafficLayer, type TrafficFrame } from "./layers/traffic.ts";
 import { CarFlow } from "./traffic/cars.ts";
+import { fillGaps } from "./traffic/gaps.ts";
 import { carsLayer } from "./layers/cars.ts";
 import type { CameraInfo, CamerasFile } from "./traffic/cameras.ts";
 import { cameraLayers } from "./layers/cameras.ts";
@@ -248,19 +249,28 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   setInterval(followSun, 1000);
   // Freeway speeds from MnDOT's road sensors, every 30 seconds.
   let freeways: Freeways | undefined;
-  const tf: TrafficFrame = { readings: {}, version: 0, daylight: sky.daylight };
+  const tf: TrafficFrame = { readings: {}, estimated: new Set(), version: 0, daylight: sky.daylight };
   // Synthetic cars at the real volume (flow x lanes), moving at the real speed, from the same readings.
   let cars: CarFlow | undefined;
   loadFreeways().then((fw) => {
     freeways = fw;
     cars = new CarFlow(fw);
-    hover.setFreeways(fw, () => tf.readings, () => trafficAge);
+    hover.setFreeways(fw, () => tf.readings, () => trafficAge, (station) => tf.estimated.has(station));
+    refill();
   }).catch((e) => console.warn(e));
   let trafficAge = 0;
-  const trafficFeed = startPoller<TrafficResponse>("/api/traffic", 30_000, (body) => {
-    tf.readings = body.s;
-    trafficAge = body.t;
+  // The sensors' own readings, with holes in coverage filled from neighboring stretches.
+  let rawReadings: Readings = {};
+  const refill = () => {
+    const filled = freeways ? fillGaps(freeways, rawReadings) : { readings: rawReadings, estimated: new Set<string>() };
+    tf.readings = filled.readings;
+    tf.estimated = filled.estimated;
     tf.version++;
+  };
+  const trafficFeed = startPoller<TrafficResponse>("/api/traffic", 30_000, (body) => {
+    rawReadings = body.s;
+    trafficAge = body.t;
+    refill();
   }, { maxMs: 5 * 60_000 });
 
   // MnDOT's freeway cameras: baked once, they never move.

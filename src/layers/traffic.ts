@@ -17,8 +17,14 @@ const COLORS: Record<Level, [RGB, RGB]> = {
 /** Free-flowing freeways stay quiet (quieter at night, beside the bus web); congestion speaks up. */
 const ALPHA: Record<Level, [number, number]> = { free: [92, 125], slowing: [200, 210], heavy: [225, 230], stopped: [240, 240] };
 
+/** An estimate borrowed from neighboring sensors draws fainter than a real reading. */
+const ESTIMATE_DIM = 0.6;
+
 export interface TrafficFrame {
+  /** Raw sensor readings plus estimates for holes (see traffic/gaps.ts). */
   readings: Readings;
+  /** Stations whose speed in `readings` is an estimate. */
+  estimated: ReadonlySet<string>;
   version: number;
   daylight: number;
 }
@@ -29,7 +35,8 @@ export function trafficLayer(freeways: Freeways, f: TrafficFrame, beforeId?: str
     const speed = f.readings[s.station]?.[0];
     if (speed === null || speed === undefined) return [0, 0, 0, 0];
     const lv = level(speed, freeways.stations[s.station]?.limit ?? 55);
-    return [...mixRgb(COLORS[lv][0], COLORS[lv][1], d), ALPHA[lv][0] + (ALPHA[lv][1] - ALPHA[lv][0]) * d];
+    const alpha = (ALPHA[lv][0] + (ALPHA[lv][1] - ALPHA[lv][0]) * d) * (f.estimated.has(s.station) ? ESTIMATE_DIM : 1);
+    return [...mixRgb(COLORS[lv][0], COLORS[lv][1], d), alpha];
   };
   return new PathLayer<Stretch>({
     id: "traffic",
