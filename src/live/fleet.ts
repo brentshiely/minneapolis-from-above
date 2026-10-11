@@ -1,6 +1,8 @@
-import type { Mode, Transit } from "../transit/data.ts";
+import { distM, type Mode, type Transit } from "../transit/data.ts";
 import type { VehicleRow } from "./feed.ts";
+import { bearing as bearingBetween } from "./geometry.ts";
 import { Motion } from "./motion.ts";
+import { inferShape } from "./shapematch.ts";
 
 /** Anything drawn as a vehicle dot: a live vehicle or a fading ghost. */
 export interface Drawable {
@@ -21,7 +23,12 @@ export interface Vehicle extends Drawable {
   seenAt: number;
   /** Page-clock seconds when the vehicle (re)appeared; drives its fade-in. */
   appearAt: number;
+  /** The previous GPS fix, to tell which way the vehicle is going when the feed gives no bearing. */
+  lastFix: [number, number];
 }
+
+/** A vehicle must have moved this far between fixes for the direction between them to mean anything. */
+const MIN_CHORD_M = 20;
 
 /** Where a vehicle was just before it teleported, fading out. */
 interface Ghost extends Drawable {
@@ -54,24 +61,26 @@ export class Fleet {
   /** Apply a feed snapshot at page-clock time `now`. Missing vehicles are kept until pruned. */
   update(feedTime: number, rows: VehicleRow[], now = 0) {
     this.feedTime = Math.max(this.feedTime, feedTime);
-    for (const [id, tripId, routeId, lat, lon, fixTime] of rows) {
+    for (const [id, tripId, routeId, lat, lon, fixTime, reported] of rows) {
       const mode = this.transit.routes[routeId]?.mode ?? "bus";
-      const shape = this.transit.shapeForTrip(tripId);
       const v = this.vehicles.get(id);
+      // A trip the baked schedule doesn't know (ids change with each new feed) still runs on its route's line.
+      const facing = reported ?? (v && distM(v.lastFix, [lon, lat]) >= MIN_CHORD_M ? bearingBetween(v.lastFix, [lon, lat]) : undefined);
+      const shape = this.transit.shapeForTrip(tripId) ?? inferShape(this.transit, routeId, [lon, lat], { bearing: facing, current: v?.motion.shape });
       if (v) {
         const before = v.motion.teleports;
         const from = v.position;
-        v.motion.onFix(shape, [lon, lat], fixTime);
+        v.motion.onFix(shape, [lon, lat], fixTime, reported);
         if (v.motion.teleports !== before) {
           this.ghosts.push({ routeId: v.routeId, mode: v.mode, position: from, alpha: v.alpha, since: now });
           v.appearAt = now;
         }
-        Object.assign(v, { tripId, routeId, mode, fixTime, seenAt: feedTime, position: v.motion.pos });
+        Object.assign(v, { tripId, routeId, mode, fixTime, seenAt: feedTime, position: v.motion.pos, lastFix: [lon, lat] });
       } else {
-        const motion = new Motion(shape, [lon, lat], fixTime);
+        const motion = new Motion(shape, [lon, lat], fixTime, reported);
         this.vehicles.set(id, {
           id, tripId, routeId, mode, motion, position: motion.pos, alpha: 0,
-          fixTime, seenAt: feedTime, appearAt: now,
+          fixTime, seenAt: feedTime, appearAt: now, lastFix: [lon, lat],
         });
       }
     }

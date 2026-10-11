@@ -12,7 +12,9 @@ import { bearing, headingAt, pointAt, project, type LonLat } from "./geometry.ts
  * holds the vehicle in place instead.
  *
  * Off a shape (no trip match, or a detour): the drawn position slides in a
- * straight line to the fix over the same glide time.
+ * straight line to the fix over the same glide time, facing the way the
+ * feed says the vehicle is pointing (the glide's own direction only when the
+ * feed gives none, since a glide cuts corners the vehicle doesn't).
  */
 
 /** A fix farther than this from the route means the vehicle is off it. */
@@ -50,13 +52,17 @@ export class Motion {
   private duration = GLIDE_DEFAULT_S;
 
   private lastFixTime: number;
+  /** The bearing the feed reported with the latest fix, if any. */
+  private reported: number | undefined;
   /** Counts discontinuous jumps, so the fleet can crossfade them. */
   teleports = 0;
   /** Consecutive fixes far behind the drawn position. */
   private backStrikes = 0;
 
-  constructor(shape: Shape | undefined, fix: LonLat, fixTime: number) {
+  constructor(shape: Shape | undefined, fix: LonLat, fixTime: number, reportedBearing?: number | null) {
     this.lastFixTime = fixTime;
+    this.reported = reportedBearing ?? undefined;
+    if (this.reported !== undefined) this.heading = this.reported;
     this.pos = [fix[0], fix[1]];
     this.from = this.pos;
     this.to = this.pos;
@@ -80,8 +86,9 @@ export class Motion {
     return Math.min(GLIDE_MAX_S, Math.max(GLIDE_MIN_S, interval));
   }
 
-  onFix(shape: Shape | undefined, fix: LonLat, fixTime: number) {
+  onFix(shape: Shape | undefined, fix: LonLat, fixTime: number, reportedBearing?: number | null) {
     if (fixTime <= this.lastFixTime && shape === this.shape) return; // same fix again
+    this.reported = reportedBearing ?? undefined;
     const glide = this.glideFor(fixTime);
     this.lastFixTime = Math.max(this.lastFixTime, fixTime);
 
@@ -165,7 +172,7 @@ export class Motion {
       this.t = 1;
       return;
     }
-    if (d > 1) this.heading = bearing(this.from, this.to);
+    if (d > 1) this.heading = this.reported ?? bearing(this.from, this.to);
     this.t = 0;
     // Same speed cap as on a shape.
     this.duration = Math.max(glide, d / MAX_SPEED_MS);
