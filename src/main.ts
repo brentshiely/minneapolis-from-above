@@ -510,10 +510,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     gamesFrame.now = now;
     incidentsFrame.now = now;
     airportFrame.now = now;
-    wildlifeFrame.now = now;
-    crimeFrame.now = now;
-    gunfireFrame.now = now;
-    dronesFrame.now = now;
+    // These layers fade items by how long ago they were reported (real clock times), unlike the others, whose `now` only drives an animation.
+    const wall = Date.now() / 1000;
+    wildlifeFrame.now = wall;
+    crimeFrame.now = wall;
+    gunfireFrame.now = wall;
+    dronesFrame.now = wall;
     overlay.setProps({
       // Planes fly above everything on the ground.
       layers: [
