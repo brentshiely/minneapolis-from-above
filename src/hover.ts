@@ -58,8 +58,6 @@ type Target =
   /** A lit snow emergency route, and where the cursor is. */
   | { kind: "snow"; city: City; name: string; at: [number, number] }
   | { kind: "falls" }
-  /** A route dashed for a live service alert, and where the cursor is. */
-  | { kind: "route-alert"; routeId: string; at: [number, number] }
   /** A shaded watch/warning area, and where the cursor is. */
   | { kind: "warning"; id: string; at: [number, number] }
   /** A venue currently playing a game. */
@@ -248,10 +246,6 @@ export class Hover {
       next = { kind: "snow", city: r.city, name: r.name, at: [info.coordinate[0], info.coordinate[1]] };
     }
     else if (obj && info.layer?.id === "pick-falls") next = { kind: "falls" };
-    else if (obj && info.layer?.id === "routes-alert" && info.coordinate) {
-      const s = obj as unknown as Shape;
-      next = { kind: "route-alert", routeId: s.route, at: [info.coordinate[0], info.coordinate[1]] };
-    }
     else if (obj && info.layer?.id === "warnings" && info.coordinate) {
       const w = obj as unknown as { properties: Warning };
       next = { kind: "warning", id: w.properties.id, at: [info.coordinate[0], info.coordinate[1]] };
@@ -349,7 +343,10 @@ export class Hover {
         ageS: this.fleet.feedTime - v.fixTime,
       });
       position = v.position;
-      layers = vehicleHighlight(this.transit, v, shape, version, this.daylight());
+      // A route with a live service alert: trace it dashed and add the notice.
+      const alert = this.alerts().get(v.routeId);
+      if (alert) desc = { ...desc, detail: [desc.detail, describeAlert(v.routeId, this.transit.routes[v.routeId], alert).title, alert.header.trim()].filter(Boolean).join(" ") };
+      layers = vehicleHighlight(this.transit, v, shape, version, this.daylight(), !!alert);
     } else if (this.target.kind === "satellite") {
       const id = this.target.id;
       const sat = this.sats().find((x) => x.id === id);
@@ -377,12 +374,6 @@ export class Hover {
       const stage = this.snowStage(this.target.city);
       if (!stage) { this.clear(); return []; }
       desc = routeRule(stage, this.target.name || undefined);
-      position = this.target.at;
-      layers = [];
-    } else if (this.target.kind === "route-alert") {
-      const info = this.alerts().get(this.target.routeId);
-      if (!info) { this.clear(); return []; }
-      desc = describeAlert(this.target.routeId, this.transit.routes[this.target.routeId], info);
       position = this.target.at;
       layers = [];
     } else if (this.target.kind === "warning") {

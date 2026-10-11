@@ -6,7 +6,6 @@ import { addRadarLayer, refreshRadarTile } from "./weather/radar.ts";
 import { skyAt, skyClock } from "./sky.ts";
 import { mixColor } from "./color.ts";
 import { loadTransit } from "./transit/data.ts";
-import { alertRouteLayers } from "./layers/routes.ts";
 import { AlertsWatch, previewAlert, startAlertsFeed } from "./transit/alerts.ts";
 import { trailLayers, vehicleLayers, type VehicleFrame } from "./layers/vehicles.ts";
 import { Fleet, type Vehicle } from "./live/fleet.ts";
@@ -133,16 +132,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // showing. Re-fetched every 5 minutes to match IEM's own refresh.
   addRadarLayer(map, imageryAnchor);
   setInterval(() => refreshRadarTile(map), 5 * 60_000);
-  // Live service alerts: affected routes dash instead of their usual solid
-  // line, and a major one (a rail line on shuttle buses, or a detour
+  // Live service alerts: an affected route is traced dashed (not solid) when
+  // you hover one of its vehicles, and a major one (a rail line on shuttle buses, or a detour
   // reaching several routes) gets a caption. ?alert=blueline-detour (or
   // greenline-detour) previews one.
   const alertsPreview = previewAlert(new URLSearchParams(location.search).get("alert") ?? "");
   const alerts = new AlertsWatch(document.getElementById("alerts")!, transit.routes);
-  let alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
-  alerts.onChange = () => {
-    alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
-  };
   if (alertsPreview) alerts.update(alertsPreview);
   const alertsFeed = alertsPreview ? undefined : startAlertsFeed((body) => alerts.update(body));
   const f: VehicleFrame = { vehicles: [], trails: [], now: 0, version: 0, trailsVersion: 0, daylight: sky.daylight };
@@ -248,7 +243,6 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     haze.setDaylight(sky.daylight);
     aurora.setDaylight(sky.daylight);
     setImageryOpacity(map, sky.daylight, map.getZoom());
-    alertLayers = alertRouteLayers(transit, alerts.affected, sky.daylight, anchor);
     markSky(sky.daylight);
   };
   setInterval(followSun, 1000);
@@ -488,7 +482,6 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(layersPanel.shown("wildlife") ? wildlifeLayers(wildlifeFrame) : []),
         ...(layersPanel.shown("crime") ? crimeLayers(crimeFrame) : []),
         ...(layersPanel.shown("cameras") ? cameraLayers(cameras, anchor) : []),
-        ...(layersPanel.shown("transit") ? alertLayers : []),
         ...(layersPanel.shown("snow") ? snowLayers(snowFrame, anchor) : []),
         ...(layersPanel.shown("transit") && !still ? trailLayers(transit, f) : []),
         ...(layersPanel.shown("transit") ? vehicleLayers(transit, f) : []),

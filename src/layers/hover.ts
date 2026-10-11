@@ -1,4 +1,5 @@
 import { IconLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Vehicle } from "../live/fleet.ts";
 import type { Plane } from "../live/aircraft.ts";
 import type { Mode, RouteInfo, Shape, Transit } from "../transit/data.ts";
@@ -75,10 +76,10 @@ export function pickLayers(vehicles: Vehicle[], planes: Plane[], version: number
   ];
 }
 
-/** The route isn't shown by default; hovering a vehicle traces the one it's on. */
-function routeHighlight(shape: Shape, mode: Mode, route: RouteInfo | undefined, d: number) {
+/** The route isn't shown by default; hovering a vehicle traces the one it's on, dashed if a service alert affects it. */
+function routeHighlight(shape: Shape, mode: Mode, route: RouteInfo | undefined, d: number, alerted: boolean) {
   const style = ROUTE_STYLE[mode];
-  return new PathLayer<Shape>({
+  return new PathLayer<Shape, PathStyleExtensionProps<Shape>>({
     id: "hover-route",
     data: [shape],
     getPath: (s) => s.path,
@@ -89,19 +90,22 @@ function routeHighlight(shape: Shape, mode: Mode, route: RouteInfo | undefined, 
     widthMaxPixels: style.maxPx + 1,
     jointRounded: true,
     capRounded: true,
+    // 'path' mode keeps the dash phase continuous; the default restarts it at every vertex, and these shapes have vertices too close together to get past the first dash.
+    ...(alerted ? { getDashArray: [16, 10] as [number, number], dashJustified: true, dashUnits: "pixels" as const } : {}),
+    extensions: alerted ? [new PathStyleExtension({ dash: true, dashMode: "path" })] : [],
     parameters: { depthCompare: "always" },
     updateTriggers: { getColor: d },
   });
 }
 
 /** The hovered vehicle, drawn as a bus or train icon on a dark disc, with the route it's on traced beneath it. */
-export function vehicleHighlight(transit: Transit, v: Vehicle, shape: Shape | undefined, version: number, d = 0) {
+export function vehicleHighlight(transit: Transit, v: Vehicle, shape: Shape | undefined, version: number, d = 0, alerted = false) {
   const color = vehicleColor(transit.routes[v.routeId], d);
   // A dark disc at night, a white one by day.
   const disc = mixRgb([7, 11, 16], [255, 255, 255], d);
   const data = [v];
   return [
-    ...(shape ? [routeHighlight(shape, transit.routes[v.routeId]?.mode ?? "bus", transit.routes[v.routeId], d)] : []),
+    ...(shape ? [routeHighlight(shape, transit.routes[v.routeId]?.mode ?? "bus", transit.routes[v.routeId], d, alerted)] : []),
     new ScatterplotLayer<Vehicle>({
       id: "hover-disc",
       data,
