@@ -7,6 +7,8 @@ import { loadToggles, saveToggles, TOGGLE_GROUPS, type LayerKey, type Toggles } 
  */
 export class TogglePanel {
   toggles: Toggles;
+  /** Called after a layer is switched on or off, for layers that live on the base map rather than in the deck.gl overlay. */
+  onToggle?: () => void;
   private root: HTMLElement;
   private button: HTMLButtonElement;
   private list: HTMLElement;
@@ -38,6 +40,7 @@ export class TogglePanel {
         this.toggles[g.key] = box.checked;
         saveToggles(this.toggles);
         row.classList.toggle("off", !box.checked);
+        this.onToggle?.();
       });
       if (!box.checked) row.classList.add("off");
       const icon = document.createElement("span");

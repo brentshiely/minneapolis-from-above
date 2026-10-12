@@ -86,6 +86,7 @@ import type { Gauge } from "./water/gauges.ts";
 import { SnowWatch } from "./snow/watch.ts";
 import { previewSnow, type SnowResponse } from "./snow/rules.ts";
 import { snowLayers, type SnowFrame } from "./layers/snow.ts";
+import { addRelief, setReliefOpacity } from "./relief.ts";
 import { dataUrl } from "./dataurl.ts";
 
 const clock = skyClock();
@@ -150,6 +151,12 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // land/water/building fills but below roads, rail and labels, so those
   // stay legible on top of the photo.
   const imageryAnchor = map.getStyle().layers.find((l) => l.type === "line" && /^(highway|railway|road|aeroway)/.test(l.id))?.id;
+  // Lidar-derived terrain shading sits beneath the photo and hands over to it by day.
+  addRelief(map, imageryAnchor);
+  const paintRelief = () => setReliefOpacity(map, sky.daylight, map.getZoom(), layersPanel.shown("relief"));
+  paintRelief();
+  map.on("zoom", paintRelief);
+  layersPanel.onToggle = paintRelief;
   addAerialImagery(map, imageryAnchor);
   setImageryOpacity(map, sky.daylight, map.getZoom());
   map.on("zoom", () => setImageryOpacity(map, sky.daylight, map.getZoom()));
@@ -268,6 +275,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     haze.setDaylight(sky.daylight);
     aurora.setDaylight(sky.daylight);
     setImageryOpacity(map, sky.daylight, map.getZoom());
+    paintRelief();
     markSky(sky.daylight);
   };
   setInterval(followSun, 1000);

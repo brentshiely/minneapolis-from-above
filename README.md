@@ -26,6 +26,7 @@ Every layer can be switched on and off from the layers panel (the stack icon at 
 | Satellites & debris | Everything in orbit that is above the horizon | Computed from real orbits |
 | Freeway traffic | Speed colors on every metro freeway, plus cars gliding along them | Real speeds and volumes; car positions made up |
 | Freeway cameras, crashes & road work | Camera snapshots and live incidents | Live |
+| Terrain relief | Bluffs, the river gorge and lake basins shaded from lidar elevation | Real (USGS 3DEP lidar) |
 | Freight trains | Rust-colored trains on every active rail line | Real trains-a-day on each line; positions simulated |
 | Amtrak | The Empire Builder (and any other Amtrak train in range) | Live positions, run forward between reports |
 | River, locks & falls | Boats through the locks, St. Anthony Falls flow | Real lock logs and gauges |
@@ -113,6 +114,7 @@ Everything on the map comes from someone else's work. Thank you to:
 **Base map and imagery**
 - [OpenFreeMap](https://openfreemap.org/) vector tiles, built from [OpenStreetMap](https://www.openstreetmap.org/copyright) data (© OpenStreetMap contributors, ODbL)
 - Aerial photography: [USGS National Agriculture Imagery Program](https://www.usgs.gov/centers/eros/science/usgs-eros-archive-aerial-photography-national-agriculture-imagery-program-naip), via The National Map
+- Terrain relief: [USGS 3D Elevation Program](https://www.usgs.gov/3d-elevation-program) bare-earth lidar elevation, shaded by The National Map
 - Weather radar: [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) (NEXRAD mosaic)
 
 **Transit and roads**
