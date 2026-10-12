@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parseRail, runSpeedMs, slice, trainsPerSecond, TrainFlow, type RailLine } from "../src/rail/rail.ts";
+import { describeFreight, parseRail, runSpeedMs, slice, trainsPerSecond, TrainFlow, type RailLine } from "../src/rail/rail.ts";
 import { buildShape } from "../src/transit/data.ts";
 
 const M_PER_DEG_LON = 111_320 * Math.cos((44.9 * Math.PI) / 180);
@@ -74,4 +74,20 @@ test("the baked file parses to lines with trains a day", () => {
   const lines = parseRail(JSON.parse(readFileSync(new URL("../public/data/rail.json", import.meta.url), "utf8")));
   assert.ok(lines.length > 100);
   assert.ok(lines.every((l) => l.trainsPerDay > 0 && l.shape.length > 0));
+});
+
+test("describeFreight says the train is simulated and gives the line's frequency", () => {
+  const d = describeFreight(line(30));
+  assert.match(d.title, /BNSF freight train/);
+  assert.match(d.detail!, /30 trains a day/);
+  assert.match(d.detail!, /15 each way/);
+  assert.match(d.detail!, /simulated/);
+  assert.equal(describeFreight({ ...line(1), rr: "XYZ" }).title, "A XYZ freight train, more or less.");
+});
+
+test("every train has its own id", () => {
+  const flow = new TrainFlow([line(500)]);
+  for (let i = 0; i < 30; i++) flow.advance(1);
+  const ids = flow.shapes.map((s) => s.id);
+  assert.equal(new Set(ids).size, ids.length);
 });

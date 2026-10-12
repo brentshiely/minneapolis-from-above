@@ -30,6 +30,8 @@ import { describeSighting, type Sighting } from "./wildlife/sightings.ts";
 import { describeCrime } from "./crime/crime.ts";
 import { describeGunfire, type GunfireEvent } from "./gunfire/gunfire.ts";
 import { describeDrone, type DroneFlight } from "./drones/drones.ts";
+import { describeFreight, type TrainShape, type RailLine } from "./rail/rail.ts";
+import { describeAmtrak, type AmtrakTrain } from "./rail/amtrak.ts";
 import type { ResolvedCrime } from "./layers/crime.ts";
 import { dataUrl } from "./dataurl.ts";
 
@@ -78,7 +80,11 @@ type Target =
   /** A recent gunfire call. */
   | { kind: "gunfire"; id: string }
   /** A recent police drone flight, and where the cursor is on it. */
-  | { kind: "drone"; id: string; at: [number, number] };
+  | { kind: "drone"; id: string; at: [number, number] }
+  /** A simulated freight train. */
+  | { kind: "freight"; id: number }
+  /** An Amtrak train, by Amtraker's id for this run. */
+  | { kind: "amtrak"; id: string };
 
 /** The moon, as the hover sees it: a spot on screen that can describe itself. */
 export interface MoonSpot {
@@ -151,6 +157,10 @@ export class Hover {
   setCrime(list: () => ResolvedCrime[]) { this.crimes = list; }
   private gunfire: () => GunfireEvent[] = () => [];
   setGunfire(list: () => GunfireEvent[]) { this.gunfire = list; }
+  private freight: () => TrainShape[] = () => [];
+  setFreight(list: () => TrainShape[]) { this.freight = list; }
+  private amtrak: () => AmtrakTrain[] = () => [];
+  setAmtrak(list: () => AmtrakTrain[]) { this.amtrak = list; }
   private drones: () => DroneFlight[] = () => [];
   setDrones(list: () => DroneFlight[]) { this.drones = list; }
 
@@ -272,6 +282,8 @@ export class Hover {
     else if (obj && info.layer?.id === "pick-wildlife") next = { kind: "wildlife", id: (obj as unknown as { s: Sighting }).s.id };
     else if (obj && info.layer?.id === "pick-crime") next = { kind: "crime", id: (obj as unknown as ResolvedCrime).c.id };
     else if (obj && info.layer?.id === "pick-gunfire") next = { kind: "gunfire", id: (obj as unknown as GunfireEvent).id };
+    else if (obj && info.layer?.id === "pick-freight") next = { kind: "freight", id: (obj as unknown as TrainShape).id };
+    else if (obj && info.layer?.id === "pick-amtrak") next = { kind: "amtrak", id: (obj as unknown as AmtrakTrain).row.id };
     else if (obj && info.layer?.id === "pick-drones" && info.coordinate) next = { kind: "drone", id: (obj as unknown as { flight: DroneFlight }).flight.id, at: [info.coordinate[0], info.coordinate[1]] };
     else if (obj && info.layer?.id === "traffic" && info.coordinate) {
       next = { kind: "traffic", station: (obj as unknown as Stretch).station, at: [info.coordinate[0], info.coordinate[1]] };
@@ -456,6 +468,20 @@ export class Hover {
       if (!f) { this.clear(); return []; }
       desc = describeDrone(f, nowS_wall());
       position = this.target.at;
+      layers = [];
+    } else if (this.target.kind === "freight") {
+      const id = this.target.id;
+      const t = this.freight().find((x) => x.id === id);
+      if (!t) { this.clear(); return []; }
+      desc = describeFreight(t.line);
+      position = t.path[t.path.length - 1];
+      layers = [];
+    } else if (this.target.kind === "amtrak") {
+      const id = this.target.id;
+      const t = this.amtrak().find((x) => x.row.id === id);
+      if (!t) { this.clear(); return []; }
+      desc = describeAmtrak(t.row, nowS_wall());
+      position = t.path[t.path.length - 1];
       layers = [];
     } else if (this.target.kind === "traffic") {
       const info = this.freeways?.stations[this.target.station];

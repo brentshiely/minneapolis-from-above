@@ -28,8 +28,9 @@ import { trafficLayer, type TrafficFrame } from "./layers/traffic.ts";
 import { CarFlow } from "./traffic/cars.ts";
 import { fillGaps } from "./traffic/gaps.ts";
 import { carsLayer } from "./layers/cars.ts";
-import { loadRail, TrainFlow } from "./rail/rail.ts";
-import { trainLayers } from "./layers/trains.ts";
+import { loadRail, TrainFlow, type RailLine } from "./rail/rail.ts";
+import { AmtrakFleet, type AmtrakResponse } from "./rail/amtrak.ts";
+import { amtrakLayers, trainLayers } from "./layers/trains.ts";
 import type { CameraInfo, CamerasFile } from "./traffic/cameras.ts";
 import { cameraLayers } from "./layers/cameras.ts";
 import { Satellites } from "./sky/satellites.ts";
@@ -284,7 +285,11 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   let trafficAge = 0;
   // Synthetic freight trains at the reported trains-a-day on each line.
   let trains: TrainFlow | undefined;
-  loadRail().then((lines) => { trains = new TrainFlow(lines); }).catch((e) => console.warn(e));
+  let railLines: RailLine[] = [];
+  loadRail().then((lines) => { railLines = lines; trains = new TrainFlow(lines); }).catch((e) => console.warn(e));
+  // Amtrak's real trains, put on those same lines.
+  const amtrak = new AmtrakFleet(() => railLines);
+  const amtrakFeed = startPoller<AmtrakResponse>("/api/amtrak", 60_000, (body) => amtrak.update(body.trains, Date.now() / 1000), { maxMs: 10 * 60_000 });
   // The sensors' own readings, with holes in coverage filled from neighboring stretches.
   let rawReadings: Readings = {};
   const refill = () => {
@@ -308,6 +313,8 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   }).catch((e) => console.warn(e));
 
   const hover = new Hover(map, overlay, fleet, air, transit, () => f.daylight);
+  hover.setFreight(() => trains?.shapes ?? []);
+  hover.setAmtrak(() => amtrak.trains);
   hover.setMoon(moon);
   hover.setPlanets(planets);
   hover.setAlerts(() => alerts.affected);
@@ -493,6 +500,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     if (!still) {
       cars?.advance(dt, tf.readings);
       trains?.advance(dt);
+      amtrak.advance(Date.now() / 1000);
       trails.record(fleet.vehicles, now);
       airTrails.record(air.planes, now);
       if (now - lastTrailBuild >= TRAIL_REBUILD_S) {
@@ -530,6 +538,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
         ...(layersPanel.shown("traffic") && freeways ? [trafficLayer(freeways, tf, anchor)] : []),
         ...(layersPanel.shown("traffic") && cars && !still ? carsLayer(cars, tf.daylight, map.getZoom()) : []),
         ...(layersPanel.shown("freight") && trains && !still ? trainLayers(trains.lines, trains.shapes, tf.daylight) : []),
+        ...(layersPanel.shown("amtrak") && !still ? amtrakLayers(amtrak.trains, tf.daylight) : []),
         ...(layersPanel.shown("incidents") ? incidentsLayers(incidentsFrame, anchor) : []),
         ...(layersPanel.shown("beaches") ? beachesLayers(beachesFrame, anchor) : []),
         ...(layersPanel.shown("airport") ? airportLayers(airportFrame) : []),
@@ -575,14 +584,14 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   const layerFeeds: [LayerKey, { status: FeedStatus } | undefined][] = [
     ["transit", feed], ["planes", airFeed], ["traffic", trafficFeed], ["incidents", incidentsFeed], ["river", riverFeed],
     ["warnings", warningsFeed], ["games", gamesFeed], ["beaches", beachesFeed], ["airport", airportFeed],
-    ["wildlife", wildlifeFeed], ["snow", snowFeed], ["crime", crimeFeed], ["gunfire", gunfireFeed], ["drones", dronesFeed],
+    ["wildlife", wildlifeFeed], ["snow", snowFeed], ["crime", crimeFeed], ["gunfire", gunfireFeed], ["drones", dronesFeed], ["amtrak", amtrakFeed],
   ];
   setInterval(() => layersPanel.setFailing(new Set(layerFeeds.filter(([, f]) => isDown(f?.status)).map(([k]) => k))), 2000);
 
   // Nobody is watching a hidden tab: stop polling, and catch up on return.
   document.addEventListener("visibilitychange", () => {
     const hidden = document.visibilityState === "hidden";
-    for (const p of [feed, dtaFeed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed, fallColorFeed, crimeFeed, gunfireFeed, dronesFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
+    for (const p of [feed, dtaFeed, airFeed, weatherFeed, trafficFeed, airQualityFeed, riverFeed, snowFeed, alertsFeed, warningsFeed, auroraFeed, gamesFeed, incidentsFeed, beachesFeed, airportFeed, wildlifeFeed, fallColorFeed, crimeFeed, gunfireFeed, dronesFeed, amtrakFeed]) if (!p) continue; else if (hidden) p.pause(); else p.resume();
   });
 
   startStatus(document.getElementById("status")!, fleet, feed, air, () => [fx.current && `${fx.current.summary} · ${fx.current.wind}`, airPhrase(haze.current), showerStatus(clock()), auroraPhrase(auroraKp, Math.floor(Date.now() / 1000)), airportPhrase(airportFrame.status), fallColorPhrase(fallColorBody)].filter(Boolean).join(" · ") || undefined, airFeed.status, () => sats.aboveHorizon);
@@ -602,6 +611,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
     crime: { frame: crimeFrame, feed: crimeFeed, districts: () => stPaulDistricts },
     gunfire: { frame: gunfireFrame, feed: gunfireFeed },
     drones: { frame: dronesFrame, feed: dronesFeed },
+    rail: { freight: () => trains, amtrak, amtrakFeed },
     fallColor: { body: () => fallColorBody, feed: fallColorFeed },
     layersPanel,
     aurora: { strength: () => auroraKp, feed: auroraFeed },

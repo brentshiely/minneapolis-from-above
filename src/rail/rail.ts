@@ -1,5 +1,6 @@
 import { buildShape, decodePolyline, type Shape } from "../transit/data.ts";
 import { dataUrl } from "../dataurl.ts";
+import type { Description } from "../describe.ts";
 
 /**
  * Baked by scripts/build-rail.mjs into public/data/rail.json: each active
@@ -64,6 +65,7 @@ interface Track {
 }
 
 interface Train {
+  id: number;
   track: Track;
   /** Distance of the front from the track's entry end; negative while it is still arriving. */
   head: number;
@@ -115,6 +117,8 @@ export function slice(shape: Shape, from: number, to: number): [number, number][
 }
 
 export interface TrainShape {
+  /** Stable while the train is on the map. */
+  id: number;
   /** Tail to head: the head is the last point. */
   path: [number, number][];
   line: RailLine;
@@ -132,6 +136,7 @@ export class TrainFlow {
   readonly lines: RailLine[];
   private tracks: Track[] = [];
   private trains: Train[] = [];
+  private nextId = 1;
   /** The trains on the map this tick, tail to head. */
   shapes: TrainShape[] = [];
 
@@ -149,7 +154,7 @@ export class TrainFlow {
         for (let k = 0; k < here; k++) {
           const length = randomLength();
           // Uniform along the line from just entering to just leaving; any whose tail has already cleared are dropped on the first tick.
-          this.trains.push({ track, head: Math.random() * (line.shape.length + length), length, speedMs: speedMs * (0.9 + Math.random() * 0.2) });
+          this.trains.push({ id: this.nextId++, track, head: Math.random() * (line.shape.length + length), length, speedMs: speedMs * (0.9 + Math.random() * 0.2) });
         }
       }
     }
@@ -172,7 +177,7 @@ export class TrainFlow {
       track.countdown -= dtS;
       while (track.countdown <= 0 && trains.length < MAX_TRAINS) {
         const speedMs = track.speedMs * (0.9 + Math.random() * 0.2);
-        trains.push({ track, head: -track.countdown * speedMs, length: randomLength(), speedMs });
+        trains.push({ id: this.nextId++, track, head: -track.countdown * speedMs, length: randomLength(), speedMs });
         track.countdown += drawInterval(trainsPerSecond(track.line.trainsPerDay));
       }
     }
@@ -187,7 +192,35 @@ export class TrainFlow {
       // Entering or leaving: only the part still on the line is drawn.
       const path = slice(shape, t.track.dir === 1 ? tail : shape.length - t.head, t.track.dir === 1 ? t.head : shape.length - tail);
       if (path.length < 2) continue;
-      this.shapes.push({ path: t.track.dir === 1 ? path : path.reverse(), line: t.track.line });
+      this.shapes.push({ id: t.id, path: t.track.dir === 1 ? path : path.reverse(), line: t.track.line });
     }
   }
+}
+
+/** What each reporting mark in MnDOT's data stands for; a mark not listed is shown as it is. */
+const RAILROADS: Record<string, string> = {
+  BNSF: "BNSF",
+  UP: "Union Pacific",
+  SOO: "Canadian Pacific (Soo Line)",
+  CP: "Canadian Pacific",
+  DME: "Canadian Pacific (Dakota, Minnesota & Eastern)",
+  CN: "Canadian National",
+  WC: "Canadian National (Wisconsin Central)",
+  TCWR: "Twin Cities & Western",
+  MNNR: "Minnesota Northern",
+  MNN: "Minnesota Northern",
+  PGR: "Progressive Rail",
+  RCPE: "Rapid City, Pierre & Eastern",
+};
+
+export const railroadName = (rr: string) => RAILROADS[rr] ?? rr;
+
+export function describeFreight(line: RailLine): Description {
+  const perDirection = Math.max(1, Math.round(line.trainsPerDay / 2));
+  const total = Math.round(line.trainsPerDay);
+  return {
+    title: `A ${railroadName(line.rr)} freight train, more or less.`,
+    detail: `${total === 1 ? "About one train a day uses" : `About ${total} trains a day use`} this line, ${perDirection} each way. Railroads don't share where their trains are, so this one is simulated at that frequency.`,
+    meta: "Trains a day from MnDOT's rail network (Federal Railroad Administration) · position simulated",
+  };
 }
