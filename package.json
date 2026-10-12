@@ -17,6 +17,7 @@
     "e2e": "node scripts/e2e.mjs",
     "build:freeways": "node scripts/build-mndot.mjs",
     "build:rail": "node scripts/build-rail.mjs",
+    "shots": "node scripts/readme-shots.mjs",
     "build:cameras": "node scripts/build-cameras.mjs",
     "build:sats": "node scripts/build-satellites.mjs",
     "build:ucs": "node scripts/build-ucs.mjs",
@@ -27,6 +28,9 @@
   "author": "Brent Shiely",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
   "dependencies": {
     "@deck.gl/core": "^9.4.0",
     "@deck.gl/extensions": "^9.4.0",
