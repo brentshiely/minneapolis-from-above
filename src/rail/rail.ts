@@ -219,7 +219,7 @@ export function describeFreight(line: RailLine): Description {
   const perDirection = Math.max(1, Math.round(line.trainsPerDay / 2));
   const total = Math.round(line.trainsPerDay);
   return {
-    title: `A ${railroadName(line.rr)} freight train, more or less.`,
+    title: `A ${railroadName(line.rr)} freight train.`,
     detail: `${total === 1 ? "About one train a day uses" : `About ${total} trains a day use`} this line, ${perDirection} each way. Railroads don't share where their trains are, so this one is simulated at that frequency.`,
     meta: "Trains a day from MnDOT's rail network (Federal Railroad Administration) · position simulated",
   };

@@ -82,7 +82,7 @@ test("describeFreight says the train is simulated and gives the line's frequency
   assert.match(d.detail!, /30 trains a day/);
   assert.match(d.detail!, /15 each way/);
   assert.match(d.detail!, /simulated/);
-  assert.equal(describeFreight({ ...line(1), rr: "XYZ" }).title, "A XYZ freight train, more or less.");
+  assert.equal(describeFreight({ ...line(1), rr: "XYZ" }).title, "A XYZ freight train.");
 });
 
 test("every train has its own id", () => {
