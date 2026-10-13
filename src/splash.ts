@@ -26,6 +26,7 @@ export class Splash {
     this.overlay.setAttribute("aria-labelledby", "splash-title");
     this.overlay.innerHTML = `
       <div class="splash-card">
+        <div class="splash-body">
         <h1 id="splash-title">Minneapolis From Above</h1>
         <p class="splash-lede">A quiet, living map of Minneapolis–Saint Paul. Real buses and light rail glide along their actual routes, alongside freeway traffic, planes, satellites, freight and Amtrak trains, river boats, weather, wildlife and recent police activity. Glance at it and feel the pulse of the city. Pan and zoom, and hover or tap almost anything to see what it is.</p>
         <h2>How it was built</h2>
@@ -37,6 +38,7 @@ export class Splash {
           <div><dt>Result</dt><dd>86 commits<small>~21,600 lines, 20 data layers</small></dd></div>
         </dl>
         <p class="splash-fine">Engineering time is estimated from commit timestamps (gaps over an hour count as breaks), so it is a floor, not a stopwatch.</p>
+        </div>
         <button type="button" class="splash-go">Explore the map</button>
       </div>`;
     this.overlay.querySelector(".splash-go")!.addEventListener("click", () => this.hide());
