@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import GtfsRealtimeBindings from "gtfs-realtime-bindings";
 import { decodeAlertFeed, EFFECT } from "../functions/_lib/gtfsrt.ts";
 import { affectedRoutes, onRequestGet, toResponse, type AlertsResponse } from "../functions/api/alerts.ts";
-import { affectedFromRows, alertCaption, majorAlert, previewAlert } from "../src/transit/alerts.ts";
+import { affectedFromRows, previewAlert } from "../src/transit/alerts.ts";
 import type { RouteInfo } from "../src/transit/data.ts";
 
 const fixture = new Uint8Array(readFileSync(new URL("./fixtures/servicealerts.pb", import.meta.url)));
@@ -121,39 +121,6 @@ test("affectedFromRows keeps the first alert to claim a route", () => {
   const m = affectedFromRows(rows);
   assert.equal(m.size, 1);
   assert.equal(m.get("645")!.header, "first");
-});
-
-test("majorAlert picks the rail alert over a lone bus detour", () => {
-  const rows: [string, string, number, string, string][] = [
-    ["a1", "645", EFFECT.OTHER_EFFECT, "Route 645 detoured off Wayzata Blvd.", ""],
-    ["a2", "902", EFFECT.DETOUR, "Buses will replace METRO Green Line trains between Union Depot and Raymond Ave. stations.", ""],
-  ];
-  const major = majorAlert(rows, ROUTES);
-  assert.equal(major?.routeId, "902");
-});
-
-test("majorAlert ignores a lone bus detour but catches one alert affecting many routes", () => {
-  const one = majorAlert([["a1", "645", EFFECT.OTHER_EFFECT, "detour", ""]], ROUTES);
-  assert.equal(one, undefined);
-
-  const wide = majorAlert(
-    ["2", "3", "9", "38"].map((r): [string, string, number, string, string] => ["big", r, EFFECT.DETOUR, "Several routes detoured for a downtown closure.", ""]),
-    ROUTES,
-  );
-  assert.ok(wide);
-});
-
-test("alertCaption names the line and drops the redundant METRO phrase", () => {
-  const caption = alertCaption(ROUTES, [
-    ["53009", "902", EFFECT.DETOUR, "Buses will replace METRO Green Line trains between Union Depot and Raymond Ave. stations.", ""],
-  ]);
-  assert.ok(caption?.startsWith("Green Line: "));
-  assert.ok(!/METRO/.test(caption!));
-});
-
-test("alertCaption is undefined with nothing major to report", () => {
-  assert.equal(alertCaption(ROUTES, [["a1", "645", EFFECT.OTHER_EFFECT, "detour", ""]]), undefined);
-  assert.equal(alertCaption(ROUTES, []), undefined);
 });
 
 test("previewAlert serves a synthetic snapshot for known specs and nothing for unknown ones", () => {

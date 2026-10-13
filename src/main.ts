@@ -175,7 +175,7 @@ Promise.all([transitReady, mapReady]).then(([transit]) => {
   // reaching several routes) gets a caption. ?alert=blueline-detour (or
   // greenline-detour) previews one.
   const alertsPreview = previewAlert(new URLSearchParams(location.search).get("alert") ?? "");
-  const alerts = new AlertsWatch(document.getElementById("alerts")!, transit.routes);
+  const alerts = new AlertsWatch();
   if (alertsPreview) alerts.update(alertsPreview);
   const alertsFeed = alertsPreview ? undefined : startAlertsFeed((body) => alerts.update(body));
   const f: VehicleFrame = { vehicles: [], trails: [], now: 0, version: 0, trailsVersion: 0, daylight: sky.daylight };

@@ -125,29 +125,6 @@ html[data-sky="day"] #caption { color: #4c5663; text-shadow: 0 0 4px #ffffff, 0 
 html[data-sky="day"] #snow { color: #14607c; text-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff; }
 @media (prefers-reduced-motion: reduce) { #snow { transition: none; } }
 
-/* A live service alert worth mentioning (a rail line on shuttle buses, or
-   a detour reaching several routes at once): one quiet line at the corner
-   opposite the snow routes, in the app's existing "something's off" amber. */
-#alerts {
-  position: fixed;
-  right: max(16px, env(safe-area-inset-right));
-  /* Clears the map's own credits line, bottom-right of the same corner. */
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 26px);
-  max-width: min(420px, calc(100vw - 32px));
-  text-align: right;
-  font: 500 12.5px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
-  letter-spacing: 0.01em;
-  color: #e2b77c;
-  text-wrap: pretty;
-  text-shadow: 0 0 4px #070b10, 0 0 8px #070b10;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 1.6s ease;
-}
-#alerts.shown { opacity: 1; }
-html[data-sky="day"] #alerts { color: #8a5a1f; text-shadow: 0 0 4px #ffffff, 0 0 8px #ffffff; }
-@media (prefers-reduced-motion: reduce) { #alerts { transition: none; } }
-
 /* A quiet legend for whatever watch/warning types are shaded on the map
    right now: one line per type, a color swatch matching its shading. */
 #warnings-legend {
@@ -273,10 +250,7 @@ html[data-sky="day"] .layers-row:hover { background: rgba(30, 40, 55, 0.08); }
   /* The status line wraps to two or three lines here: sit at the top
      instead, under the drift's caption. */
   #snow { top: auto; bottom: calc(var(--dock) + 52px); right: 16px; font-size: 12px; }
-  /* The service alert nestles in the top-right corner, opposite the
-     caption; the legend is on the left here, and the snow line sits above
-     the status line at the bottom. */
-  #alerts { top: max(14px, env(safe-area-inset-top)); bottom: auto; right: max(16px, env(safe-area-inset-right)); max-width: 50vw; font-size: 11.5px; line-height: 1.35; }
+  /* The snow line sits above the status line at the bottom. */
   #tip { font-size: 12.5px; }
 }
 
@@ -435,7 +409,7 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
   #layers-list { max-height: calc(100dvh - 24px); }
   #search-results { max-height: calc(50dvh - 24px); }
   #status { font-size: 10px; }
-  #snow, #alerts, #warnings-legend { font-size: 11px; }
+  #snow, #warnings-legend { font-size: 11px; }
   #tip .tip-image { display: none; }
 }
 /* Landscape phones are wide enough for the desktop arrangement of notes
@@ -448,7 +422,7 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
 @media (min-width: 641px) and (max-width: 1100px) and (pointer: coarse) {
   #tip { max-width: min(340px, calc(100vw - 16px)); font-size: 14px; }
   #caption { font-size: 14px; }
-  #snow, #alerts, #warnings-legend { font-size: 13px; }
+  #snow, #warnings-legend { font-size: 13px; }
 }
 
 /* Big monitors and TVs: scale the quiet text up so it stays readable
@@ -456,7 +430,7 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
 @media (min-width: 1900px) {
   #status { font-size: 13px; }
   #caption { font-size: 15px; }
-  #snow, #alerts { font-size: 14px; max-width: 560px; }
+  #snow { font-size: 14px; max-width: 560px; }
   #warnings-legend { font-size: 14px; }
   #tip { font-size: 14.5px; max-width: 340px; }
   .layers-row { font-size: 14px; }

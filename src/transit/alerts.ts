@@ -4,7 +4,6 @@
  * renders nothing — the map looks exactly like an ordinary day.
  */
 import type { AlertRow, AlertsResponse } from "../../functions/api/alerts.ts";
-import type { RouteInfo } from "./data.ts";
 import { startPoller, type Poller } from "../live/feed.ts";
 
 export type { AlertRow, AlertsResponse };
@@ -39,51 +38,6 @@ const EFFECT_WORD: Record<number, string> = {
 export const effectWord = (effect: number): string => EFFECT_WORD[effect] ?? "Service alert";
 
 /**
- * Metro Transit's own header text usually already names the line ("Buses
- * will replace METRO Green Line trains…"); drop that phrase so the caption
- * (which leads with the line's name itself) doesn't repeat it.
- */
-function trimHeader(routeName: string, header: string): string {
-  let h = header.trim().replace(/^Buses will replace\b/i, "Shuttle buses replace");
-  const named = new RegExp(`\\bMETRO ${routeName}(?: Line)?\\b`, "i");
-  h = h.replace(named, "").replace(/\s{2,}/g, " ").trim();
-  if (h) h = h.charAt(0).toLowerCase() + h.slice(1);
-  if (h.length > 160) h = `${h.slice(0, 157).trimEnd()}…`;
-  return h;
-}
-
-/**
- * The most notable currently-affected route, if any is worth a caption:
- * a rail line (replacement buses for trains is always news), or a single
- * alert broad enough to be detouring several routes at once.
- */
-export function majorAlert(rows: AlertRow[], routes: Record<string, RouteInfo>): { routeId: string; header: string } | undefined {
-  const byAlert = new Map<string, AlertRow[]>();
-  for (const row of rows) {
-    const list = byAlert.get(row[0]);
-    if (list) list.push(row); else byAlert.set(row[0], [row]);
-  }
-  let best: { routeId: string; header: string; score: number } | undefined;
-  for (const list of byAlert.values()) {
-    const routeIds = [...new Set(list.map((r) => r[1]))];
-    const rail = routeIds.find((id) => routes[id]?.mode === "rail");
-    if (!rail && routeIds.length < 4) continue;
-    const score = (rail ? 100 : 0) + routeIds.length;
-    if (!best || score > best.score) best = { routeId: rail ?? routeIds[0], header: list[0][3], score };
-  }
-  return best;
-}
-
-export function alertCaption(routes: Record<string, RouteInfo>, rows: AlertRow[]): string | undefined {
-  const major = majorAlert(rows, routes);
-  if (!major) return undefined;
-  const route = routes[major.routeId];
-  const name = route?.name ?? `Route ${major.routeId}`;
-  const rest = trimHeader(name, major.header);
-  return rest ? `${name}: ${rest}` : undefined;
-}
-
-/**
  * `?alert=blueline-detour` (etc.) previews a live alert without waiting for
  * one, so the feature can be checked on an ordinary day. Presets describe
  * a rail replacement in Metro Transit's own header style.
@@ -102,30 +56,20 @@ const PRESETS: Record<string, { routeId: string; effect: number; header: string;
 };
 
 /**
- * Keeps the affected-routes map and the quiet caption in step with the
- * feed. With nothing affected it shows nothing and `affected` is empty,
+ * Keeps the affected-routes map in step with the feed. With nothing affected it shows nothing and `affected` is empty,
  * so routes draw exactly as they do on an ordinary day.
  */
 export class AlertsWatch {
   affected = new Map<string, AlertInfo>();
   /** Called after `update` changes `affected`, so callers can rebuild layers. */
   onChange?: () => void;
-  private el: HTMLElement;
-  private routes: Record<string, RouteInfo>;
   private key = "";
-
-  constructor(el: HTMLElement, routes: Record<string, RouteInfo>) {
-    this.el = el;
-    this.routes = routes;
-  }
 
   update(body: AlertsResponse) {
     const key = JSON.stringify(body.a);
     if (key === this.key) return;
     this.key = key;
     this.affected = affectedFromRows(body.a);
-    this.el.textContent = alertCaption(this.routes, body.a) ?? "";
-    this.el.classList.toggle("shown", !!this.el.textContent);
     this.onChange?.();
   }
 }
