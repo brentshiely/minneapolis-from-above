@@ -413,8 +413,6 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
    doesn't zoom the whole page when it takes focus. */
 @media (pointer: coarse) {
   #layers-button, #search-button { width: 44px; height: 44px; }
-  #layers-list, #search-form { left: 52px; }
-  #search-panel { top: calc(50% - 54px); }
   .layers-row { padding: 10px 8px; gap: 10px; }
   .layers-row input[type="checkbox"] { width: 20px; height: 20px; }
   #search-input { font-size: 16px; padding: 12px 14px; }
@@ -438,7 +436,6 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
 @media (max-height: 500px) {
   #layers-list { max-height: calc(100dvh - 24px); }
   #search-results { max-height: calc(50dvh - 24px); }
-  #search-panel { top: calc(50% - 54px); }
   #status { font-size: 10px; }
   #snow, #alerts, #warnings-legend { font-size: 11px; }
   #tip .tip-image { display: none; }
@@ -478,8 +475,6 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
 #about-button {
   position: fixed;
   left: max(14px, env(safe-area-inset-left));
-  top: calc(50% + 44px);
-  transform: translateY(-50%);
   z-index: 3;
   width: 34px;
   height: 34px;
@@ -495,8 +490,6 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
 #about-button:hover { background: rgba(20, 28, 38, 0.9); }
 #about-button:focus-visible, .splash-go:focus-visible { outline: 2px solid #6f9dff; outline-offset: 2px; }
 html[data-sky="day"] #about-button { background: rgba(255, 255, 255, 0.85); color: #333; border-color: rgba(40, 50, 64, 0.18); }
-@media (pointer: coarse) { #about-button { width: 44px; height: 44px; top: calc(50% + 54px); } }
-@media (max-height: 500px) { #about-button { top: calc(50% + 54px); } }
 
 #splash {
   position: fixed;
@@ -548,3 +541,40 @@ html[data-sky="day"] #about-button { background: rgba(255, 255, 255, 0.85); colo
 .splash-go:hover { background: #86adff; }
 @media (max-width: 520px) { .splash-card { font-size: 13.5px; line-height: 1.5; } .splash-stats { gap: 6px; } .splash-stats div { padding: 8px 7px; } .splash-stats dd { font-size: 14px; } .splash-stats small, .splash-stats dt { font-size: 10.5px; } .splash-card h2 { margin-top: 12px; } }
 @media (max-height: 500px) { .splash-card { padding: 14px 18px; } .splash-card h2 { margin-top: 10px; } .splash-stats { grid-template-columns: repeat(3, 1fr); } .splash-go { margin-top: 10px; } }
+
+/* ---- The three buttons live in a row at the bottom-left: in the thumb's
+   reach on phones, and clear of the hover cards. Their lists open upward. ---- */
+:root { --btn: 34px; --edge: max(14px, env(safe-area-inset-left)); --floor: max(12px, env(safe-area-inset-bottom)); --dock: calc(var(--floor) + var(--btn) + 8px); }
+@media (pointer: coarse) { :root { --btn: 44px; } }
+#search-panel, #layers-panel, #about-button {
+  top: auto;
+  transform: none;
+  bottom: var(--floor);
+}
+#search-panel { left: var(--edge); }
+#layers-panel { left: calc(var(--edge) + var(--btn) + 8px); }
+#about-button { left: calc(var(--edge) + 2 * (var(--btn) + 8px)); width: var(--btn); height: var(--btn); top: auto; }
+#layers-list, #search-form {
+  position: fixed;
+  left: var(--edge);
+  top: auto;
+  bottom: var(--dock);
+  transform: none;
+}
+#layers-list { max-height: min(520px, calc(100vh - var(--dock) - 24px)); max-height: min(520px, calc(100dvh - var(--dock) - 24px)); max-width: calc(100vw - 2 * var(--edge)); }
+#search-form { width: min(320px, calc(100vw - 2 * var(--edge))); }
+/* Results grow upward from the field's top edge, so the field stays by the button. */
+#search-form { display: flex; flex-direction: column-reverse; }
+#search-results { border-top: 0; border-bottom: 1px solid rgba(140, 155, 175, 0.16); max-height: min(50vh, 320px, calc(100vh - var(--dock) - 90px)); max-height: min(50dvh, 320px, calc(100dvh - var(--dock) - 90px)); }
+#search-note { border-top: 0; border-bottom: 1px solid rgba(140, 155, 175, 0.16); }
+html[data-sky="day"] #search-results, html[data-sky="day"] #search-note { border-bottom-color: rgba(40, 50, 64, 0.12); }
+@media (max-height: 500px) {
+  #layers-list { max-height: calc(100dvh - var(--dock) - 12px); }
+  #search-results { max-height: calc(100dvh - var(--dock) - 70px); }
+}
+/* The status and snow lines sit just above the row. */
+#status { bottom: var(--dock); }
+#snow { bottom: calc(var(--dock) + 22px); }
+@media (max-width: 640px) { #snow { bottom: auto; } }
+/* A tooltip is never hidden behind a control (it takes no clicks). */
+#tip { z-index: 5; }
