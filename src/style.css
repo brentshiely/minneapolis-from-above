@@ -18,7 +18,7 @@ html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-
   bottom: max(12px, env(safe-area-inset-bottom));
   font: 500 11px/1.3 ui-monospace, "SF Mono", Menlo, monospace;
   letter-spacing: 0.04em;
-  color: #4f5d6a;
+  color: #8d9aa6;
   pointer-events: none;
   user-select: none;
   transition: color 0.6s;
@@ -67,7 +67,7 @@ html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-
 
 /* Daytime: the page chrome follows the map from dark to light. */
 html[data-sky="day"], html[data-sky="day"] body { background: #eceee9; }
-html[data-sky="day"] #status { color: #56606a; text-shadow: 0 0 3px #ffffff, 0 0 6px #ffffff; }
+html[data-sky="day"] #status { color: #38424d; text-shadow: 0 0 3px #ffffff, 0 0 6px #ffffff; }
 html[data-sky="day"] #status.stalled { color: #a4661f; }
 html[data-sky="day"] .maplibregl-ctrl-bottom-right .maplibregl-ctrl.maplibregl-ctrl-attrib,
 html[data-sky="day"] .maplibregl-ctrl-attrib.maplibregl-compact,
@@ -558,9 +558,16 @@ html[data-sky="day"] #search-results, html[data-sky="day"] #search-note { border
    the text wraps and grows upward instead. */
 @media (max-width: 640px) {
   .maplibregl-ctrl-attrib.maplibregl-compact-show {
-    max-width: calc(100vw - var(--edge) - 3 * (var(--btn) + 8px) - 24px);
+    box-sizing: border-box;
+    /* right margin (10px) + the button row + gap, so it never reaches the buttons */
+    max-width: calc(100vw - 10px - env(safe-area-inset-right) - var(--edge) - 3 * (var(--btn) + 8px) - 4px);
   }
   .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-inner { white-space: normal; line-height: 1.5; }
 }
+/* While the credits are open they own the corner: the status and snow
+   lines step aside rather than print underneath them. */
+body:has(.maplibregl-compact-show) #status,
+body:has(.maplibregl-compact-show) #snow { opacity: 0; }
+#status, #snow { transition: opacity 0.2s ease, color 0.6s; }
 
 @media (pointer: coarse) { .maplibregl-ctrl-attrib { font-size: 12px; } }
