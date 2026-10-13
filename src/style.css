@@ -550,3 +550,7 @@ html[data-sky="day"] #search-results, html[data-sky="day"] #search-note { border
 @media (max-width: 640px) { #snow { bottom: calc(var(--dock) + 52px); } }
 /* A tooltip is never hidden behind a control (it takes no clicks). */
 #tip { z-index: 5; }
+
+/* The map's credits button, once opened, stretches across a phone's width:
+   it rises above the bottom-left button row rather than hiding behind it. */
+.maplibregl-ctrl-bottom-right { z-index: 4; }
