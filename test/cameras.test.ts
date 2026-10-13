@@ -39,15 +39,15 @@ test("describes a camera in plain language, with its live snapshot", () => {
   const d = describeCamera({ name: "C909", description: "I-394 EB @ Hampshire Ave", lon: -93.3652, lat: 44.97115 }, 12_340_000);
   assert.equal(d.title, "I-394 eastbound at Hampshire Ave.");
   assert.equal(d.meta, "MnDOT traffic camera");
-  assert.equal(d.image, "https://public.carsprogram.org/cameras/MN/C909?t=1234");
+  assert.equal(d.image, "/api/image?cam=C909&t=1234");
 
   const noCrossStreet = describeCamera({ name: "C1", description: "I-94 WB", lon: 0, lat: 0 });
   assert.equal(noCrossStreet.title, "I-94 westbound.");
 });
 
 test("the snapshot URL uses the camera's IRIS name, unencoded characters aside", () => {
-  assert.equal(snapshotUrl("C909"), "https://public.carsprogram.org/cameras/MN/C909");
-  assert.equal(snapshotUrl("D6-C340"), "https://public.carsprogram.org/cameras/MN/D6-C340");
+  assert.equal(snapshotUrl("C909"), "/api/image?cam=C909");
+  assert.equal(snapshotUrl("D6-C340"), "/api/image?cam=D6-C340");
 });
 
 test("the baked camera file covers hundreds of freeway cameras", () => {

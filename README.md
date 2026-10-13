@@ -51,6 +51,10 @@ Several layers show things that no one publishes the exact position of, so the m
 - **Route shapes:** Metro Transit static GTFS, baked into `public/data/` by `scripts/build-gtfs.mjs`
 - **Hosting:** Cloudflare Pages (static frontend plus Functions)
 
+## Privacy and security
+
+No accounts, cookies, analytics or tracking, and nothing is kept on a visitor's device between visits; the details, including the three map hosts the browser talks to directly, are in [PRIVACY.md](PRIVACY.md). How the app is hardened (strict CSP, validated inputs, no open proxy, zero known vulnerable dependencies) is in [SECURITY.md](SECURITY.md). `node scripts/csp-check.mjs` checks the headers and reports any blocked request.
+
 ## Run it locally
 
 ```bash

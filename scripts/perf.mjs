@@ -17,6 +17,7 @@ const browser = await puppeteer.launch({
 });
 try {
   const page = await browser.newPage();
+  await page.evaluateOnNewDocument(() => { try { sessionStorage.setItem("mfa-splash-seen", "1"); } catch { /* fine */ } }); // skip the welcome card
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });

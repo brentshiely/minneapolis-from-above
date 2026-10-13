@@ -79,6 +79,7 @@ import { SearchBox, type Place } from "./search.ts";
 import { Marker } from "maplibre-gl";
 import { TogglePanel } from "./togglepanel.ts";
 import { Splash } from "./splash.ts";
+import { forgetLegacyStorage } from "./forget.ts";
 import type { LayerKey } from "./toggles.ts";
 import type { FeedStatus } from "./live/feed.ts";
 import type { WarningsResponse } from "../functions/api/warnings.ts";
@@ -124,6 +125,8 @@ const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 /** How long a tooltip pinned by a tap holds the ambient tour still. */
 const PIN_HOLD_S = 30;
 
+// Nothing of ours is kept between visits: clear what old versions saved.
+forgetLegacyStorage();
 // The welcome card doesn't wait for the map or the data.
 new Splash(document.body);
 

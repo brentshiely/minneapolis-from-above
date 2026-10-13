@@ -39,6 +39,7 @@ async function openApp({ reduced = false, query = "", phone = false } = {}) {
   if (reduced) await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
   // Count vehicle fetches, and let tests fake the page being hidden.
   await page.evaluateOnNewDocument(() => {
+    try { sessionStorage.setItem("mfa-splash-seen", "1"); } catch { /* fine */ }
     window.__vehicleFetches = 0;
     const real = window.fetch;
     window.fetch = (input, init) => {
@@ -70,7 +71,7 @@ try {
 
   await check("status line shows live counts", async () => {
     const text = await page.$eval("#status", (el) => el.textContent);
-    assert(/^\d+ buses · \d+ trains · \d+ planes( · [\d,]+ satellites up)?( · -?\d+°F, [a-z ]+ · (calm|([NESW]{1,2} )?wind \d+ mph(, gusting to \d+)?)( · AQI \d+, [a-z ]+( \([a-z ]+\))?)?)? · live$/.test(text), `got "${text}"`);
+    assert(/^\d+ buses · \d+ trains · \d+ planes( · [\d,]+ satellites up)?( · -?\d+°F, [a-z ]+ · (calm|([NESW]{1,2} )?wind \d+ mph(, gusting to \d+)?)( · AQI \d+, [a-z ]+( \([a-z ]+\))?)?)?( · Fall color: [a-z ]+)? · live$/.test(text), `got "${text}"`);
     return text;
   });
 
@@ -387,9 +388,12 @@ try {
       assert(r.shown && r.caption.length > 0, "no caption");
       return r.caption;
     });
-    await check("moving the mouse stops the drift at once", async () => {
+    await check("a click stops the drift at once (hovering alone doesn't)", async () => {
       await idle.page.mouse.move(400, 300);
       await idle.page.mouse.move(420, 320);
+      await sleep(200);
+      assert(await idle.page.evaluate(() => window.fromAbove.drift.drifting), "hovering ended the tour");
+      await idle.page.mouse.click(420, 320);
       await sleep(200);
       const a = await idle.page.evaluate(() => ({
         drifting: window.fromAbove.drift.drifting,

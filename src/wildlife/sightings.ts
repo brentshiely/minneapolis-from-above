@@ -16,12 +16,23 @@ export function sightingStrength(s: Sighting, nowS: number): number {
   return Math.max(0, Math.min(1, 1 - ageDays / FADE_DAYS));
 }
 
+const INAT_PHOTO = /^https:\/\/(?:inaturalist-open-data\.s3\.amazonaws\.com|static\.inaturalist\.org)\/photos\/(\d{1,12}\/(?:medium|small|large|square)\.(?:jpe?g|png))$/i;
+
+/**
+ * An iNaturalist photo, addressed through our own server (functions/api/image.ts)
+ * so Amazon's servers never see the visitor. Any other address gets no picture.
+ */
+export function photoUrl(url: string | undefined): string | undefined {
+  const id = url ? INAT_PHOTO.exec(url)?.[1] : undefined;
+  return id ? `/api/image?photo=${id}` : undefined;
+}
+
 export function describeSighting(s: Sighting, nowS: number): Description {
   return {
     title: `${s.species}.`,
     detail: `Seen ${ago(nowS - s.observedAt)}.`,
     meta: "iNaturalist",
-    image: s.photo?.url,
+    image: photoUrl(s.photo?.url),
   };
 }
 

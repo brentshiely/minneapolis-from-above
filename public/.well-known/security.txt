@@ -1,0 +1,4 @@
+Contact: https://github.com/brentshiely/minneapolis-from-above/security/advisories/new
+Expires: 2027-10-13T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://minneapolis-from-above.pages.dev/.well-known/security.txt

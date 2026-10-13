@@ -29,6 +29,7 @@ const browser = await puppeteer.launch({
 /** Open the app at a simulated time of day, once the buses are moving. */
 async function open(at) {
   const page = await browser.newPage();
+  await page.evaluateOnNewDocument(() => { try { sessionStorage.setItem("mfa-splash-seen", "1"); } catch { /* fine */ } }); // skip the welcome card
   await page.goto(`${base}/?at=${at}`, { waitUntil: "load" });
   await page.waitForFunction(() => window.fromAbove?.fleet?.vehicles.size > 0, { timeout: 60_000 });
   await sleep(WARMUP_S);

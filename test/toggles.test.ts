@@ -21,20 +21,20 @@ test("every toggle group has a unique key, a label and a glyph", () => {
 });
 
 test("loadToggles defaults every layer to on when nothing is saved", () => {
-  const realStorage = globalThis.localStorage;
+  const realStorage = globalThis.sessionStorage;
   try {
-    (globalThis as unknown as { localStorage: Storage }).localStorage = fakeStorage();
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = fakeStorage();
     const t = loadToggles();
     for (const g of TOGGLE_GROUPS) assert.equal(t[g.key], true, g.key);
   } finally {
-    (globalThis as unknown as { localStorage: Storage }).localStorage = realStorage;
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = realStorage;
   }
 });
 
 test("saveToggles round-trips through loadToggles, and a new layer added later still defaults on", () => {
-  const realStorage = globalThis.localStorage;
+  const realStorage = globalThis.sessionStorage;
   try {
-    (globalThis as unknown as { localStorage: Storage }).localStorage = fakeStorage();
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = fakeStorage();
     const first = loadToggles();
     first.planes = false;
     saveToggles(first);
@@ -42,18 +42,18 @@ test("saveToggles round-trips through loadToggles, and a new layer added later s
     assert.equal(reloaded.planes, false);
     assert.equal(reloaded.transit, true);
   } finally {
-    (globalThis as unknown as { localStorage: Storage }).localStorage = realStorage;
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = realStorage;
   }
 });
 
-test("loadToggles tolerates missing localStorage entirely (private browsing, etc.)", () => {
-  const realStorage = globalThis.localStorage;
+test("loadToggles tolerates missing sessionStorage entirely (private browsing, etc.)", () => {
+  const realStorage = globalThis.sessionStorage;
   try {
-    // @ts-expect-error -- simulating an environment where localStorage throws.
-    globalThis.localStorage = { getItem() { throw new Error("blocked"); } };
+    // @ts-expect-error -- simulating an environment where sessionStorage throws.
+    globalThis.sessionStorage = { getItem() { throw new Error("blocked"); } };
     const t = loadToggles();
     assert.equal(t.transit, true);
   } finally {
-    (globalThis as unknown as { localStorage: Storage }).localStorage = realStorage;
+    (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = realStorage;
   }
 });

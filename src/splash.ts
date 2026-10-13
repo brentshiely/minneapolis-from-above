@@ -1,4 +1,5 @@
-const SEEN_KEY = "mfa-splash-seen";
+/** Remembered only for this tab (sessionStorage), so a reload does not nag. Nothing is kept once the tab closes. */
+export const SEEN_KEY = "mfa-splash-seen";
 
 /**
  * A first-visit welcome card: what the app is, how it was built, and how
@@ -31,6 +32,8 @@ export class Splash {
         <p class="splash-lede">A quiet, living map of Minneapolis–Saint Paul. Real buses and light rail glide along their actual routes, alongside freeway traffic, planes, satellites, freight and Amtrak trains, river boats, weather, wildlife and recent police activity. Glance at it and feel the pulse of the city. Pan and zoom, and hover or tap almost anything to see what it is.</p>
         <h2>How it was built</h2>
         <p>Built from scratch with <strong>Claude Code</strong>, in conversation with Brent Shiely, using MapLibre GL, deck.gl and TypeScript. Live data comes from Metro Transit, MnDOT, the National Weather Service, USGS, FAA and open city data; where nobody publishes exact positions (freight trains, cars on the freeways), the map draws them at the real rate and says so on the hover card.</p>
+        <h2>Your privacy</h2>
+        <p>No accounts, cookies, ads or tracking, and the app never asks where you are. Nothing is saved on your device between visits. The base map and aerial photos come straight from OpenFreeMap and the USGS, which see your IP address like any map would; everything else goes through this app's server. <a href="https://github.com/brentshiely/minneapolis-from-above/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">The details</a>.</p>
         <h2>How long it took</h2>
         <dl class="splash-stats">
           <div><dt>Timeframe</dt><dd>Sep 26 – Oct 12, 2026<small>17 days</small></dd></div>
@@ -60,11 +63,11 @@ export class Splash {
 
   private hide() {
     this.overlay.hidden = true;
-    try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* private mode: fine */ }
+    try { sessionStorage.setItem(SEEN_KEY, "1"); } catch { /* private mode: fine */ }
     (this.lastFocus ?? this.button).focus?.();
   }
 }
 
 function seen(): boolean {
-  try { return localStorage.getItem(SEEN_KEY) === "1"; } catch { return false; }
+  try { return sessionStorage.getItem(SEEN_KEY) === "1"; } catch { return false; }
 }

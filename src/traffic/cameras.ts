@@ -63,9 +63,13 @@ function plainLocation(description: string): string {
   return where ? `${routeName(route)}${bearing} at ${where}.` : `${routeName(route)}${bearing}.`;
 }
 
-/** MnDOT's public snapshot, refreshed every few seconds by the CARS program. */
+/**
+ * MnDOT's public snapshot, refreshed every few seconds by the CARS program,
+ * fetched through our own server (functions/api/image.ts) so MnDOT never
+ * sees the visitor.
+ */
 export function snapshotUrl(name: string): string {
-  return `https://public.carsprogram.org/cameras/MN/${encodeURIComponent(name)}`;
+  return `/api/image?cam=${encodeURIComponent(name)}`;
 }
 
 export function describeCamera(cam: CameraInfo, atMs = Date.now()): Description {
@@ -74,6 +78,6 @@ export function describeCamera(cam: CameraInfo, atMs = Date.now()): Description 
     meta: "MnDOT traffic camera",
     // Busted every 10 s so a tooltip left open picks up a newer frame,
     // without refetching on every render frame.
-    image: `${snapshotUrl(cam.name)}?t=${Math.floor(atMs / 10_000)}`,
+    image: `${snapshotUrl(cam.name)}&t=${Math.floor(atMs / 10_000)}`,
   };
 }

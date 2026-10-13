@@ -35,10 +35,9 @@ html, body { margin: 0; height: 100%; background: #070b10; color: #c9d3dc; font-
   max-width: min(300px, calc(100vw - 16px));
   padding: 9px 12px 8px;
   border-radius: 8px;
-  background: rgba(10, 15, 21, 0.9);
+  background: rgba(10, 15, 21, 0.94);
   border: 1px solid rgba(120, 140, 160, 0.22);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(6px);
   color: #dfe6ec;
   font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
   pointer-events: none;
@@ -173,12 +172,11 @@ html[data-sky="day"] #warnings-legend .item { color: #1e2731; text-shadow: 0 0 4
   height: 34px;
   border-radius: 50%;
   border: 1px solid rgba(140, 155, 175, 0.28);
-  background: rgba(10, 15, 21, 0.72);
+  background: rgba(10, 15, 21, 0.86);
   color: #c9d3dc;
   display: grid;
   place-items: center;
   cursor: pointer;
-  backdrop-filter: blur(6px);
   transition: background 0.15s ease;
 }
 #layers-button:hover, #layers-button.open { background: rgba(20, 28, 38, 0.9); }
@@ -191,10 +189,9 @@ html[data-sky="day"] #warnings-legend .item { color: #1e2731; text-shadow: 0 0 4
   gap: 2px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: rgba(10, 15, 21, 0.86);
+  background: rgba(10, 15, 21, 0.94);
   border: 1px solid rgba(140, 155, 175, 0.22);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(6px);
   max-height: min(78vh, 520px);
   overflow-y: auto;
 }
@@ -288,12 +285,11 @@ html[data-sky="day"] #layers-button.has-warning::after { background: #c47f14; bo
   height: 34px;
   border-radius: 50%;
   border: 1px solid rgba(140, 155, 175, 0.28);
-  background: rgba(10, 15, 21, 0.72);
+  background: rgba(10, 15, 21, 0.86);
   color: #c9d3dc;
   display: grid;
   place-items: center;
   cursor: pointer;
-  backdrop-filter: blur(6px);
   transition: background 0.15s ease;
 }
 #search-button:hover, #search-button.open { background: rgba(20, 28, 38, 0.9); }
@@ -307,7 +303,6 @@ html[data-sky="day"] #layers-button.has-warning::after { background: #c47f14; bo
   background: rgba(10, 15, 21, 0.9);
   border: 1px solid rgba(140, 155, 175, 0.22);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(6px);
   overflow: hidden;
 }
 #search-form[hidden] { display: none; }
@@ -440,7 +435,7 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
 /* Hover-only affordances shouldn't stick after a tap on touch screens. */
 @media (hover: none) {
   .layers-row:hover, #search-results li:hover { background: transparent; }
-  #layers-button:hover:not(.open), #search-button:hover:not(.open) { background: rgba(10, 15, 21, 0.72); }
+  #layers-button:hover:not(.open), #search-button:hover:not(.open) { background: rgba(10, 15, 21, 0.86); }
   html[data-sky="day"] #layers-button:hover:not(.open), html[data-sky="day"] #search-button:hover:not(.open) { background: rgba(255, 255, 255, 0.85); }
 }
 
@@ -453,12 +448,11 @@ button, label, input { -webkit-tap-highlight-color: transparent; }
   height: 34px;
   border-radius: 50%;
   border: 1px solid rgba(140, 155, 175, 0.28);
-  background: rgba(10, 15, 21, 0.72);
+  background: rgba(10, 15, 21, 0.86);
   color: #c9d3dc;
   display: grid;
   place-items: center;
   cursor: pointer;
-  backdrop-filter: blur(6px);
 }
 #about-button:hover { background: rgba(20, 28, 38, 0.9); }
 #about-button:focus-visible, .splash-go:focus-visible { outline: 2px solid #6f9dff; outline-offset: 2px; }
@@ -470,8 +464,7 @@ html[data-sky="day"] #about-button { background: rgba(255, 255, 255, 0.85); colo
   z-index: 10;
   display: flex;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: rgba(5, 8, 12, 0.72);
-  backdrop-filter: blur(5px);
+  background: rgba(5, 8, 12, 0.84);
 }
 #splash[hidden] { display: none; }
 .splash-card {
@@ -576,3 +569,5 @@ body:has(.maplibregl-compact-show) #snow { opacity: 0; }
 @media (pointer: coarse) { .maplibregl-ctrl-attrib { font-size: 12px; } }
 
 .splash-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.splash-card a { color: #8fb4ff; text-underline-offset: 2px; }
+.splash-card a:focus-visible { outline: 2px solid #6f9dff; outline-offset: 2px; border-radius: 2px; }

@@ -15,7 +15,7 @@ export const IMAGERY_SOURCE_ID = "naip";
 export const IMAGERY_LAYER_ID = "aerial-imagery";
 
 const NAIP_TILE_URL = "https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage"
-  + "?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=jpg&f=image";
+  + "?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=jpg&f=image";
 
 /** Below this zoom the imagery is fully faded out; not worth requesting. */
 const FADE_START_ZOOM = 14;
@@ -41,9 +41,11 @@ export function addAerialImagery(map: Map, beforeId?: string) {
   map.addSource(IMAGERY_SOURCE_ID, {
     type: "raster",
     tiles: [NAIP_TILE_URL],
-    tileSize: 256,
-    minzoom: 12,
-    maxzoom: 19,
+    // 512 px tiles: the same detail on screen from a quarter of the requests
+    // (the USGS server drops some under bursts), so the zoom limits sit one lower.
+    tileSize: 512,
+    minzoom: 11,
+    maxzoom: 18,
     attribution: "Imagery: USGS NAIP",
   });
   map.addLayer({

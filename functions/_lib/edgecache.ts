@@ -21,6 +21,7 @@ const PARAMS: Record<string, string[]> = {
   "/api/satinfo": ["id"],
   "/api/flight": ["callsign", "hex"],
   "/api/geocode": ["q"],
+  "/api/image": ["cam", "photo"],
   "/api/radar-tile": ["m", "z", "x", "y"],
 };
 

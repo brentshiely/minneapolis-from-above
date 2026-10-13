@@ -1,6 +1,6 @@
 /**
  * Which of the map's data layers the viewer wants to see. Persisted per
- * browser (localStorage) so a choice sticks across visits; every layer
+ * browser (sessionStorage, this tab only) so a choice sticks across visits; every layer
  * defaults on, so nobody has to discover the panel to see the full map.
  */
 export type LayerKey =
@@ -36,7 +36,8 @@ export const TOGGLE_GROUPS: ToggleGroup[] = [
   { key: "crime", label: "Crime events", glyph: '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 2.5 20 6v6c0 5-3.4 8.2-8 9.5-4.6-1.3-8-4.5-8-9.5V6z"/>' },
 ];
 
-const STORAGE_KEY = "fromabove.layers";
+/** Kept only for the life of the tab (sessionStorage); never written to disk, never sent anywhere. */
+export const STORAGE_KEY = "fromabove.layers";
 
 export type Toggles = Record<LayerKey, boolean>;
 
@@ -48,7 +49,7 @@ function defaults(): Toggles {
 
 export function loadToggles(): Toggles {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return defaults();
     const saved = JSON.parse(raw) as Partial<Toggles>;
     return { ...defaults(), ...saved };
@@ -58,5 +59,5 @@ export function loadToggles(): Toggles {
 }
 
 export function saveToggles(t: Toggles) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(t)); } catch { /* private browsing, etc. */ }
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(t)); } catch { /* storage blocked: choices just last until reload */ }
 }

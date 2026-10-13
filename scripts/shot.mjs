@@ -24,6 +24,7 @@ const browser = await puppeteer.launch({
 });
 try {
   const page = await browser.newPage();
+  await page.evaluateOnNewDocument(() => { try { sessionStorage.setItem("mfa-splash-seen", "1"); } catch { /* fine */ } }); // skip the welcome card
   await page.goto(url, { waitUntil: "load" });
   await page.waitForFunction(() => window.fromAbove?.fleet?.vehicles.size > 0, { timeout: 30_000 });
   await new Promise((r) => setTimeout(r, Number(warmupArg) * 1000));

@@ -13,7 +13,7 @@ export const RELIEF_SOURCE_ID = "relief";
 export const RELIEF_LAYER_ID = "terrain-relief";
 
 const RELIEF_TILE_URL = "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage"
-  + "?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=png&f=image"
+  + "?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=512,512&format=png&f=image"
   + "&renderingRule=%7B%22rasterFunction%22%3A%22Hillshade%20Gray%22%7D";
 
 /** Below this zoom the shading is too fine to read and isn't requested. */
@@ -55,9 +55,10 @@ export function addRelief(map: Map, beforeId?: string) {
   map.addSource(RELIEF_SOURCE_ID, {
     type: "raster",
     tiles: [RELIEF_TILE_URL],
-    tileSize: 256,
-    minzoom: 9,
-    maxzoom: 17,
+    // 512 px tiles: the same detail from a quarter of the requests; zoom limits one lower.
+    tileSize: 512,
+    minzoom: 8,
+    maxzoom: 16,
     attribution: "Relief: USGS 3DEP lidar",
   });
   map.addLayer({

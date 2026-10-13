@@ -9,6 +9,7 @@ const url = process.argv[2] ?? "http://localhost:5173";
 const browser = await puppeteer.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: "new",
   args: ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist", "--window-size=1440,900"], defaultViewport: { width: 1440, height: 900, deviceScaleFactor: 2 } });
 const page = await browser.newPage();
+await page.evaluateOnNewDocument(() => { try { sessionStorage.setItem("mfa-splash-seen", "1"); } catch { /* fine */ } }); // skip the welcome card
 await page.goto(url, { waitUntil: "load" });
 await page.waitForFunction(() => window.fromAbove?.fleet?.vehicles.size > 0, { timeout: 30000 });
 await new Promise(r => setTimeout(r, 12000));

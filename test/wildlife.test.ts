@@ -57,10 +57,12 @@ test("sightingStrength is full when just seen, fades linearly, and bottoms out a
 });
 
 test("describeSighting reads plainly and carries the photo through as the image", () => {
-  const d = describeSighting({ id: 1, species: "Red Fox", observedAt: 0, position: [0, 0], photo: { url: "https://x/photo.jpg", attribution: "me" } }, 3600);
+  const d = describeSighting({ id: 1, species: "Red Fox", observedAt: 0, position: [0, 0], photo: { url: "https://inaturalist-open-data.s3.amazonaws.com/photos/77/medium.jpg", attribution: "me" } }, 3600);
   assert.equal(d.title, "Red Fox.");
   assert.match(d.detail!, /Seen /);
-  assert.equal(d.image, "https://x/photo.jpg");
+  assert.equal(d.image, "/api/image?photo=77/medium.jpg"); // through our server, not the visitor's browser
+  const other = describeSighting({ id: 2, species: "Red Fox", observedAt: 0, position: [0, 0], photo: { url: "https://x/photo.jpg", attribution: "me" } }, 3600);
+  assert.equal(other.image, undefined);
 });
 
 test("previewWildlife serves a recent sighting for the known spec and nothing else", () => {
