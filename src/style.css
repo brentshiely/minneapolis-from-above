@@ -269,16 +269,14 @@ html[data-sky="day"] .layers-row:hover { background: rgba(30, 40, 55, 0.08); }
   }
   #status .sep { display: none; }
   #status .sky { display: block; }
-  #caption { font-size: 12px; right: 16px; }
+  #caption { font-size: 12px; right: auto; max-width: calc(50vw - 24px); }
   /* The status line wraps to two or three lines here: sit at the top
      instead, under the drift's caption. */
-  #snow { top: calc(max(14px, env(safe-area-inset-top)) + 24px); bottom: auto; right: 16px; font-size: 12px; }
-  /* Same reasoning: sit under the caption, snow and legend lines instead
-     of the credits button in the bottom-right corner. The legend moves
-     to the left here, but its box is nowhere near as wide as this one,
-     so clearance is by height, not by side: room for a few legend lines
-     even on a rare day with several watches and warnings out at once. */
-  #alerts { top: calc(max(14px, env(safe-area-inset-top)) + 90px); bottom: auto; right: 16px; font-size: 12px; }
+  #snow { top: auto; bottom: calc(var(--dock) + 52px); right: 16px; font-size: 12px; }
+  /* The service alert nestles in the top-right corner, opposite the
+     caption; the legend is on the left here, and the snow line sits above
+     the status line at the bottom. */
+  #alerts { top: max(14px, env(safe-area-inset-top)); bottom: auto; right: max(16px, env(safe-area-inset-right)); max-width: 50vw; font-size: 11.5px; line-height: 1.35; }
   #tip { font-size: 12.5px; }
 }
 
@@ -575,6 +573,6 @@ html[data-sky="day"] #search-results, html[data-sky="day"] #search-note { border
 /* The status and snow lines sit just above the row. */
 #status { bottom: var(--dock); }
 #snow { bottom: calc(var(--dock) + 22px); }
-@media (max-width: 640px) { #snow { bottom: auto; } }
+@media (max-width: 640px) { #snow { bottom: calc(var(--dock) + 52px); } }
 /* A tooltip is never hidden behind a control (it takes no clicks). */
 #tip { z-index: 5; }
