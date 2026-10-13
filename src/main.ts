@@ -78,6 +78,7 @@ import type { FallColorResponse } from "../functions/api/fallcolor.ts";
 import { SearchBox, type Place } from "./search.ts";
 import { Marker } from "maplibre-gl";
 import { TogglePanel } from "./togglepanel.ts";
+import { Splash } from "./splash.ts";
 import type { LayerKey } from "./toggles.ts";
 import type { FeedStatus } from "./live/feed.ts";
 import type { WarningsResponse } from "../functions/api/warnings.ts";
@@ -122,6 +123,9 @@ function labelsAnchor(): string | undefined {
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 /** How long a tooltip pinned by a tap holds the ambient tour still. */
 const PIN_HOLD_S = 30;
+
+// The welcome card doesn't wait for the map or the data.
+new Splash(document.body);
 
 const transitReady = loadTransit();
 const mapReady = new Promise<void>((resolve) => map.once("load", () => resolve()));
