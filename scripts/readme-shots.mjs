@@ -33,8 +33,12 @@ async function open(at) {
   await page.goto(`${base}/?at=${at}`, { waitUntil: "load" });
   await page.waitForFunction(() => window.fromAbove?.fleet?.vehicles.size > 0, { timeout: 60_000 });
   await sleep(WARMUP_S);
-  // No ambient tour wandering off mid-shot.
-  await page.evaluate(() => { window.fromAbove.drift.idleS = 1e9; window.fromAbove.drift.wake(); });
+  // No ambient tour wandering off mid-shot, and no radar: its blocky returns
+  // read as a rendering glitch and hide the vehicles the shots are meant to show.
+  await page.evaluate(() => {
+    window.fromAbove.drift.idleS = 1e9; window.fromAbove.drift.wake();
+    window.fromAbove.map.setLayoutProperty("radar", "visibility", "none");
+  });
   return page;
 }
 

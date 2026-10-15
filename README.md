@@ -4,16 +4,16 @@
 
 An ambient, top-down living map of Minneapolis–Saint Paul. Real buses and light rail trains glide along their actual routes in near real time, and so does a good deal else: freeway traffic, planes, satellites, freight and Amtrak trains, river boats, weather, wildlife and recent police activity. It is something to glance at and feel the pulse of the city, not a dashboard: no required interaction beyond pan and zoom. Hover or tap almost anything to see what it is.
 
-![The whole metro by day: buses, trains, planes and freeway traffic over the map](docs/screenshots/metro-day.jpg)
+![The whole metro at night: buses, trains, planes and freeway traffic glowing over the map](docs/screenshots/metro-night.jpg)
 
 | | |
 | --- | --- |
 | ![Downtown Minneapolis by day](docs/screenshots/downtown.jpg) | ![Downtown Minneapolis at night](docs/screenshots/downtown-night.jpg) |
 | ![A freight train and its hover card](docs/screenshots/freight-train.jpg) | ![Amtrak's Empire Builder and its hover card](docs/screenshots/amtrak-train.jpg) |
 
-The map follows the real sun, so it looks different at night:
+The map follows the real sun, so it looks different by day:
 
-![The metro at night](docs/screenshots/metro-night.jpg)
+![The metro by day](docs/screenshots/metro-day.jpg)
 
 ## What's on the map
 
