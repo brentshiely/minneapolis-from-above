@@ -1,7 +1,9 @@
 /**
  * Which of the map's data layers the viewer wants to see. Persisted per
- * browser (sessionStorage, this tab only) so a choice sticks across visits; every layer
- * defaults on, so nobody has to discover the panel to see the full map.
+ * browser (sessionStorage, this tab only) so a choice sticks across visits; nearly every
+ * layer defaults on, so nobody has to discover the panel to see the full map. The
+ * public-safety layers (crime, shots fired, police drones) default off: they are one
+ * click away in the panel, but the map opens on transit, planes, weather and the like.
  */
 export type LayerKey =
   | "transit" | "planes" | "satellites" | "traffic" | "cameras" | "incidents"
@@ -41,9 +43,12 @@ export const STORAGE_KEY = "fromabove.layers";
 
 export type Toggles = Record<LayerKey, boolean>;
 
+/** Layers that start switched off; the viewer turns them on from the layers panel. */
+export const OFF_BY_DEFAULT: ReadonlySet<LayerKey> = new Set<LayerKey>(["crime", "gunfire", "drones"]);
+
 function defaults(): Toggles {
   const t = {} as Toggles;
-  for (const g of TOGGLE_GROUPS) t[g.key] = true;
+  for (const g of TOGGLE_GROUPS) t[g.key] = !OFF_BY_DEFAULT.has(g.key);
   return t;
 }
 

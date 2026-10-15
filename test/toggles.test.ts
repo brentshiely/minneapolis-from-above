@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { loadToggles, saveToggles, TOGGLE_GROUPS } from "../src/toggles.ts";
+import { loadToggles, OFF_BY_DEFAULT, saveToggles, TOGGLE_GROUPS } from "../src/toggles.ts";
 
 function fakeStorage() {
   const store = new Map<string, string>();
@@ -20,12 +20,13 @@ test("every toggle group has a unique key, a label and a glyph", () => {
   }
 });
 
-test("loadToggles defaults every layer to on when nothing is saved", () => {
+test("loadToggles defaults every layer to on, except the public-safety ones, when nothing is saved", () => {
   const realStorage = globalThis.sessionStorage;
   try {
     (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = fakeStorage();
     const t = loadToggles();
-    for (const g of TOGGLE_GROUPS) assert.equal(t[g.key], true, g.key);
+    for (const g of TOGGLE_GROUPS) assert.equal(t[g.key], !OFF_BY_DEFAULT.has(g.key), g.key);
+    assert.deepEqual([...OFF_BY_DEFAULT].sort(), ["crime", "drones", "gunfire"]);
   } finally {
     (globalThis as unknown as { sessionStorage: Storage }).sessionStorage = realStorage;
   }

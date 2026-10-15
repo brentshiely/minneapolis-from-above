@@ -17,7 +17,7 @@ The map follows the real sun, so it looks different at night:
 
 ## What's on the map
 
-Every layer can be switched on and off from the layers panel (the stack icon at the left edge); the choice is remembered in the browser.
+Every layer can be switched on and off from the layers panel (the stack icon at the left edge); the choice is remembered in the browser. Crime, shots fired and police drones start switched off; turn them on from the same panel.
 
 | Layer | What you see | Real or modeled |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ Every layer can be switched on and off from the layers panel (the stack icon at 
 | River, locks & falls | Boats through the locks, St. Anthony Falls flow | Real lock logs and gauges |
 | Weather watches & warnings, radar | NWS alerts, radar, clouds, wind, rain and snow | Live |
 | Wildlife, fall color, northern lights | iNaturalist sightings, the DNR fall color report, aurora forecast | Live |
-| Crime, shots fired, police drones | Recent incidents from city open data, faded by age | Real, delayed or offset where privacy needs it |
+| Crime, shots fired, police drones (off until you switch them on) | Recent incidents from city open data, faded by age | Real, delayed or offset where privacy needs it |
 | Game days, beaches, MSP status, snow emergencies | Venues in use, beach closures, airport delays, parking rules | Live |
 
 ## Where the numbers are real and where they are made up
