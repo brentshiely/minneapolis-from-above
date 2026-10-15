@@ -165,4 +165,4 @@ Cloudflare Pages hosts the static app and the functions together. Once, run `npx
 
 ## Backlog
 
-Work is tracked story by story in the backlog artifact, with one commit per completed story. A copy of the backlog page lives in `backlog/`.
+Work is done story by story, with one commit per completed story.
